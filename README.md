@@ -28,8 +28,10 @@ npm run build
 |---|---|
 | `src/proxy.ts`, `src/lib/auth.ts` | 비밀번호 잠금 (서명된 쿠키 세션) |
 | `src/lib/db/` | 기기 저장소(IndexedDB, Dexie) 스키마, 프로필, 백업 |
-| `src/lib/game/` | 레벨·경험치, 펫 성장·기분, 연속 학습일 |
+| `src/lib/db/study.ts` | 할 일, 시험 계획, 집중 기록, 카드, 오답, 과목, 퀘스트 저장 |
+| `src/lib/study/` | 간격 반복(SM-2), 시험 D-day 역산, 오답 재풀이 간격, 집중 타이머 상태 기계 |
+| `src/lib/game/` | 레벨·경험치, 펫 성장·기분, 연속 학습일, 일일 퀘스트 |
 | `src/data/curriculum.ts` | 국·영·수·사·과 교육과정 기본 데이터 (중1~고3) |
 | `src/components/` | 게임 UI 컴포넌트, 펫 SVG, 앱 셸 |
-| `src/app/` | 화면 (홈, 플래너, 복습, AI 학습실, 성장, 학습법, 설정, 로그인, 첫 실행) |
+| `src/app/` | 화면 (홈, 플래너·시험 계획, 타이머, 복습·카드·오답노트, 성장, 설정·과목 관리, 로그인, 첫 실행) |
 | `public/sw.js` | 서비스 워커 |

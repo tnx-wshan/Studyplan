@@ -1,8 +1,9 @@
-import { getDB, newId } from "./index";
+import { getDB, newId, type HomeStudyDB } from "./index";
 import type { Profile, Subject } from "./types";
-import { SUBJECT_GROUPS, type GradeId } from "@/data/curriculum";
+import { SUBJECT_GROUPS, defaultCourseIds, type GradeId } from "@/data/curriculum";
 import type { PetSpecies } from "@/lib/game/pet";
 import { toDateKey } from "@/lib/date";
+import { levelFromXp } from "@/lib/game/level";
 
 export async function getProfile(): Promise<Profile | undefined> {
   return getDB().profile.get("me");
@@ -38,6 +39,8 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Profil
     name: g.label,
     group: g.id,
     color: g.color,
+    courseIds: defaultCourseIds(input.grade, g.id),
+    customUnits: [],
     createdAt: now,
     updatedAt: now,
   }));
@@ -48,21 +51,33 @@ export async function completeOnboarding(input: OnboardingInput): Promise<Profil
   return profile;
 }
 
+export async function dismissLevelUp() {
+  await getDB().profile.update("me", { levelUpFrom: undefined });
+}
+
 export async function updateProfile(patch: Partial<Omit<Profile, "id" | "createdAt">>) {
   await getDB().profile.update("me", { ...patch, updatedAt: Date.now() });
 }
 
-/** 경험치 지급. 이벤트 기록을 남겨 통계와 잔디에 쓴다. */
-export async function grantXp(amount: number, reason: string, at = Date.now()) {
-  const db = getDB();
-  await db.transaction("rw", db.profile, db.xpEvents, async () => {
-    const p = await db.profile.get("me");
-    if (!p) throw new Error("profile not found");
-    await db.profile.update("me", {
-      totalXp: p.totalXp + amount,
-      coins: p.coins + Math.floor(amount / 10),
-      updatedAt: at,
-    });
-    await db.xpEvents.add({ id: newId(), at, date: toDateKey(new Date(at)), amount, reason });
+export type XpReason = "focus" | "task" | "card" | "wrong" | `quest:${string}` | "other";
+
+/** 경험치 지급. profile·xpEvents 테이블을 포함한 트랜잭션 안에서 호출해야 한다. */
+export async function addXpInTx(db: HomeStudyDB, amount: number, reason: XpReason, at = Date.now()) {
+  const p = await db.profile.get("me");
+  if (!p) throw new Error("profile not found");
+  const before = levelFromXp(p.totalXp).level;
+  const after = levelFromXp(p.totalXp + amount).level;
+  await db.profile.update("me", {
+    totalXp: p.totalXp + amount,
+    coins: p.coins + Math.floor(amount / 10),
+    updatedAt: at,
+    ...(after > before && p.levelUpFrom === undefined ? { levelUpFrom: before } : {}),
   });
+  await db.xpEvents.add({ id: newId(), at, date: toDateKey(new Date(at)), amount, reason });
+}
+
+/** 경험치 지급. 이벤트 기록을 남겨 통계와 잔디, 퀘스트 진행에 쓴다. */
+export async function grantXp(amount: number, reason: XpReason, at = Date.now()) {
+  const db = getDB();
+  await db.transaction("rw", db.profile, db.xpEvents, () => addXpInTx(db, amount, reason, at));
 }

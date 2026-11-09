@@ -6,6 +6,11 @@ import { useEffect, type ReactNode } from "react";
 import { getDB } from "@/lib/db";
 import { usePetState, useProfile } from "@/lib/hooks";
 import { cn, Pill } from "./ui";
+import { LevelUp } from "./LevelUp";
+import { TimerWatcher } from "./TimerWatcher";
+import { Toaster } from "./Toaster";
+import { formatClock, remaining, elapsed } from "@/lib/study/timer";
+import { useNow, useTimerState } from "@/lib/timerStore";
 
 const NAV = [
   { href: "/", label: "홈", icon: "🏠" },
@@ -47,6 +52,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TopBar />
       <main className="flex-1 px-4 pb-28 pt-2">{children}</main>
       <BottomNav />
+      <TimerWatcher />
+      <Toaster />
+      <LevelUp />
     </div>
   );
 }
@@ -60,6 +68,7 @@ function TopBar() {
       </Link>
       {state && (
         <div className="flex items-center gap-1.5">
+          <MiniTimer />
           <Pill icon={<span aria-hidden>⭐</span>}>Lv.{state.level.level}</Pill>
           <Pill icon={<span aria-hidden>🔥</span>}>
             <span className="sr-only">연속 학습일</span>
@@ -108,5 +117,18 @@ function BottomNav() {
         })}
       </ul>
     </nav>
+  );
+}
+
+function MiniTimer() {
+  const timer = useTimerState();
+  const pathname = usePathname();
+  const now = useNow(timer.phase !== "idle");
+  if (timer.phase === "idle" || pathname === "/timer") return null;
+  const ms = timer.mode === "free" && timer.phase === "focus" ? elapsed(timer, now) : remaining(timer, now);
+  return (
+    <Link href="/timer" className="font-display rounded-full bg-primary px-2.5 py-1 text-sm text-white tabular-nums">
+      {timer.phase === "break" ? "☕" : "⏱️"} {formatClock(ms)}
+    </Link>
   );
 }

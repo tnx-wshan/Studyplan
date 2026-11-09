@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { applyTheme } from "@/components/ThemeSync";
-import { Button, Card, SectionTitle, cn } from "@/components/ui";
+import Link from "next/link";
+import { Button, Card, SectionTitle, buttonStyles, cn } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS, coursesFor, gradeLabel, type GradeId } from "@/data/curriculum";
 import { exportBackup, importBackup } from "@/lib/db/backup";
 import { updateProfile } from "@/lib/db/profile";
@@ -96,6 +97,10 @@ export default function SettingsPage() {
         </Card>
       </section>
 
+      <Link href="/settings/subjects" className={buttonStyles("ghost", "md", "w-full")}>
+        📚 과목·단원 관리
+      </Link>
+
       <section>
         <SectionTitle>{gradeLabel(profile.grade)} 교육과정</SectionTitle>
         <Card className="space-y-3">
@@ -114,7 +119,7 @@ export default function SettingsPage() {
                 {coursesFor(profile.grade, s.id).map((c) => (
                   <li key={c.id}>
                     <p className="font-display">{c.name}</p>
-                    <p className="text-ink-soft">{c.units.length ? c.units.join(" · ") : "단원은 과목 관리에서 직접 추가해요(1단계)."}</p>
+                    <p className="text-ink-soft">{c.units.length ? c.units.join(" · ") : "단원은 과목·단원 관리에서 직접 추가해요."}</p>
                   </li>
                 ))}
               </ul>

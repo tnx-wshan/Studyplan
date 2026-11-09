@@ -18,31 +18,48 @@ export interface Profile extends Base {
   coins: number;
   theme: "system" | "light" | "dark";
   onboardedAt: number;
+  /** 레벨이 올랐지만 아직 축하 화면을 보지 않았을 때, 오르기 전 레벨 */
+  levelUpFrom?: number;
 }
 
 export interface Subject extends Base {
   name: string;
   group: SubjectGroup;
   color: string;
-  courseId?: string; // curriculum 과목 연결
+  /** 연결한 교육과정 과목(Course.id). 이 과목들의 단원이 단원 목록이 된다. */
+  courseIds: string[];
+  /** 학생이 직접 추가한 단원 */
+  customUnits: string[];
   archived?: boolean;
 }
 
 export interface Exam extends Base {
   title: string;
   date: string; // YYYY-MM-DD
-  ranges: { subjectId: string; unitIds: string[]; note?: string }[];
+  ranges: { subjectId: string; units: string[] }[];
+  minutesPerDay: number;
+  /** 쉬는 요일 (0=일 ~ 6=토) */
+  restDays: number[];
 }
+
+export type TaskKind = "custom" | "learn" | "review" | "final" | "spaced";
 
 export interface Task extends Base {
   date: string;
   subjectId?: string;
   title: string;
+  kind: TaskKind;
+  /** 학습·복습 대상 단원 */
+  unit?: string;
   estimatedMinutes?: number;
-  actualMinutes?: number;
   done: boolean;
+  doneAt?: number;
+  /** 완료 경험치를 이미 받았는지 (체크를 껐다 켜도 한 번만 지급) */
+  xpGranted?: boolean;
   order: number;
   examId?: string;
+  /** 간격 복습 할 일이 몇 번째 복습인지 (1·3·7·14일) */
+  spacedStep?: number;
 }
 
 export interface StudySession extends Base {
@@ -64,8 +81,18 @@ export interface Card extends Base {
   front: string;
   back: string;
   due: number;
-  /** 간격 반복 알고리즘 상태 (1단계에서 구현) */
-  srs: { stability: number; difficulty: number; reps: number; lapses: number; lastReview?: number };
+  srs: SrsState;
+}
+
+/** SM-2 기반 간격 반복 상태 */
+export interface SrsState {
+  /** 다음 복습까지 간격(일). 0이면 아직 배우는 중 */
+  interval: number;
+  /** 쉬움 정도 (1.3 ~ 3.0) */
+  ease: number;
+  reps: number;
+  lapses: number;
+  lastReview?: number;
 }
 
 export interface WrongAnswer extends Base {
@@ -77,8 +104,18 @@ export interface WrongAnswer extends Base {
   correctAnswer: string;
   reason: "concept" | "mistake" | "time" | "other";
   note?: string;
-  nextRetry: number;
+  /** 다음에 다시 풀 날짜 YYYY-MM-DD */
+  nextRetry: string;
+  /** 연속으로 맞힌 횟수 */
+  streak: number;
+  mastered: boolean;
   retries: { at: number; correct: boolean }[];
+}
+
+export interface StoredImage {
+  id: string;
+  blob: Blob;
+  createdAt: number;
 }
 
 export interface Material extends Base {

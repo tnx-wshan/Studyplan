@@ -26,7 +26,7 @@ export const GRADES: { id: GradeId; label: string; level: SchoolLevel; curriculu
 export const SUBJECT_GROUPS: { id: SubjectGroup; label: string; short: string; color: string }[] = [
   { id: "korean", label: "국어", short: "국", color: "#ef6b6b" },
   { id: "english", label: "영어", short: "영", color: "#5b8def" },
-  { id: "math", label: "수학", short: "수", color: "#f2a93b" },
+  { id: "math", label: "수학", short: "수", color: "#d4881c" },
   { id: "social", label: "사회", short: "사", color: "#47b881" },
   { id: "science", label: "과학", short: "과", color: "#9b6bdf" },
 ];
@@ -261,4 +261,20 @@ export function coursesFor(grade: GradeId, group?: SubjectGroup): Course[] {
 
 export function gradeLabel(id: GradeId): string {
   return GRADES.find((g) => g.id === id)?.label ?? id;
+}
+
+/** 처음 과목을 만들 때 연결할 교육과정 과목: 선택지가 2개 이하이면 모두, 많으면(선택과목) 비워두고 학생이 고른다. */
+export function defaultCourseIds(grade: GradeId, group: SubjectGroup): string[] {
+  const list = coursesFor(grade, group);
+  return list.length <= 2 ? list.map((c) => c.id) : [];
+}
+
+export function courseById(id: string): Course | undefined {
+  return COURSES.find((c) => c.id === id);
+}
+
+/** 과목의 단원 목록: 연결한 교육과정 단원 + 직접 추가한 단원 (중복 제거, 순서 유지) */
+export function unitsForSubject(subject: { courseIds: string[]; customUnits: string[] }): string[] {
+  const units = subject.courseIds.flatMap((id) => courseById(id)?.units ?? []);
+  return [...new Set([...units, ...subject.customUnits])];
 }

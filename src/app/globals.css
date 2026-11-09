@@ -103,3 +103,27 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pet-bounce, .pet-slow, .pet-blink, .pet-z { animation: none; }
 }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.7); }
+  70% { transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes card-flip {
+  from { transform: rotateY(90deg); }
+  to { transform: rotateY(0); }
+}
+.toast-in { animation: toast-in 0.2s ease-out; }
+.pop-in { animation: pop-in 0.35s ease-out; }
+.card-flip { animation: card-flip 0.25s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .toast-in, .pop-in, .card-flip { animation: none; }
+}
+
+/* 차트 막대: 과목색을 그대로 쓰되, 어두운 화면에서는 살짝 어둡게 (어두운 배경 명도 범위 검증) */
+.mark { background: var(--c); }
+:root[data-theme="dark"] .mark { background: color-mix(in oklab, var(--c) 88%, black); }

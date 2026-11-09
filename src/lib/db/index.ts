@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from "dexie";
 import type * as T from "./types";
+import { defaultCourseIds, type SubjectGroup } from "@/data/curriculum";
 
 export class HomeStudyDB extends Dexie {
   profile!: EntityTable<T.Profile, "id">;
@@ -20,6 +21,7 @@ export class HomeStudyDB extends Dexie {
   reflections!: EntityTable<T.Reflection, "id">;
   aiUsage!: EntityTable<T.AiUsage, "id">;
   xpEvents!: EntityTable<T.XpEvent, "id">;
+  images!: EntityTable<T.StoredImage, "id">;
 
   constructor(name = "homestudy") {
     super(name);
@@ -43,6 +45,29 @@ export class HomeStudyDB extends Dexie {
       aiUsage: "id, date",
       xpEvents: "id, date",
     });
+    // v2: 1단계 기능 (과목·단원 연결, 할 일 종류, 오답 사진)
+    this.version(2)
+      .stores({ images: "id" })
+      .upgrade(async (tx) => {
+        const profile = await tx.table("profile").get("me");
+        await tx
+          .table("subjects")
+          .toCollection()
+          .modify((s: Record<string, unknown>) => {
+            if (!Array.isArray(s.courseIds)) {
+              s.courseIds = profile ? defaultCourseIds(profile.grade, s.group as SubjectGroup) : [];
+            }
+            if (!Array.isArray(s.customUnits)) s.customUnits = [];
+            // 차트에서 너무 밝던 0단계 수학 기본색을 조정
+            if (s.color === "#f2a93b") s.color = "#d4881c";
+          });
+        await tx
+          .table("tasks")
+          .toCollection()
+          .modify((t: Record<string, unknown>) => {
+            if (!t.kind) t.kind = "custom";
+          });
+      });
   }
 }
 

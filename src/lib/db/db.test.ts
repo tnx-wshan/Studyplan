@@ -23,7 +23,7 @@ describe("profile", () => {
 
   it("grantXp adds xp, coins and an event", async () => {
     await completeOnboarding({ ...input });
-    await grantXp(120, "test");
+    await grantXp(120, "other");
     const p = await getProfile();
     expect(p?.totalXp).toBe(120);
     expect(p?.coins).toBe(12);
@@ -31,7 +31,7 @@ describe("profile", () => {
 
   it("backup round-trips", async () => {
     await completeOnboarding({ ...input });
-    await grantXp(50, "test");
+    await grantXp(50, "other");
     const json = await exportBackup();
     setDB(new HomeStudyDB(`test-${n++}`));
     expect(await getProfile()).toBeUndefined();
@@ -41,5 +41,20 @@ describe("profile", () => {
 
   it("rejects non-homestudy backups", async () => {
     await expect(importBackup(JSON.stringify({ foo: 1 }))).rejects.toThrow();
+  });
+});
+
+describe("level up", () => {
+  it("records the level before a level-up until dismissed", async () => {
+    const { dismissLevelUp } = await import("./profile");
+    await completeOnboarding({ ...input });
+    await grantXp(50, "other");
+    expect((await getProfile())?.levelUpFrom).toBeUndefined();
+    await grantXp(60, "other"); // 110 XP → Lv.2
+    expect((await getProfile())?.levelUpFrom).toBe(1);
+    await grantXp(200, "other"); // 아직 확인 안 함: 처음 레벨 유지
+    expect((await getProfile())?.levelUpFrom).toBe(1);
+    await dismissLevelUp();
+    expect((await getProfile())?.levelUpFrom).toBeUndefined();
   });
 });
