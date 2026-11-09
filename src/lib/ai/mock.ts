@@ -15,6 +15,21 @@ function promptText(options: { prompt: unknown }) {
 }
 
 function jsonFor(text: string): unknown {
+  if (text.includes("학습 코치")) {
+    return {
+      summary: "이번 주는 꾸준히 공부한 날이 많았어요. 집중 시간도 잘 쌓였어요.",
+      strengths: ["집중 타이머로 공부한 시간이 늘었어요", "오답을 다시 풀었어요"],
+      improvements: ["복습 카드를 넘긴 날이 적었어요"],
+      recommendations: [
+        { methodId: "spaced", reason: "복습 간격을 지키면 기억이 오래가요" },
+        { methodId: "없는학습법", reason: "목록에 없는 추천은 걸러져야 해요" },
+      ],
+      goals: ["평일 저녁 10분 복습 카드 넘기기", "주말에 백지 복습 1번"],
+    };
+  }
+  if (text.includes("파인만 기법으로") || text.includes("백지 복습으로")) {
+    return { score: 72, good: ["핵심 정의를 정확히 썼어요"], missing: ["근의 공식"], misconceptions: [], nextStep: "근의 공식을 유도하는 과정을 다시 설명해 보세요." };
+  }
   if (text.includes("검산 선생님")) {
     return { results: [{ index: 0, correct: true, fixedAnswer: "", fixedExplanation: "" }] };
   }

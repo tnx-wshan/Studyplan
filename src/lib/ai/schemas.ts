@@ -76,3 +76,45 @@ export const QuizRequestSchema = z.object({
   verify: z.boolean(),
 });
 export type QuizRequest = z.infer<typeof QuizRequestSchema>;
+
+// ───────── 3단계 코칭 ─────────
+
+export const FeedbackSchema = z.object({
+  score: z.number().describe("이해도 0~100"),
+  good: z.array(z.string()).describe("잘 설명한 점 1~3개"),
+  missing: z.array(z.string()).describe("빠진 핵심 개념 0~4개"),
+  misconceptions: z.array(z.string()).describe("틀리거나 헷갈린 설명 0~3개. 없으면 빈 배열"),
+  nextStep: z.string().describe("다음에 할 일 한 문장"),
+});
+
+export const FeedbackRequestSchema = z.object({
+  kind: z.enum(["blank", "feynman"]),
+  grade: z.string().max(20),
+  subject: z.string().max(20).optional(),
+  topic: z.string().min(1).max(100),
+  text: z.string().min(1).max(6000),
+  /** 비교할 정리 자료가 있으면 */
+  reference: z.string().max(12_000).optional(),
+});
+export type FeedbackRequest = z.infer<typeof FeedbackRequestSchema>;
+
+export const CoachSchema = z.object({
+  summary: z.string().describe("이번 기간 공부를 2~3문장으로 따뜻하게 정리"),
+  strengths: z.array(z.string()).describe("잘한 점 2~3개 (구체적인 숫자 근거)"),
+  improvements: z.array(z.string()).describe("보완할 점 1~3개 (구체적으로)"),
+  recommendations: z
+    .array(z.object({ methodId: z.string().describe("학습법 목록의 id 중 하나"), reason: z.string().describe("이 학생에게 권하는 이유 한 문장") }))
+    .describe("학습법 추천 1~3개"),
+  goals: z.array(z.string()).describe("다음 기간 실천 목표 2~3개 (측정 가능하게)"),
+});
+
+export const CoachRequestSchema = z.object({
+  grade: z.string().max(20),
+  periodLabel: z.string().max(40),
+  /** 통계 요약 (앱이 만든 글) */
+  stats: z.string().min(1).max(6000),
+  reflection: z.string().max(2000).optional(),
+  weakAreas: z.array(z.string().max(30)).max(6),
+  methods: z.array(z.object({ id: z.string().max(30), name: z.string().max(40) })).max(30),
+});
+export type CoachRequest = z.infer<typeof CoachRequestSchema>;

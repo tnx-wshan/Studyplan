@@ -1,6 +1,7 @@
 "use client";
 
-import type { MaterialRequest, QuestionOutput, QuizRequest, TutorRequest } from "./schemas";
+import type { CoachRequest, FeedbackRequest, MaterialRequest, QuestionOutput, QuizRequest, TutorRequest } from "./schemas";
+import type { AiFeedback, CoachReport } from "@/lib/db/types";
 
 export interface AiStatus {
   provider: string;
@@ -8,7 +9,7 @@ export interface AiStatus {
   modelId: string;
   configured: boolean;
   problem?: string;
-  usage: { feature: "tutor" | "quiz" | "material"; label: string; used: number; limit: number }[];
+  usage: { feature: "tutor" | "quiz" | "material" | "coach"; label: string; used: number; limit: number }[];
 }
 
 export interface MaterialResponse {
@@ -50,6 +51,9 @@ async function postJson<T>(url: string, body: unknown, signal?: AbortSignal): Pr
 
 export const requestMaterial = (body: MaterialRequest, signal?: AbortSignal) => postJson<MaterialResponse>("/api/ai/material", body, signal);
 export const requestQuiz = (body: QuizRequest, signal?: AbortSignal) => postJson<QuizResponse>("/api/ai/quiz", body, signal);
+export const requestFeedback = (body: FeedbackRequest) => postJson<AiFeedback>("/api/ai/feedback", body);
+export const requestCoach = (body: CoachRequest) =>
+  postJson<Pick<CoachReport, "summary" | "strengths" | "improvements" | "recommendations" | "goals" | "madeBy">>("/api/ai/coach", body);
 
 /** 튜터 답을 조각조각 받으며 onText로 알려준다. 전체 답을 돌려준다. */
 export async function streamTutor(body: TutorRequest, onText: (full: string) => void, signal?: AbortSignal): Promise<string> {

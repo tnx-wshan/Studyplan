@@ -17,7 +17,7 @@ export function useAiStatus() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-  const remaining = (feature: "tutor" | "quiz" | "material") => {
+  const remaining = (feature: "tutor" | "quiz" | "material" | "coach") => {
     const u = status?.usage.find((x) => x.feature === feature);
     return u ? u.limit - u.used : null;
   };

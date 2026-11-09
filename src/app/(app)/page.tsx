@@ -13,14 +13,11 @@ import { claimQuest, dailyStats } from "@/lib/db/study";
 import { toDateKey } from "@/lib/date";
 import { DAILY_QUESTS, questProgress } from "@/lib/game/quests";
 import { useMinuteTick } from "@/lib/timerStore";
+import { recommendedMethods, type Dimension } from "@/data/diagnosis";
+import { METHODS, methodById } from "@/data/methods";
+import { daysBetween } from "@/lib/date";
+import { withRo } from "@/lib/korean";
 import { PET_MOOD_TEXT } from "@/lib/game/pet";
-
-/** 받침이 있으면 "으로", 없거나 ㄹ받침이면 "로" */
-function withRo(word: string) {
-  const code = word.charCodeAt(word.length - 1) - 0xac00;
-  const jong = code >= 0 && code < 11172 ? code % 28 : 0;
-  return word + (jong === 0 || jong === 8 ? "로" : "으로");
-}
 
 export default function HomePage() {
   const state = usePetState();
@@ -56,6 +53,8 @@ export default function HomePage() {
       <DailyQuests />
 
       <TodayOverview />
+
+      <TodayMethod />
 
       <div className="grid grid-cols-2 gap-3">
         <Link href="/timer" className={buttonStyles("primary", "lg", "w-full")}>
@@ -200,5 +199,33 @@ function TodayOverview() {
         )}
       </Card>
     </section>
+  );
+}
+
+/** 오늘의 학습법: 진단 결과 추천을 우선으로, 날마다 하나씩 돌아가며 보여준다 */
+function TodayMethod() {
+  const state = usePetState();
+  if (!state) return null;
+  const scores = state.profile.diagnosis?.scores as Record<Dimension, number> | undefined;
+  const pool = scores ? recommendedMethods(scores) : METHODS.filter((m) => m.evidence === "high").map((m) => m.id);
+  const day = daysBetween("2026-01-01", toDateKey());
+  const method = methodById(pool[((day % pool.length) + pool.length) % pool.length]);
+  if (!method) return null;
+  return (
+    <Link href={`/methods/detail?id=${method.id}`} className="block">
+      <Card className="flex items-center gap-3 border-accent bg-accent/5">
+        <span aria-hidden className="text-3xl">
+          {method.icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-ink-soft">{scores ? "나에게 맞는 오늘의 학습법" : "오늘의 학습법"}</p>
+          <p className="font-display">{method.name}</p>
+          <p className="truncate text-sm text-ink-soft">{method.oneLine}</p>
+        </div>
+        <span aria-hidden className="text-ink-soft">
+          ›
+        </span>
+      </Card>
+    </Link>
   );
 }

@@ -1,4 +1,4 @@
-import type { QuizRequest } from "./schemas";
+import type { CoachRequest, FeedbackRequest, QuizRequest } from "./schemas";
 
 const COMMON = `너는 한국 중·고등학생의 자기주도 학습을 돕는 '홈스터디' 앱의 AI 선생님이야.
 - 학생의 학년과 한국 교육과정 수준에 맞춰 쉬운 한국어로 설명해.
@@ -82,4 +82,36 @@ export function verifyPrompt(questions: { prompt: string; choices: string[]; ans
 ${questions
   .map((q, i) => `[${i}] ${q.prompt}${q.choices.length ? `\n보기: ${q.choices.join(" / ")}` : ""}\n주어진 정답: ${q.answer}`)
   .join("\n\n")}`;
+}
+
+export function feedbackPrompt(req: FeedbackRequest) {
+  const task =
+    req.kind === "feynman"
+      ? "학생이 파인만 기법으로 개념을 쉬운 말로 설명했어. 설명이 정확한지, 핵심이 빠지지 않았는지, 쉬운 말로 풀어냈는지 봐 줘."
+      : "학생이 백지 복습으로 단원에서 기억나는 것을 모두 적었어. 핵심 개념 중 무엇을 떠올렸고 무엇이 빠졌는지 봐 줘.";
+  return `${COMMON}
+${task}
+- 학생: ${req.grade}${req.subject ? `, 과목: ${req.subject}` : ""}, 주제: ${req.topic}
+- 칭찬은 구체적으로, 빠진 점은 학생이 다시 공부할 수 있게 개념 이름으로 짚어줘.
+- 정답이나 전체 정리를 대신 써 주지 말고, 학생이 스스로 채우게 해.
+- score는 이 주제의 핵심을 얼마나 이해했는지 0~100으로.
+${req.reference ? `\n[비교할 정리 자료]\n${req.reference}\n` : ""}
+[학생이 쓴 내용]
+${req.text}`;
+}
+
+export function coachPrompt(req: CoachRequest) {
+  return `${COMMON}
+너는 학생의 공부 기록을 보고 다음 주 공부를 도와주는 학습 코치야.
+- 학생: ${req.grade}, 기간: ${req.periodLabel}
+- 숫자 근거를 들어 구체적으로 말하고, 비난하지 말고 격려하는 말투로.
+- 기록이 적으면 '기록이 적다'고 솔직히 말하고 작게 시작할 방법을 권해.
+- 학습법 추천은 아래 목록의 id만 써.
+- 목표는 '수학 문제 더 풀기'처럼 막연하지 않게 '평일 저녁 30분 수학 오답 다시 풀기'처럼 측정 가능하게.
+
+[공부 기록]
+${req.stats}
+${req.reflection ? `\n[학생의 회고]\n${req.reflection}\n` : ""}${req.weakAreas.length ? `\n[습관 진단에서 보완할 영역] ${req.weakAreas.join(", ")}\n` : ""}
+[학습법 목록]
+${req.methods.map((m) => `${m.id}: ${m.name}`).join("\n")}`;
 }

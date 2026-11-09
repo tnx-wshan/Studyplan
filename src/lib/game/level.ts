@@ -32,4 +32,5 @@ export const XP_REWARDS = {
   quizCorrect: 3, // 퀴즈 정답
   dailyQuestDone: 30,
   reflectionWritten: 20,
+  methodPractice: 15,
 } as const;

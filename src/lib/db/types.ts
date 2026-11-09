@@ -20,6 +20,8 @@ export interface Profile extends Base {
   onboardedAt: number;
   /** 레벨이 올랐지만 아직 축하 화면을 보지 않았을 때, 오르기 전 레벨 */
   levelUpFrom?: number;
+  /** 학습 습관 진단 결과 */
+  diagnosis?: { answers: Record<string, number>; scores: Record<string, number>; at: number };
 }
 
 export interface Subject extends Base {
@@ -192,6 +194,42 @@ export interface Reflection extends Base {
   good: string;
   bad: string;
   nextGoal: string;
+  /** 이번 주 공부에 대한 만족도 1~5 */
+  mood?: number;
+  xpGranted?: boolean;
+}
+
+/** 학습법 실습 기록 */
+export interface MethodLog extends Base {
+  methodId: string;
+  date: string;
+  subjectId?: string;
+  topic?: string;
+  /** 실습 내용 (학습법마다 다름) */
+  fields: Record<string, string>;
+  /** 백지 복습: 떠올린 핵심 비율 0~100 */
+  recall?: number;
+  aiFeedback?: AiFeedback;
+}
+
+export interface AiFeedback {
+  score: number;
+  good: string[];
+  missing: string[];
+  misconceptions: string[];
+  nextStep: string;
+}
+
+/** AI 주간 코칭 */
+export interface CoachReport extends Base {
+  /** 기간 키: YYYY-Www 또는 YYYY-MM */
+  period: string;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  recommendations: { methodId: string; reason: string }[];
+  goals: string[];
+  madeBy: string;
 }
 
 export interface AiUsage {

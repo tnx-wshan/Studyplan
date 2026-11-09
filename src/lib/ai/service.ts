@@ -1,5 +1,7 @@
 import { generateText, isStepCount, Output, streamText, type LanguageModel, type ModelMessage, type ToolSet } from "ai";
 import {
+  coachPrompt,
+  feedbackPrompt,
   materialFromCurriculumPrompt,
   materialFromImagesPrompt,
   materialFromPdfPrompt,
@@ -9,6 +11,8 @@ import {
   webSearchPrompt,
 } from "./prompts";
 import {
+  CoachSchema,
+  FeedbackSchema,
   MaterialSchema,
   QuizSchema,
   VerifySchema,
@@ -17,6 +21,8 @@ import {
   type QuestionOutput,
   type QuizRequest,
   type TutorRequest,
+  type CoachRequest,
+  type FeedbackRequest,
 } from "./schemas";
 
 /** data:<type>;base64,<data> → SDK 파일 조각 */
@@ -156,4 +162,20 @@ export async function makeQuiz(req: QuizRequest, model: LanguageModel) {
     }
   }
   return { title: output.title.trim() || "AI 퀴즈", questions, verified };
+}
+
+export async function makeFeedback(req: FeedbackRequest, model: LanguageModel) {
+  const { output } = await generateText({ model, prompt: feedbackPrompt(req), output: Output.object({ schema: FeedbackSchema }), maxOutputTokens: 2000 });
+  return { ...output, score: Math.max(0, Math.min(100, Math.round(output.score))) };
+}
+
+/** 주간 코칭. 목록에 없는 학습법 추천은 버린다. */
+export async function makeCoaching(req: CoachRequest, model: LanguageModel) {
+  const { output } = await generateText({ model, prompt: coachPrompt(req), output: Output.object({ schema: CoachSchema }), maxOutputTokens: 3000 });
+  const ids = new Set(req.methods.map((m) => m.id));
+  const seen = new Set<string>();
+  return {
+    ...output,
+    recommendations: output.recommendations.filter((r) => ids.has(r.methodId) && !seen.has(r.methodId) && seen.add(r.methodId)).slice(0, 3),
+  };
 }

@@ -22,6 +22,8 @@ export class HomeStudyDB extends Dexie {
   aiUsage!: EntityTable<T.AiUsage, "id">;
   xpEvents!: EntityTable<T.XpEvent, "id">;
   images!: EntityTable<T.StoredImage, "id">;
+  methodLogs!: EntityTable<T.MethodLog, "id">;
+  coachReports!: EntityTable<T.CoachReport, "id">;
 
   constructor(name = "homestudy") {
     super(name);
@@ -68,6 +70,8 @@ export class HomeStudyDB extends Dexie {
             if (!t.kind) t.kind = "custom";
           });
       });
+    // v3: 3단계 코칭 (학습법 실습 기록, AI 코칭)
+    this.version(3).stores({ methodLogs: "id, methodId, date", coachReports: "id, period" });
   }
 }
 
