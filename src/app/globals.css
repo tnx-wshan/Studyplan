@@ -127,3 +127,22 @@ body {
 /* 차트 막대: 과목색을 그대로 쓰되, 어두운 화면에서는 살짝 어둡게 (어두운 배경 명도 범위 검증) */
 .mark { background: var(--c); }
 :root[data-theme="dark"] .mark { background: color-mix(in oklab, var(--c) 88%, black); }
+
+/* AI 답변 마크다운 */
+.md { line-height: 1.7; overflow-wrap: anywhere; }
+.md > * + * { margin-top: 0.6em; }
+.md h1, .md h2, .md h3 { font-family: var(--font-display), var(--font-body), sans-serif; line-height: 1.35; }
+.md h1 { font-size: 1.25em; }
+.md h2 { font-size: 1.12em; }
+.md h3 { font-size: 1.02em; }
+.md ul { list-style: disc; padding-left: 1.3em; }
+.md ol { list-style: decimal; padding-left: 1.4em; }
+.md li + li { margin-top: 0.2em; }
+.md strong { color: var(--primary-deep); }
+.md a { color: var(--accent); text-decoration: underline; }
+.md code { background: var(--surface-2); border-radius: 6px; padding: 0.1em 0.35em; font-size: 0.92em; }
+.md pre { background: var(--surface-2); border-radius: 12px; padding: 0.8em; overflow-x: auto; }
+.md blockquote { border-left: 4px solid var(--line); padding-left: 0.8em; color: var(--ink-soft); }
+.md table { border-collapse: collapse; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--line); padding: 0.3em 0.6em; }
+.md .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }

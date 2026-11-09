@@ -122,25 +122,43 @@ export interface Material extends Base {
   kind: "web" | "photo" | "pdf" | "curriculum";
   title: string;
   subjectId?: string;
-  extractedText?: string;
-  sourceUrl?: string;
-  blob?: Blob;
+  /** AI가 정리한 개념 (마크다운) */
+  summary: string;
+  keyPoints: string[];
+  sources: { title: string; url: string }[];
+  /** 웹 검색어, 단원 이름 등 */
+  query?: string;
 }
 
 export interface Quiz extends Base {
   title: string;
   materialIds: string[];
   subjectId?: string;
+  difficulty: "easy" | "normal" | "hard";
+  /** 정답 검산을 거쳤는지 */
+  verified: boolean;
+  /** 만든 AI (예: Google Gemini) */
+  madeBy: string;
+  attempts: { at: number; score: number; total: number }[];
 }
 
 export interface Question extends Base {
   quizId: string;
+  order: number;
   type: "multiple" | "short" | "essay";
   prompt: string;
-  choices?: string[];
+  choices: string[];
   answer: string;
   explanation: string;
-  sources?: string[];
+  concept: string;
+  /** 이번 풀이에서 쓴 답과 채점 결과 */
+  userAnswer?: string;
+  result?: "correct" | "wrong";
+  /** 한 번이라도 맞혀서 경험치를 받았는지 */
+  xpGranted?: boolean;
+  flagged?: boolean;
+  savedToWrong?: boolean;
+  savedToCard?: boolean;
 }
 
 export interface TutorChat extends Base {
@@ -154,6 +172,8 @@ export interface TutorMessage extends Base {
   role: "user" | "assistant";
   content: string;
   imageIds?: string[];
+  /** 답을 받지 못했을 때 오류 메시지 */
+  error?: string;
 }
 
 export interface UserQuest extends Base {

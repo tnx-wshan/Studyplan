@@ -1,0 +1,139 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { MockLanguageModelV4 } from "ai/test";
+import { describe, expect, it, vi } from "vitest";
+import { mockModel } from "./mock";
+import { makeMaterial, makeQuiz, normalizeQuestion, parseWebAnswer, toModelMessages, tutorStream } from "./service";
+
+const usage = {
+  inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
+  outputTokens: { total: 1, text: 1, reasoning: undefined },
+};
+function jsonModel(...responses: unknown[]) {
+  let i = 0;
+  return new MockLanguageModelV4({
+    doGenerate: async () => ({
+      content: [{ type: "text", text: JSON.stringify(responses[Math.min(i++, responses.length - 1)]) }],
+      finishReason: { unified: "stop", raw: undefined },
+      usage,
+      warnings: [],
+    }),
+  });
+}
+
+const q = (over: Partial<Parameters<typeof normalizeQuestion>[0]> = {}) => ({
+  type: "multiple" as const,
+  prompt: "1+1은?",
+  choices: ["1", "2", "3", "4"],
+  answer: "2",
+  explanation: "",
+  concept: "덧셈",
+  ...over,
+});
+
+describe("normalizeQuestion", () => {
+  it("keeps exact answers", () => {
+    expect(normalizeQuestion(q())?.answer).toBe("2");
+  });
+  it("maps circled numbers and 'n번' to the choice text", () => {
+    expect(normalizeQuestion(q({ choices: ["가", "나", "다", "라"], answer: "③" }))?.answer).toBe("다");
+    expect(normalizeQuestion(q({ choices: ["가", "나", "다", "라"], answer: "2번" }))?.answer).toBe("나");
+  });
+  it("strips numbering from choices and answer", () => {
+    const n = normalizeQuestion(q({ choices: ["① 사과", "② 배", "③ 감"], answer: "② 배" }));
+    expect(n).toMatchObject({ choices: ["사과", "배", "감"], answer: "배" });
+  });
+  it("prefers a literal numeric choice over an index", () => {
+    expect(normalizeQuestion(q({ choices: ["1", "5", "6"], answer: "5" }))?.answer).toBe("5");
+  });
+  it("drops unanswerable or broken questions", () => {
+    expect(normalizeQuestion(q({ answer: "7" }))).toBeNull();
+    expect(normalizeQuestion(q({ choices: ["a", "a"] }))).toBeNull();
+    expect(normalizeQuestion(q({ prompt: " " }))).toBeNull();
+  });
+  it("clears choices for non-multiple questions", () => {
+    expect(normalizeQuestion(q({ type: "short", choices: ["x"] }))?.choices).toEqual([]);
+  });
+});
+
+describe("parseWebAnswer", () => {
+  it("splits the key points section", () => {
+    const r = parseWebAnswer("## 개념\n설명\n\n## 핵심\n- 하나\n- 둘\n1. 셋", "광합성");
+    expect(r).toEqual({ title: "광합성", summary: "## 개념\n설명", keyPoints: ["하나", "둘", "셋"] });
+  });
+  it("works without a key points section", () => {
+    expect(parseWebAnswer("본문", "q").keyPoints).toEqual([]);
+  });
+});
+
+describe("toModelMessages", () => {
+  it("attaches images only to recent user messages", () => {
+    const img = "data:image/png;base64,AAAA";
+    const msgs = Array.from({ length: 8 }, (_, i) => ({ role: i % 2 ? ("assistant" as const) : ("user" as const), content: `m${i}`, images: i % 2 ? undefined : [img] }));
+    const out = toModelMessages(msgs);
+    expect(typeof out[0].content).toBe("string"); // 오래된 메시지: 사진 제외
+    expect(Array.isArray(out[6].content)).toBe(true);
+    expect((out[6].content as { type: string; mediaType?: string }[])[1]).toMatchObject({ type: "file", mediaType: "image/png", data: "AAAA" });
+  });
+});
+
+describe("service with mock model", () => {
+  it("streams a tutor reply in hint mode", async () => {
+    const r = tutorStream({ mode: "hint", grade: "고1", messages: [{ role: "user", content: "x^2-5x+6=0" }] }, mockModel());
+    let text = "";
+    for await (const t of r.textStream) text += t;
+    expect(text).toContain("두 일차식의 곱");
+  });
+
+  it("makes a structured material from curriculum", async () => {
+    const m = await makeMaterial({ kind: "curriculum", grade: "고1", course: "공통수학1", unit: "이차방정식" }, mockModel(), () => ({}));
+    expect(m.title).toBe("이차방정식의 풀이");
+    expect(m.keyPoints.length).toBeGreaterThan(0);
+    expect(m.sources).toEqual([]);
+  });
+
+  it("makes a quiz and applies verification fixes", async () => {
+    const quiz = { title: "t", questions: [q(), q({ prompt: "2+2는?", answer: "3" })] };
+    const verify = { results: [{ index: 1, correct: false, fixedAnswer: "4", fixedExplanation: "2+2=4" }] };
+    const r = await makeQuiz(
+      { grade: "고1", material: "자료", count: 5, types: ["multiple"], difficulty: "normal", verify: true },
+      jsonModel(quiz, verify),
+    );
+    expect(r.verified).toBe(true);
+    expect(r.questions.map((x) => x.answer)).toEqual(["2", "4"]);
+    expect(r.questions[1].explanation).toBe("2+2=4");
+  });
+
+  it("drops broken questions and respects the count", async () => {
+    const quiz = { title: "t", questions: [q(), q({ answer: "없는 답" }), q(), q()] };
+    const r = await makeQuiz({ grade: "고1", material: "자료", count: 2, types: ["multiple"], difficulty: "easy", verify: false }, jsonModel(quiz));
+    expect(r.questions).toHaveLength(2);
+    expect(r.verified).toBe(false);
+  });
+});
+
+describe("daily usage", () => {
+  it("counts per feature, refunds, and resets on a new Seoul day", async () => {
+    vi.stubEnv("AI_LIMIT_QUIZ", "2");
+    vi.resetModules();
+    const u = await import("./usage");
+    const cwd = process.cwd();
+    process.chdir(mkdtempSync(path.join(tmpdir(), "hs-")));
+    const day1 = new Date("2026-11-09T05:00:00Z"); // 서울 14시
+    expect(await u.consume("quiz", day1)).toBe(true);
+    expect(await u.consume("quiz", day1)).toBe(true);
+    expect(await u.consume("quiz", day1)).toBe(false);
+    await u.refund("quiz", day1);
+    expect(await u.consume("quiz", day1)).toBe(true);
+    // 서울 자정이 지나면 초기화 (UTC 15시 = 서울 0시)
+    expect(await u.consume("quiz", new Date("2026-11-09T15:30:00Z"))).toBe(true);
+    // 파일에서 다시 읽어도 유지
+    u.resetUsageMemory();
+    const usage = await u.getUsage(new Date("2026-11-09T16:00:00Z"));
+    expect(usage.find((x) => x.feature === "quiz")).toMatchObject({ used: 1, limit: 2 });
+    expect(u.seoulDate(new Date("2026-11-09T15:30:00Z"))).toBe("2026-11-10");
+    vi.unstubAllEnvs();
+    process.chdir(cwd);
+  });
+});
