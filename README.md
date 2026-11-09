@@ -1,0 +1,35 @@
+# 홈스터디
+
+펫과 함께 성장하는 중·고등학생 자기주도 학습 웹앱(PWA)입니다. 전체 계획은 [PLAN.md](./PLAN.md)를 보세요.
+
+## 실행 방법
+
+```bash
+npm install
+cp .env.example .env.local   # APP_PASSWORD, SESSION_SECRET 값을 채웁니다
+npm run dev                  # http://localhost:3000
+```
+
+- `.env.local`은 저장소에 올라가지 않습니다. 비밀번호를 바꾸면 기존 로그인은 모두 풀립니다.
+- 홈 화면 설치와 오프라인 지원(서비스 워커)은 `npm run build && npm start`로 실행한 경우에만 동작합니다.
+
+## 검사
+
+```bash
+npm test          # 단위 테스트 (Vitest)
+npm run typecheck
+npm run lint
+npm run build
+```
+
+## 구조
+
+| 경로 | 내용 |
+|---|---|
+| `src/proxy.ts`, `src/lib/auth.ts` | 비밀번호 잠금 (서명된 쿠키 세션) |
+| `src/lib/db/` | 기기 저장소(IndexedDB, Dexie) 스키마, 프로필, 백업 |
+| `src/lib/game/` | 레벨·경험치, 펫 성장·기분, 연속 학습일 |
+| `src/data/curriculum.ts` | 국·영·수·사·과 교육과정 기본 데이터 (중1~고3) |
+| `src/components/` | 게임 UI 컴포넌트, 펫 SVG, 앱 셸 |
+| `src/app/` | 화면 (홈, 플래너, 복습, AI 학습실, 성장, 학습법, 설정, 로그인, 첫 실행) |
+| `public/sw.js` | 서비스 워커 |

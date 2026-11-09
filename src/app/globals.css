@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* 홈스터디 디자인 토큰: 밝고 통통한 게임 UI */
+:root {
+  --bg: #fff8ef;
+  --bg-soft: #fff1dc;
+  --surface: #ffffff;
+  --surface-2: #fff6ea;
+  --ink: #2d2a32;
+  --ink-soft: #6b6474;
+  --line: #f0e0c8;
+  --primary: #ff8a3d;
+  --primary-deep: #d9661c;
+  --accent: #6c5ce7;
+  --accent-deep: #4b3cc4;
+  --success: #3fbf6f;
+  --success-deep: #279a52;
+  --xp: #ffc83d;
+  --xp-deep: #e0a106;
+  --danger: #f05454;
+  --shadow: 0 4px 0 rgba(45, 42, 50, 0.08);
+}
+
+:root[data-theme="dark"] {
+  --bg: #17151f;
+  --bg-soft: #1f1c2b;
+  --surface: #252233;
+  --surface-2: #2d2a3e;
+  --ink: #f4f1fa;
+  --ink-soft: #aaa3bd;
+  --line: #3a3650;
+  --primary: #ff9a52;
+  --primary-deep: #c76a26;
+  --accent: #8f82ff;
+  --accent-deep: #5f52d6;
+  --success: #4fd083;
+  --success-deep: #2f9a5b;
+  --xp: #ffd25c;
+  --xp-deep: #c99a12;
+  --danger: #ff6b6b;
+  --shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-soft: var(--bg-soft);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-primary-deep: var(--primary-deep);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-success: var(--success);
+  --color-success-deep: var(--success-deep);
+  --color-xp: var(--xp);
+  --color-xp-deep: var(--xp-deep);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-body), system-ui, sans-serif;
+}
+
+html {
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+/* 펫 애니메이션 */
+@keyframes pet-bounce {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  45% { transform: translateY(-6%) scale(0.97, 1.03); }
+  55% { transform: translateY(-6%) scale(0.97, 1.03); }
+  90% { transform: translateY(0) scale(1.04, 0.96); }
+}
+@keyframes pet-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+@keyframes pet-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes float-z {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(10px, -24px) scale(1); }
+}
+.pet-bounce { animation: pet-bounce 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+.pet-slow { animation: pet-sway 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+.pet-blink { animation: pet-blink 4s infinite; transform-box: fill-box; transform-origin: center; }
+.pet-z { animation: float-z 2.4s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-bounce, .pet-slow, .pet-blink, .pet-z { animation: none; }
+}
