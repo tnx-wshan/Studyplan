@@ -320,6 +320,7 @@ export default function CreateQuizPage() {
               📄 {material.title}
             </SectionTitle>
             <Card className="space-y-3">
+              {material.notice && <p className="rounded-2xl bg-xp/10 p-3 text-sm">⚠️ {material.notice}</p>}
               {showSummary && <Markdown>{material.summary}</Markdown>}
               {material.keyPoints.length > 0 && (
                 <div className="rounded-2xl bg-xp/10 p-3">

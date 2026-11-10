@@ -43,11 +43,14 @@ export function materialFromPdfPrompt(grade: string, subject?: string) {
 학생(${grade}${subject ? `, ${subject}` : ""})이 PDF 학습 자료를 올렸어. 시험 공부에 쓸 수 있게 핵심 개념을 정리해 줘. 자료에 있는 내용만 바탕으로 해.${MATERIAL_FORMAT}`;
 }
 
-export function webSearchPrompt(grade: string, query: string, subject?: string) {
+export function webSearchPrompt(grade: string, query: string, subject?: string, search = true) {
   return `${COMMON}
 학생(${grade}${subject ? `, ${subject}` : ""})이 "${query}"에 대해 공부하려고 해.
-웹 검색으로 믿을 만한 자료(교육 기관, 백과사전, 공공 자료 우선)를 찾아 학생 수준에 맞게 개념을 정리해 줘.
-여러 자료의 내용이 다르면 차이를 알려줘. 저작권이 있는 글을 길게 그대로 옮기지 말고 요약해.
+${
+  search
+    ? "웹 검색으로 믿을 만한 자료(교육 기관, 백과사전, 공공 자료 우선)를 찾아 학생 수준에 맞게 개념을 정리해 줘.\n여러 자료의 내용이 다르면 차이를 알려줘. 저작권이 있는 글을 길게 그대로 옮기지 말고 요약해."
+    : "한국 교육과정 수준에 맞게 개념을 정리해 줘. 확실하지 않은 내용은 쓰지 말고, 최신 정보가 필요한 부분은 그렇다고 알려줘."
+}
 소제목과 목록을 쓴 마크다운으로 답하고, 마지막에 '## 핵심' 아래 꼭 기억할 점 3~7개를 '- '로 적어줘.`;
 }
 

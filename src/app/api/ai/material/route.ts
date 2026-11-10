@@ -13,5 +13,5 @@ export async function POST(request: Request) {
   } catch (e) {
     return friendlyAiError(e);
   }
-  return withQuota("material", async () => NextResponse.json(await makeMaterial(body, ai.model, ai.webSearch)));
+  return withQuota("material", async () => NextResponse.json(await makeMaterial(body, ai.models, ai.webSearch)));
 }

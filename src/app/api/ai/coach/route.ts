@@ -14,6 +14,6 @@ export async function POST(request: Request) {
     return friendlyAiError(e);
   }
   return withQuota("coach", async () =>
-    NextResponse.json({ ...(await makeCoaching(body, ai.model)), madeBy: PROVIDER_LABELS[ai.setup.provider] }),
+    NextResponse.json({ ...(await makeCoaching(body, ai.models)), madeBy: PROVIDER_LABELS[ai.setup.provider] }),
   );
 }

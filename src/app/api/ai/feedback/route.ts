@@ -13,5 +13,5 @@ export async function POST(request: Request) {
   } catch (e) {
     return friendlyAiError(e);
   }
-  return withQuota("coach", async () => NextResponse.json(await makeFeedback(body, ai.model)));
+  return withQuota("coach", async () => NextResponse.json(await makeFeedback(body, ai.models)));
 }

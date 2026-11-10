@@ -4,7 +4,7 @@ import path from "node:path";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import { mockModel } from "./mock";
-import { makeMaterial, makeQuiz, normalizeQuestion, parseWebAnswer, toModelMessages, tutorStream } from "./service";
+import { fixNewlines, makeMaterial, makeQuiz, normalizeQuestion, parseWebAnswer, startTutorStream, toModelMessages, tutorStream, withFallback } from "./service";
 
 const usage = {
   inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
@@ -135,5 +135,72 @@ describe("daily usage", () => {
     expect(u.seoulDate(new Date("2026-11-09T15:30:00Z"))).toBe("2026-11-10");
     vi.unstubAllEnvs();
     process.chdir(cwd);
+  });
+});
+
+describe("model fallback", () => {
+  const failing = () =>
+    new MockLanguageModelV4({
+      doGenerate: async () => {
+        throw new Error("503 UNAVAILABLE: high demand");
+      },
+      doStream: async () => {
+        throw new Error("503 UNAVAILABLE: high demand");
+      },
+    });
+
+  it("moves to the next model when one fails, and throws the last error if all fail", async () => {
+    const tried: string[] = [];
+    const r = await withFallback(["a", "b", "c"] as never, async (m) => {
+      tried.push(String(m));
+      if (m !== ("c" as never)) throw new Error(`fail ${m}`);
+      return "ok";
+    });
+    expect(r).toBe("ok");
+    expect(tried).toEqual(["a", "b", "c"]);
+    await expect(withFallback(["a", "b"] as never, async (m) => Promise.reject(new Error(`fail ${m}`)))).rejects.toThrow("fail b");
+  });
+
+  it("falls back for structured generation", async () => {
+    const quiz = { title: "t", questions: [q()] };
+    const r = await makeQuiz({ grade: "고1", material: "자료", count: 3, types: ["multiple"], difficulty: "easy", verify: false }, [failing(), jsonModel(quiz)]);
+    expect(r.questions).toHaveLength(1);
+  });
+
+  it("starts the tutor stream on the first model that produces text", async () => {
+    const { first, rest } = await startTutorStream({ mode: "solution", grade: "고1", messages: [{ role: "user", content: "풀이" }] }, [failing(), mockModel()]);
+    let text = first;
+    for (;;) {
+      const next = await rest.next();
+      if (next.done) break;
+      if (next.value.type === "text-delta") text += next.value.text;
+    }
+    expect(text).toContain("정답:");
+    await expect(startTutorStream({ mode: "hint", grade: "고1", messages: [{ role: "user", content: "x" }] }, [failing()])).rejects.toThrow("503");
+  });
+});
+
+describe("output cleanup and web fallback", () => {
+  it("turns literal \\n into newlines but keeps LaTeX commands", () => {
+    expect(fixNewlines("### 제목\\n내용\\n\\n* 목록")).toBe("### 제목\n내용\n\n* 목록");
+    expect(fixNewlines("$a \\neq 0$, $\\nabla f$, $\\nu$")).toBe("$a \\neq 0$, $\\nabla f$, $\\nu$");
+  });
+
+  it("answers without search and says so when web search fails", async () => {
+    let calls = 0;
+    const model = new MockLanguageModelV4({
+      doGenerate: async (options) => {
+        calls++;
+        if (options.tools?.length) throw new Error("429 quota exceeded");
+        return { content: [{ type: "text", text: "## 개념\\n설명\n\n## 핵심\n- 하나" }], finishReason: { unified: "stop", raw: undefined }, usage, warnings: [] };
+      },
+    });
+    const tools = { search: { type: "provider" as const, id: "x.search", args: {} } } as never;
+    const m = await makeMaterial({ kind: "web", grade: "중2", query: "광합성" }, model, () => tools);
+    expect(calls).toBe(2);
+    expect(m.notice).toContain("웹 검색을 쓸 수 없어서");
+    expect(m.sources).toEqual([]);
+    expect(m.summary).toBe("## 개념\n설명");
+    expect(m.keyPoints).toEqual(["하나"]);
   });
 });

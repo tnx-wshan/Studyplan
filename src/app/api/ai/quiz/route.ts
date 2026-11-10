@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return friendlyAiError(e);
   }
   return withQuota("quiz", async () => {
-    const quiz = await makeQuiz(body, ai.model);
+    const quiz = await makeQuiz(body, ai.models);
     if (quiz.questions.length === 0) throw new Error("no usable questions");
     return NextResponse.json(quiz);
   });
