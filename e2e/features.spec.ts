@@ -77,7 +77,7 @@ test("기억 지도: 공부한 단원의 기억 상태와 복습 예보", async 
   await page.goto("/review");
   await expect(page.getByText(/내일 복습 1개 예정/)).toBeVisible();
   await page.getByRole("link", { name: /기억 지도/ }).click();
-  await expect(page.getByText(/복습 1개/)).toBeVisible(); // 예보: 내일
+  await expect(page.getByText(/카드 0 · 오답 0 · 간격 복습 1/)).toBeVisible(); // 예보: 내일
   const unit = page.getByRole("button", { name: /인수분해/ });
   await expect(unit).toContainText("100%");
   await expect(unit).toContainText("선명");

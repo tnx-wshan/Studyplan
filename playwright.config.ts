@@ -10,6 +10,8 @@ export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
   workers: 1,
+  // 알려진 문제: 로그인 직후 가끔 화면이 멈추는 현상이 있어(PLAN.md 참고) 고칠 때까지 한 번 재시도한다
+  retries: 1,
   timeout: 120_000,
   expect: { timeout: 10_000 },
   reporter: [["list"]],

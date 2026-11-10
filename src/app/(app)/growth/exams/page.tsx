@@ -86,6 +86,13 @@ function TrendChart({ series, subjectMap }: { series: TrendSeries[]; subjectMap:
     return exams.length === 1 ? (pad.l + W - pad.r) / 2 : pad.l + (i / (exams.length - 1)) * (W - pad.l - pad.r);
   };
   const y = (score: number) => pad.t + (1 - score / 100) * (H - pad.t - pad.b);
+  // 선 끝 이름표: 점수가 비슷하면 겹치므로 위에서부터 최소 간격(11)을 두고 밀어낸다
+  const labelY = new Map<string, number>();
+  let prevY = -Infinity;
+  for (const item of series.map((s) => ({ id: s.subjectId, y: y(s.points.at(-1)!.score) + 3 })).sort((a, b) => a.y - b.y)) {
+    prevY = Math.max(item.y, prevY + 11);
+    labelY.set(item.id, prevY);
+  }
   const shown = series.flatMap((s) => s.points.map((p) => ({ ...p, subjectId: s.subjectId }))).find((p) => `${p.subjectId}:${p.examId}` === active);
 
   return (
@@ -140,7 +147,7 @@ function TrendChart({ series, subjectMap }: { series: TrendSeries[]; subjectMap:
                   </g>
                 );
               })}
-              <text x={x(last.examId) + 8} y={y(last.score) + 3} fontSize="10" fill="var(--ink)">
+              <text x={x(last.examId) + 8} y={labelY.get(s.subjectId)} fontSize="10" fill="var(--ink)">
                 {subjectMap.get(s.subjectId)?.name ?? "과목"}
               </text>
             </g>

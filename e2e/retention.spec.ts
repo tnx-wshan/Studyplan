@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { daysAgo, noHorizontalScroll, rewindTimer, seedPast, startFresh } from "./helpers";
+import { daysAgo, dismissRankUp, noHorizontalScroll, rewindTimer, seedPast, startFresh } from "./helpers";
 
 test("5분만 시작 → 더 할지 묻기, 주간 목표 정하고 달성 보상", async ({ page }) => {
   const errors = await startFresh(page);
@@ -26,12 +26,11 @@ test("5분만 시작 → 더 할지 묻기, 주간 목표 정하고 달성 보�
   await rewindTimer(page, 120);
   await page.getByRole("button", { name: /끝내고 기록/ }).click();
   await expect(page.getByText(/집중 120분 기록/)).toBeVisible();
+  await dismissRankUp(page); // 125 XP → RANK 2
 
   await page.goto("/");
   // 오늘 기록이 생겼으니 '5분 시작' 카드는 사라진다
   await expect(page.getByRole("button", { name: "5분 시작" })).toHaveCount(0);
-  const rank = page.getByText("RANK UP");
-  if (await rank.isVisible().catch(() => false)) await page.getByRole("button", { name: "확인" }).click();
   await page.getByRole("button", { name: /목표 달성! \+50 XP 받기/ }).click();
   await expect(page.getByText("주간 목표 달성! +50 XP")).toBeVisible();
 
@@ -58,6 +57,8 @@ test("복귀 환영: 오래 쉬었다 오면 가벼운 퀘스트를 준다", asy
 
   // 5분 집중으로 첫 복귀 퀘스트 완료
   await page.getByRole("button", { name: "5분 시작" }).click();
+  await expect(page).toHaveURL(/\/timer/);
+  await expect(page.getByText("집중 5분")).toBeVisible();
   await rewindTimer(page, 6);
   await expect(page.getByText("5분 완료! 오늘 기록이 남았어요 ✓")).toBeVisible();
   await page.goto("/");
