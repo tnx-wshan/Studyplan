@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatClock, initialTimer, pause, remaining, resume, start, stop, tick } from "./timer";
+import { formatClock, initialTimer, pause, remaining, resume, start, startQuick, stop, tick } from "./timer";
 
 const M = 60_000;
 
@@ -44,5 +44,15 @@ describe("timer", () => {
   it("formats the clock", () => {
     expect(formatClock(25 * M)).toBe("25:00");
     expect(formatClock(61_500)).toBe("01:02");
+  });
+
+  it("quick start ends after 5 minutes without a break and asks to continue", () => {
+    const s = startQuick(initialTimer(), 0, "m");
+    expect(remaining(s, 0)).toBe(5 * M);
+    const r = tick(s, 6 * M);
+    expect(r.completed).toMatchObject({ minutes: 5, endedAt: 5 * M, subjectId: "m" });
+    expect(r.state).toMatchObject({ phase: "idle", quickDone: true, quick: false });
+    // 이어서 시작하면 묻는 상태가 사라진다
+    expect(start(r.state, 7 * M, { focusMin: 25, breakMin: 5 })).toMatchObject({ quickDone: false, quick: false, phase: "focus" });
   });
 });

@@ -1,7 +1,7 @@
 import { addDays, toDateKey } from "@/lib/date";
 
 /** 최근 몇 주간의 공부 기록 잔디 */
-export function StudyGrass({ days, weeks = 8 }: { days: Set<string>; weeks?: number }) {
+export function StudyGrass({ days, frozen, weeks = 8 }: { days: Set<string>; frozen?: Set<string>; weeks?: number }) {
   const today = toDateKey();
   const todayDow = new Date().getDay(); // 0=일
   const start = addDays(today, -(weeks * 7 - 1) - (6 - todayDow));
@@ -17,10 +17,10 @@ export function StudyGrass({ days, weeks = 8 }: { days: Set<string>; weeks?: num
             {col.map((d) => (
               <div
                 key={d}
-                title={d}
+                title={frozen?.has(d) ? `${d} (보호권 사용)` : d}
                 className="aspect-square w-full rounded-[4px]"
                 style={{
-                  background: d > today ? "transparent" : days.has(d) ? "var(--success)" : "var(--surface-2)",
+                  background: d > today ? "transparent" : days.has(d) ? "var(--success)" : frozen?.has(d) ? "repeating-linear-gradient(45deg, var(--accent) 0 2px, var(--surface-2) 2px 5px)" : "var(--surface-2)",
                   outline: d === today ? "2px solid var(--primary)" : undefined,
                 }}
               />

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { levelFromXp, xpToNext } from "./level";
 import { moodFromDaysSince, nextStage, stageForLevel } from "./pet";
-import { computeStreak } from "./streak";
+import { computeStreak, daysToFreeze } from "./streak";
 
 describe("level", () => {
   it("starts at level 1", () => {
@@ -60,5 +60,28 @@ describe("streak", () => {
   });
   it("handles month and year boundaries", () => {
     expect(computeStreak(["2025-12-31", "2026-01-01"], "2026-01-01").current).toBe(2);
+  });
+});
+
+describe("streak freeze", () => {
+  const today = "2026-11-12";
+  it("bridges a frozen day without counting it", () => {
+    // 9, 10 공부 / 11 보호권 / 12 공부
+    const s = computeStreak(["2026-11-09", "2026-11-10", "2026-11-12"], today, ["2026-11-11"]);
+    expect(s).toEqual({ current: 3, longest: 3, studiedToday: true });
+    expect(computeStreak(["2026-11-09", "2026-11-10", "2026-11-12"], today).current).toBe(1);
+  });
+  it("keeps the streak alive today after a frozen yesterday", () => {
+    expect(computeStreak(["2026-11-09", "2026-11-10"], today, ["2026-11-11"]).current).toBe(2);
+  });
+  it("picks days to freeze only when freezes cover the whole gap", () => {
+    const days = ["2026-11-09", "2026-11-10"];
+    expect(daysToFreeze(days, [], 1, today)).toEqual(["2026-11-11"]);
+    expect(daysToFreeze(days, [], 0, today)).toEqual([]);
+    expect(daysToFreeze(days, ["2026-11-11"], 1, today)).toEqual([]); // 이미 메움
+    expect(daysToFreeze(days, [], 1, "2026-11-13")).toEqual([]); // 이틀 빠짐, 보호권 1개
+    expect(daysToFreeze(days, [], 2, "2026-11-13")).toEqual(["2026-11-11", "2026-11-12"]);
+    expect(daysToFreeze([], [], 2, today)).toEqual([]); // 기록 없음
+    expect(daysToFreeze(["2026-11-11"], [], 2, today)).toEqual([]); // 빠진 날 없음
   });
 });

@@ -8,6 +8,7 @@ import { usePetState, useProfile } from "@/lib/hooks";
 import { cn, Pill } from "./ui";
 import { LevelUp } from "./LevelUp";
 import { BadgeWatcher } from "./game/BadgeWatcher";
+import { RetentionWatcher } from "./game/RetentionWatcher";
 import { OfflineWarmup } from "./ServiceWorker";
 import { TimerWatcher } from "./TimerWatcher";
 import { Toaster } from "./Toaster";
@@ -67,10 +68,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 /** 자정이 지나면 화면을 다시 그려서 '오늘'이 새 날짜가 되게 한다 (프로필을 불러온 뒤에만 그려진다) */
 function DatedMain({ children }: { children: ReactNode }) {
   useMinuteTick();
+  const today = toDateKey();
   return (
-    <main key={toDateKey()} className="flex-1 px-4 pb-28 pt-2">
-      {children}
-    </main>
+    <>
+      <RetentionWatcher today={today} />
+      <main key={today} className="flex-1 px-4 pb-28 pt-2">
+        {children}
+      </main>
+    </>
   );
 }
 

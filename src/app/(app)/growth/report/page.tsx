@@ -14,6 +14,7 @@ import { METHODS, methodById } from "@/data/methods";
 import { requestCoach } from "@/lib/ai/client";
 import { getDB } from "@/lib/db";
 import { loadReportInput, saveCoachReport, saveReflection } from "@/lib/db/coaching";
+import { addTask } from "@/lib/db/study";
 import type { Reflection } from "@/lib/db/types";
 import { toDateKey } from "@/lib/date";
 import { useProfile } from "@/lib/hooks";
@@ -322,6 +323,20 @@ function Coaching({ period, stats }: { period: Period; stats: string }) {
           {report.strengths.length > 0 && <Bullets title="👍 잘한 점" items={report.strengths} />}
           {report.improvements.length > 0 && <Bullets title="🌱 보완할 점" items={report.improvements} />}
           {report.goals.length > 0 && <Bullets title="🎯 다음 목표" items={report.goals} />}
+          {report.goals.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full"
+              onClick={async () => {
+                const date = shiftPeriod(periodFor("week", toDateKey()), 1).start;
+                for (const g of report.goals) await addTask({ date, title: `[주간 목표] ${g}`.slice(0, 60) });
+                toast(`목표 ${report.goals.length}개를 다음 주 월요일 할 일로 넣었어요`);
+              }}
+            >
+              🗓️ 목표를 다음 주 플래너에 넣기
+            </Button>
+          )}
           {report.recommendations.length > 0 && (
             <div className="space-y-2">
               <p className="font-display text-sm">💡 추천 학습법</p>

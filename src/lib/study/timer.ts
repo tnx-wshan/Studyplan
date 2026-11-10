@@ -20,6 +20,10 @@ export interface TimerState {
   phaseStartedAt: number | null;
   /** 오늘 끝낸 집중 구간 수 */
   cycles: number;
+  /** '5분만 시작' 모드: 끝나면 휴식 없이 "더 할까요?"를 묻는다 */
+  quick?: boolean;
+  /** '5분만 시작'을 방금 끝냈는지 (더 할지 묻는 화면 표시용) */
+  quickDone?: boolean;
   /** 아직 저장하지 못한 집중 기록 (저장 중 앱이 닫혀도 다음에 이어서 저장) */
   pending?: CompletedFocus[];
 }
@@ -58,8 +62,15 @@ export function remaining(s: TimerState, now: number): number {
   return Math.max(0, phaseLength(s) - elapsed(s, now));
 }
 
-export function start(s: TimerState, now: number, opts: Partial<Pick<TimerState, "mode" | "focusMin" | "breakMin" | "subjectId" | "taskId">> = {}): TimerState {
-  return { ...s, ...opts, phase: "focus", runningSince: now, accumulated: 0, phaseStartedAt: now };
+export function start(s: TimerState, now: number, opts: Partial<Pick<TimerState, "mode" | "focusMin" | "breakMin" | "subjectId" | "taskId" | "quick">> = {}): TimerState {
+  return { ...s, quick: false, ...opts, quickDone: false, phase: "focus", runningSince: now, accumulated: 0, phaseStartedAt: now };
+}
+
+export const QUICK_MINUTES = 5;
+
+/** '5분만 시작': 5분 집중, 휴식 없음 */
+export function startQuick(s: TimerState, now: number, subjectId?: string): TimerState {
+  return start(s, now, { mode: "pomodoro", focusMin: QUICK_MINUTES, breakMin: 0, subjectId, taskId: undefined, quick: true });
 }
 
 export function pause(s: TimerState, now: number): TimerState {
@@ -93,6 +104,13 @@ export function tick(s: TimerState, now: number): { state: TimerState; completed
   const el = elapsed(s, now);
   if (el < len) return { state: s };
   const endedAt = now - (el - len); // 실제로 끝난 시각
+  if (s.phase === "focus" && s.quick) {
+    // 휴식으로 넘기지 않고, 더 할지 묻는 상태로 끝낸다
+    return {
+      state: { ...s, phase: "idle", runningSince: null, accumulated: 0, phaseStartedAt: null, cycles: s.cycles + 1, quick: false, quickDone: true },
+      completed: focusRecord(s, endedAt, len),
+    };
+  }
   if (s.phase === "focus") {
     return {
       state: { ...s, phase: "break", runningSince: endedAt, accumulated: 0, phaseStartedAt: endedAt, cycles: s.cycles + 1 },
@@ -106,7 +124,7 @@ export function tick(s: TimerState, now: number): { state: TimerState; completed
 /** 그만하기. 집중 중이었으면 지금까지 한 만큼 기록한다. */
 export function stop(s: TimerState, now: number): { state: TimerState; completed?: CompletedFocus } {
   const ms = elapsed(s, now);
-  const next: TimerState = { ...s, phase: "idle", runningSince: null, accumulated: 0, phaseStartedAt: null };
+  const next: TimerState = { ...s, phase: "idle", runningSince: null, accumulated: 0, phaseStartedAt: null, quick: false, quickDone: false };
   if (s.phase === "focus" && ms >= 60_000) return { state: next, completed: focusRecord(s, now, ms) };
   return { state: next };
 }

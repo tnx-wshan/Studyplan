@@ -25,6 +25,14 @@ export interface Profile extends Base {
   equipped?: { accessory?: string; background?: string };
   /** 칭호로 쓰는 업적 id */
   titleBadge?: string;
+  /** 연속 기록 보호권 개수 (최대 2) */
+  freezes?: number;
+  /** 보호권을 쓴 날짜들 */
+  frozenDays?: string[];
+  /** 오래 쉬었다 돌아온 날 (복귀 환영 표시용) */
+  comeback?: { date: string; awayDays: number };
+  /** 주간 집중 목표(분): 주 키 → 목표 */
+  weeklyGoals?: Record<string, number>;
   onboardedAt: number;
   /** 레벨이 올랐지만 아직 축하 화면을 보지 않았을 때, 오르기 전 레벨 */
   levelUpFrom?: number;

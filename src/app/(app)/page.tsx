@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { CompanionCard } from "@/components/game/CompanionCard";
 import { QuestBoard } from "@/components/game/QuestBoard";
+import { ComebackCard, QuickStartCard, WeeklyGoalCard } from "@/components/game/RetentionCards";
+import { MAX_FREEZES } from "@/lib/game/streak";
 import { StudyGrass } from "@/components/StudyGrass";
 import { buttonStyles, Card, SectionTitle } from "@/components/ui";
 import { usePetState, useStudyDays } from "@/lib/hooks";
@@ -25,6 +27,12 @@ export default function HomePage() {
     <div className="space-y-5">
       <CompanionCard />
 
+      <ComebackCard />
+
+      <QuickStartCard studiedToday={streak.studiedToday} streak={streak.current} />
+
+      <WeeklyGoalCard />
+
       <QuestBoard />
 
       <TodayOverview />
@@ -41,11 +49,17 @@ export default function HomePage() {
       </div>
 
       <section>
-        <SectionTitle action={<span className="text-sm text-ink-soft">최장 {streak.longest}일</span>}>
+        <SectionTitle
+          action={
+            <span className="text-sm text-ink-soft">
+              <span title="연속 기록 보호권: 하루 쉬어도 연속 기록을 지켜줘요">🛡️ {profile.freezes ?? 0}/{MAX_FREEZES}</span> · 최장 {streak.longest}일
+            </span>
+          }
+        >
           🔥 공부 잔디 · {streak.current}일 연속
         </SectionTitle>
         <Card>
-          <StudyGrass days={study.days} weeks={12} />
+          <StudyGrass days={study.days} frozen={study.frozenDays} weeks={12} />
         </Card>
       </section>
 

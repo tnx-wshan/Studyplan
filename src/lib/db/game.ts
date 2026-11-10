@@ -76,7 +76,7 @@ export async function computeTotals(): Promise<Totals> {
   const [profile, reflections] = await Promise.all([db.profile.get("me"), db.reflections.count()]);
   const days = new Set([...input.sessions.map((s) => s.date), ...input.xpEvents.map((e) => e.date)]);
   return {
-    longestStreak: computeStreak(days).longest,
+    longestStreak: computeStreak(days, undefined, profile?.frozenDays).longest,
     totalMinutes: input.sessions.reduce((s, x) => s + x.focusMinutes, 0),
     cardsReviewed: input.xpEvents.filter((e) => e.reason === "card").length,
     wrongMastered: input.wrongAnswers.filter((w) => w.mastered).length,

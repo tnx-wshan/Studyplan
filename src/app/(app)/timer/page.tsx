@@ -11,7 +11,7 @@ import { getDB } from "@/lib/db";
 import { setTaskDone } from "@/lib/db/study";
 import { toDateKey } from "@/lib/date";
 import { usePetState } from "@/lib/hooks";
-import { PRESETS, elapsed, formatClock, pause, phaseLength, remaining, resume, start, stop, type TimerMode } from "@/lib/study/timer";
+import { PRESETS, elapsed, formatClock, pause, phaseLength, remaining, resume, start, startQuick, stop, type TimerMode } from "@/lib/study/timer";
 import { getTimer, setTimer, useNow, useTimerState } from "@/lib/timerStore";
 
 export default function TimerPage() {
@@ -27,9 +27,30 @@ function TimerScreen() {
   return (
     <div className="space-y-5">
       <PageHeader title="⏱️ 집중 타이머" />
+      {timer.phase === "idle" && timer.quickDone && <QuickDone />}
       {timer.phase === "idle" ? <Setup /> : <Running />}
       <TodaySummary />
     </div>
+  );
+}
+
+/** '5분만 시작'을 끝낸 뒤: 더 할지 묻는다 */
+function QuickDone() {
+  const more = (focusMin: number, breakMin: number) => setTimer(start(getTimer(), Date.now(), { mode: "pomodoro", focusMin, breakMin }));
+  return (
+    <Card className="space-y-3 border-success text-center">
+      <p className="font-display text-xl">5분 완료! 오늘 기록이 남았어요 ✓</p>
+      <p className="text-sm text-ink-soft">시작이 제일 어려운 부분이에요. 이 흐름으로 조금만 더 해볼까요?</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Button onClick={() => more(15, 3)}>15분 더</Button>
+        <Button variant="accent" onClick={() => more(25, 5)}>
+          25분 더
+        </Button>
+      </div>
+      <button type="button" className="text-sm text-ink-soft underline" onClick={() => setTimer({ ...getTimer(), quickDone: false })}>
+        오늘은 여기까지
+      </button>
+    </Card>
   );
 }
 
@@ -127,6 +148,9 @@ function Setup() {
       <Button size="lg" className="w-full" onClick={onStart}>
         ▶ 집중 시작
       </Button>
+      <button type="button" className="w-full text-center text-sm text-ink-soft underline" onClick={() => setTimer(startQuick(getTimer(), Date.now(), subjectId))}>
+        ⚡ 하기 싫은 날엔 5분만 시작하기
+      </button>
 
       {notifyState === "default" && (
         <button

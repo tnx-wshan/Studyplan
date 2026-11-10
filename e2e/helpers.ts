@@ -48,3 +48,37 @@ export const TINY_PNG = {
   mimeType: "image/png",
   buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"),
 };
+
+/** n일 전 날짜 (YYYY-MM-DD, 브라우저 시간대 기준) */
+export function daysAgo(page: Page, n: number) {
+  return page.evaluate((days) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }, n);
+}
+
+/** 기기 DB에 과거 공부 기록을 넣고, 필요하면 프로필 값을 바꾼다 */
+export async function seedPast(page: Page, dates: string[], profilePatch: Record<string, unknown> = {}) {
+  await page.evaluate(
+    ({ dates, profilePatch }) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open("homestudy");
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const tx = db.transaction(["xpEvents", "profile"], "readwrite");
+          dates.forEach((date, i) => tx.objectStore("xpEvents").put({ id: `seed-${date}-${i}`, at: new Date(`${date}T12:00:00`).getTime(), date, amount: 10, reason: "task" }));
+          const store = tx.objectStore("profile");
+          const get = store.get("me");
+          get.onsuccess = () => store.put({ ...get.result, ...profilePatch });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    { dates, profilePatch },
+  );
+}

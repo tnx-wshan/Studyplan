@@ -17,9 +17,10 @@ export function useStudyDays() {
   return useLiveQuery(
     async () => {
       const db = getDB();
-      const [sessions, xp] = await Promise.all([
+      const [sessions, xp, profile] = await Promise.all([
         db.studySessions.orderBy("date").uniqueKeys(),
         db.xpEvents.orderBy("date").uniqueKeys(),
+        db.profile.get("me"),
       ]);
       const days = new Set([...(sessions as string[]), ...(xp as string[])]);
       const today = toDateKey();
@@ -27,7 +28,8 @@ export function useStudyDays() {
       const last = sorted.at(-1) ?? null;
       return {
         days,
-        streak: computeStreak(days, today),
+        streak: computeStreak(days, today, profile?.frozenDays),
+        frozenDays: new Set(profile?.frozenDays ?? []),
         daysSinceLast: last ? daysBetween(last, today) : null,
       };
     },
