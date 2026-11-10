@@ -82,6 +82,9 @@ export default function GrowthPage() {
           이번 주 회고
         </Link>
       </div>
+      <Link href="/growth/exams" className={buttonStyles("ghost", "md", "w-full")}>
+        📈 시험 성적
+      </Link>
       <Link href="/growth/badges" className={buttonStyles("ghost", "md", "w-full")}>
         🏆 업적과 칭호
       </Link>

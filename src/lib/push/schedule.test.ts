@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueReminders, reminderMessage, seoulClock, type SubscriptionState } from "./schedule";
+import { dueReminders, dueRoutineReminders, reminderMessage, routineKey, routineMessage, seoulClock, type SubscriptionState } from "./schedule";
 
 const base: SubscriptionState = {
   settings: { review: "19:00", plan: "16:00", streak: "21:00", style: "noir" },
@@ -32,11 +32,24 @@ describe("dueReminders", () => {
 
 describe("helpers", () => {
   it("reads Seoul time", () => {
-    expect(seoulClock(new Date("2026-11-11T12:30:00Z"))).toEqual({ date: "2026-11-11", minutes: 21 * 60 + 30 });
-    expect(seoulClock(new Date("2026-11-11T15:05:00Z"))).toEqual({ date: "2026-11-12", minutes: 5 });
+    expect(seoulClock(new Date("2026-11-11T12:30:00Z"))).toEqual({ date: "2026-11-11", minutes: 21 * 60 + 30, weekday: 3 });
+    expect(seoulClock(new Date("2026-11-11T15:05:00Z"))).toEqual({ date: "2026-11-12", minutes: 5, weekday: 4 });
   });
   it("has messages for both styles", () => {
     expect(reminderMessage("streak", "noir").url).toBe("/timer");
     expect(reminderMessage("review", "cute").title).toContain("복습");
+  });
+});
+
+describe("routine reminders", () => {
+  const routine = { id: "r1", title: "저녁 수학", time: "20:00", days: [1, 3], minutes: 30 };
+  const sub: SubscriptionState = { settings: { ...base.settings, routines: [routine] }, lastSent: {} };
+  it("fires on the routine's weekdays at its time, once a day", () => {
+    // 2026-11-11은 수요일(3)
+    expect(dueRoutineReminders(sub, clock("20:03"))).toEqual([routine]);
+    expect(dueRoutineReminders(sub, clock("19:59"))).toEqual([]);
+    expect(dueRoutineReminders(sub, clock("20:03", "2026-11-12"))).toEqual([]); // 목요일
+    expect(dueRoutineReminders({ ...sub, lastSent: { [routineKey("r1")]: "2026-11-11" } }, clock("20:03"))).toEqual([]);
+    expect(routineMessage(routine, "cute").body).toContain("저녁 수학 30분");
   });
 });

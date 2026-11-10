@@ -9,7 +9,7 @@ import { TaskRow } from "@/components/planner/TaskRow";
 import { toast } from "@/components/Toaster";
 import { Button, Card, ProgressBar, SectionTitle, buttonStyles, cn } from "@/components/ui";
 import { getDB } from "@/lib/db";
-import { carryOverToToday } from "@/lib/db/study";
+import { carryOverToToday, examsAwaitingResult } from "@/lib/db/study";
 import { addDays, daysBetween, parseDateKey, toDateKey } from "@/lib/date";
 
 function weekStart(key: string) {
@@ -28,6 +28,7 @@ export default function PlannerPage() {
   const weekTasks = useLiveQuery(() => getDB().tasks.where("date").between(days[0], days[6], true, true).toArray(), [days[0], days[6]]);
   const pastUndone = useLiveQuery(() => getDB().tasks.where("date").below(today).filter((t) => !t.done).count(), [today]);
   const exams = useLiveQuery(() => getDB().exams.where("date").aboveOrEqual(today).sortBy("date"), [today]);
+  const awaiting = useLiveQuery(() => examsAwaitingResult(today), [today]);
   const examTasks = useLiveQuery(async () => {
     const all = await getDB().tasks.filter((t) => !!t.examId && t.kind !== "spaced").toArray();
     const map = new Map<string, { done: number; total: number }>();
@@ -48,9 +49,14 @@ export default function PlannerPage() {
       <PageHeader
         title="🗓️ 플래너"
         action={
-          <Link href="/planner/exam/new" className={buttonStyles("accent", "sm")}>
+          <div className="flex gap-1.5">
+            <Link href="/planner/routines" className={buttonStyles("ghost", "sm")}>
+              🔁 루틴
+            </Link>
+            <Link href="/planner/exam/new" className={buttonStyles("accent", "sm")}>
             + 시험 계획
           </Link>
+          </div>
         }
       />
 
@@ -76,6 +82,22 @@ export default function PlannerPage() {
           })}
         </div>
       )}
+
+      {awaiting?.map((e) => (
+        <Link key={e.id} href={`/planner/exam?id=${e.id}`} className="block">
+          <Card className="flex items-center gap-3 border-accent">
+            <span aria-hidden className="text-2xl">
+              📊
+            </span>
+            <p className="flex-1 text-sm">
+              <b className="font-display">{e.title}</b> 수고했어요! 결과와 돌아보기를 기록해요. <span className="text-xp-deep">+30 XP</span>
+            </p>
+            <span aria-hidden className="text-ink-soft">
+              ›
+            </span>
+          </Card>
+        </Link>
+      ))}
 
       {!!pastUndone && (
         <Card className="flex items-center gap-3 border-xp bg-xp/10">

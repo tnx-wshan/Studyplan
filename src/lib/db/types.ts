@@ -31,6 +31,8 @@ export interface Profile extends Base {
   frozenDays?: string[];
   /** 오래 쉬었다 돌아온 날 (복귀 환영 표시용) */
   comeback?: { date: string; awayDays: number };
+  /** 읽은 동료의 기록 (테마 공통 키) */
+  readRecords?: string[];
   /** 주간 집중 목표(분): 주 키 → 목표 */
   weeklyGoals?: Record<string, number>;
   onboardedAt: number;
@@ -58,6 +60,14 @@ export interface Exam extends Base {
   minutesPerDay: number;
   /** 쉬는 요일 (0=일 ~ 6=토) */
   restDays: number[];
+  /** 과목별 목표 점수 (과목 id → 0~100) */
+  goals?: Record<string, number>;
+  /** 과목별 실제 점수 */
+  results?: Record<string, number>;
+  /** 시험 뒤 돌아보기 */
+  resultNote?: { worked: string; change: string };
+  resultAt?: number;
+  resultXpGranted?: boolean;
 }
 
 export type TaskKind = "custom" | "learn" | "review" | "final" | "spaced";
@@ -78,6 +88,24 @@ export interface Task extends Base {
   examId?: string;
   /** 간격 복습 할 일이 몇 번째 복습인지 (1·3·7·14일) */
   spacedStep?: number;
+  /** 루틴에서 만들어진 할 일 */
+  routineId?: string;
+  /** 시작 시각 "HH:MM" (루틴) */
+  time?: string;
+}
+
+/** 매주 반복하는 고정 공부 루틴 */
+export interface Routine extends Base {
+  title: string;
+  subjectId?: string;
+  minutes: number;
+  /** 요일 (0=일 ~ 6=토) */
+  days: number[];
+  /** 시작 시각 "HH:MM" (없으면 시각 없이) */
+  time?: string;
+  active: boolean;
+  /** 이 날짜까지는 할 일을 이미 만들었다 */
+  generatedThrough?: string;
 }
 
 export interface StudySession extends Base {

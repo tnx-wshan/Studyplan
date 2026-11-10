@@ -7,6 +7,7 @@ import { TaskRow } from "@/components/planner/TaskRow";
 import { Card, SectionTitle, buttonStyles } from "@/components/ui";
 import { getDB } from "@/lib/db";
 import { toDateKey } from "@/lib/date";
+import { reviewForecast } from "@/lib/study/memory";
 import { useMinuteTick } from "@/lib/timerStore";
 
 export default function ReviewPage() {
@@ -17,6 +18,11 @@ export default function ReviewPage() {
   const totalCards = useLiveQuery(() => getDB().cards.count(), []);
   const dueWrong = useLiveQuery(() => getDB().wrongAnswers.where("nextRetry").belowOrEqual(today).filter((w) => !w.mastered).count(), [today]);
   const totalWrong = useLiveQuery(() => getDB().wrongAnswers.count(), []);
+  const tomorrow = useLiveQuery(async () => {
+    const db = getDB();
+    const [cards, wrong, tasks] = await Promise.all([db.cards.toArray(), db.wrongAnswers.toArray(), db.tasks.where("date").aboveOrEqual(today).toArray()]);
+    return reviewForecast(cards, wrong, tasks, today, 2)[1].total;
+  }, [today]);
   const spaced = useLiveQuery(() => getDB().tasks.where("date").equals(today).filter((t) => t.kind === "spaced").toArray(), [today]);
 
   return (
@@ -59,6 +65,23 @@ export default function ReviewPage() {
           )}
         </Card>
       </div>
+
+      <Link href="/review/map" className="block">
+        <Card className="flex items-center gap-3">
+          <span aria-hidden className="text-3xl">
+            🧠
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-display">기억 지도</p>
+            <p className="text-sm text-ink-soft">
+              {tomorrow === undefined ? "단원별 기억 상태와 복습 예보" : tomorrow > 0 ? `내일 복습 ${tomorrow}개 예정 · 단원별 기억 상태 보기` : "내일은 복습할 것이 없어요 · 단원별 기억 상태 보기"}
+            </p>
+          </div>
+          <span aria-hidden className="text-ink-soft">
+            ›
+          </span>
+        </Card>
+      </Link>
 
       <div className="grid grid-cols-2 gap-3 text-sm">
         <Link href="/review/cards" className={buttonStyles("ghost", "md")}>

@@ -8,13 +8,18 @@ import { backgroundStyle } from "@/data/shop";
 import { badgeById } from "@/lib/game/achievements";
 import { terms } from "@/lib/game/companion";
 import { usePetState } from "@/lib/hooks";
+import { useLiveQuery } from "dexie-react-hooks";
+import { getDB } from "@/lib/db";
+import { unreadCount } from "@/data/story";
 import { withRo } from "@/lib/korean";
 
 /** 홈의 펫/동료 카드 */
 export function CompanionCard() {
   const state = usePetState();
   const style = useUiStyle();
+  const badges = useLiveQuery(async () => new Set((await getDB().userBadges.toArray()).map((b) => b.badgeId)), []);
   if (!state) return null;
+  const unread = badges ? unreadCount(style, state.level.level, badges, state.profile.readRecords ?? []) : 0;
   const { profile, level, stage, next, mood } = state;
   const t = terms(style);
   const noir = style === "noir";
@@ -24,9 +29,19 @@ export function CompanionCard() {
   return (
     <Card className={cn("overflow-hidden p-0 text-center", !bg && "bg-gradient-to-b from-bg-soft to-surface")}>
       <div className="relative px-4 pt-4" style={bg}>
-        <Link href="/companion" className="absolute right-3 top-3 rounded-full bg-surface/80 px-2.5 py-1 text-xs backdrop-blur" aria-label={`${t.pet} 꾸미기`}>
-          {noir ? "장비" : "🎀 꾸미기"}
-        </Link>
+        <div className="absolute right-3 top-3 flex gap-1.5">
+          <Link href="/companion/records" className="relative rounded-full bg-surface/80 px-2.5 py-1 text-xs backdrop-blur" aria-label={noir ? "동료의 기록" : "펫의 일기"}>
+            {noir ? "기록" : "📔 일기"}
+            {unread > 0 && (
+              <span className="font-display absolute -right-1 -top-1.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] text-white" aria-label={`새 기록 ${unread}개`}>
+                {unread}
+              </span>
+            )}
+          </Link>
+          <Link href="/companion" className="rounded-full bg-surface/80 px-2.5 py-1 text-xs backdrop-blur" aria-label={`${t.pet} 꾸미기`}>
+            {noir ? "장비" : "🎀 꾸미기"}
+          </Link>
+        </div>
         <p className="kicker text-left">Companion · {t.speciesLabel(profile.pet.species)}</p>
         <p className="font-display text-sm text-ink-soft">
           {t.stageLabel(stage.stage)}

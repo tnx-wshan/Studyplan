@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Empty, PageHeader, formatDateKey, useSubjectMap } from "@/components/kit";
 import { TaskRow } from "@/components/planner/TaskRow";
+import { ExamResults } from "@/components/planner/ExamResults";
 import { toast } from "@/components/Toaster";
 import { Button, Card, ProgressBar, SectionTitle } from "@/components/ui";
 import { getDB } from "@/lib/db";
@@ -70,6 +71,8 @@ function ExamDetail() {
           할 일 {done} / {main.length} 완료
         </p>
       </Card>
+
+      <ExamResults exam={exam} subjectMap={subjectMap} dday={dday} />
 
       <section>
         <SectionTitle>과목별 단원 진도</SectionTitle>

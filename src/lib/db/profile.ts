@@ -59,7 +59,7 @@ export async function updateProfile(patch: Partial<Omit<Profile, "id" | "created
   await getDB().profile.update("me", { ...patch, updatedAt: Date.now() });
 }
 
-export type XpReason = "focus" | "task" | "card" | "wrong" | "quiz" | "method" | "reflection" | `quest:${string}` | "other";
+export type XpReason = "focus" | "task" | "card" | "wrong" | "quiz" | "method" | "reflection" | "exam" | `quest:${string}` | "other";
 
 /** 경험치 지급. profile·xpEvents 테이블을 포함한 트랜잭션 안에서 호출해야 한다. */
 export async function addXpInTx(db: HomeStudyDB, amount: number, reason: XpReason, at = Date.now()) {

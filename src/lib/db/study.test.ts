@@ -193,3 +193,37 @@ describe("backup with photos and old formats", () => {
     await expect(importBackup("not json")).rejects.toThrow("읽을 수 없어요");
   });
 });
+
+describe("exam goals and results", () => {
+  it("saves goals/results, grants xp once, and builds a trend", async () => {
+    const { examTrend, goalsMet } = await import("@/lib/study/examTrend");
+    const { setExamGoals, saveExamResult, examsAwaitingResult } = await import("./study");
+    const subjects = await getDB().subjects.toArray();
+    const math = subjects.find((s) => s.group === "math")!;
+    const eng = subjects.find((s) => s.group === "english")!;
+    const mk = async (title: string, date: string) =>
+      (await createExam({ title, date, ranges: [{ subjectId: math.id, units: ["a"] }, { subjectId: eng.id, units: ["b"] }], minutesPerDay: 60, restDays: [] }, "2026-09-01")).exam;
+    const mid = await mk("중간", "2026-10-10");
+    const fin = await mk("기말", "2026-11-08");
+
+    await setExamGoals(fin.id, { [math.id]: 85, [eng.id]: undefined });
+    expect((await getDB().exams.get(fin.id))?.goals).toEqual({ [math.id]: 85 });
+    expect((await examsAwaitingResult("2026-11-09")).map((e) => e.title)).toEqual(["기말"]);
+
+    expect(await saveExamResult(mid.id, { [math.id]: 70, [eng.id]: 80 }, { worked: "", change: "" })).toBe(30);
+    expect(await saveExamResult(fin.id, { [math.id]: 88.4, [eng.id]: 140 }, { worked: " 백지 복습 ", change: "" })).toBe(30);
+    expect(await saveExamResult(fin.id, { [math.id]: 90 }, { worked: "", change: "" })).toBe(0); // 고쳐도 한 번만
+    expect(await saveExamResult(fin.id, {}, { worked: "", change: "" })).toBe(0);
+    expect(await examsAwaitingResult("2026-11-09")).toEqual([]);
+
+    const exams = await getDB().exams.toArray();
+    const trend = examTrend(exams);
+    const m = trend.find((t) => t.subjectId === math.id)!;
+    expect(m.points.map((p) => p.score)).toEqual([70, 90]);
+    expect(m.change).toBe(20);
+    expect(m.points[1].goal).toBe(85);
+    expect(goalsMet(exams.find((e) => e.id === fin.id)!)).toEqual({ met: 1, total: 1 });
+    // 영어는 두 번째 저장에서 빠졌다
+    expect(trend.find((t) => t.subjectId === eng.id)?.points).toHaveLength(1);
+  });
+});

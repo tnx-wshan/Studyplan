@@ -6,6 +6,7 @@ import { XP_REWARDS } from "@/lib/game/level";
 import { DAILY_QUESTS, type DailyStats } from "@/lib/game/quests";
 import { generateExamPlan, type TaskDraft } from "@/lib/study/examPlan";
 import { nextRetryAfter, SPACED_STEPS } from "@/lib/study/retry";
+import { clampScore } from "@/lib/study/examTrend";
 import { newSrs, review, type Rating } from "@/lib/study/srs";
 
 const now = () => Date.now();
@@ -67,6 +68,16 @@ export async function setTaskDone(id: string, done: boolean, at = now()) {
       }
     }
   });
+}
+
+/** 기억 지도에서: 단원 복습을 오늘 할 일로 넣는다 (이미 있으면 넣지 않는다) */
+export async function addReviewTask(subjectId: string, unit: string, date = toDateKey()) {
+  const db = getDB();
+  const exists = await db.tasks.where("date").equals(date).filter((t) => !t.done && t.kind === "spaced" && t.subjectId === subjectId && t.unit === unit).count();
+  if (exists) return false;
+  const t = now();
+  await db.tasks.add({ id: newId(), date, subjectId, title: `${unit} (기억 지도 복습)`, kind: "spaced", unit, estimatedMinutes: 15, done: false, order: await nextOrder(date), createdAt: t, updatedAt: t });
+  return true;
 }
 
 export async function updateTask(id: string, patch: Partial<Pick<Task, "title" | "date" | "subjectId" | "estimatedMinutes">>) {
@@ -152,6 +163,35 @@ export async function deleteExam(examId: string) {
     await db.tasks.bulkUpdate(tasks.filter((t) => t.done).map((t) => ({ key: t.id, changes: { examId: undefined } })));
     await db.exams.delete(examId);
   });
+}
+
+/** 시험 전 목표 점수 저장 (빈 값은 목표 없음) */
+export async function setExamGoals(examId: string, goals: Record<string, number | undefined>) {
+  const clean: Record<string, number> = {};
+  for (const [k, v] of Object.entries(goals)) if (v !== undefined && Number.isFinite(v)) clean[k] = clampScore(v);
+  await getDB().exams.update(examId, { goals: clean, updatedAt: now() });
+}
+
+/** 시험 결과와 돌아보기 저장. 처음 기록할 때만 경험치를 준다. */
+export async function saveExamResult(examId: string, results: Record<string, number | undefined>, note: { worked: string; change: string }, at = now()) {
+  const db = getDB();
+  const clean: Record<string, number> = {};
+  for (const [k, v] of Object.entries(results)) if (v !== undefined && Number.isFinite(v)) clean[k] = clampScore(v);
+  if (Object.keys(clean).length === 0) return 0;
+  return db.transaction("rw", db.exams, db.profile, db.xpEvents, async () => {
+    const exam = await db.exams.get(examId);
+    if (!exam) return 0;
+    const grant = !exam.resultXpGranted;
+    await db.exams.update(examId, { results: clean, resultNote: { worked: note.worked.trim(), change: note.change.trim() }, resultAt: at, resultXpGranted: true, updatedAt: at });
+    if (grant) await addXpInTx(db, XP_REWARDS.examResult, "exam", at);
+    return grant ? XP_REWARDS.examResult : 0;
+  });
+}
+
+/** 끝났지만(오늘 포함) 아직 결과를 기록하지 않은 최근 시험 */
+export async function examsAwaitingResult(today = toDateKey(), withinDays = 21) {
+  const from = addDays(today, -withinDays);
+  return (await getDB().exams.where("date").between(from, today, true, true).toArray()).filter((e) => !e.results);
 }
 
 // ───────── 집중 기록 ─────────

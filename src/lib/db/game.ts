@@ -139,3 +139,11 @@ export async function equipItem(kind: "accessory" | "background", itemId?: strin
 export async function setStyle(style: NonNullable<Profile["style"]>) {
   await getDB().profile.update("me", { style, updatedAt: now() });
 }
+
+/** 동료의 기록을 읽음으로 표시 */
+export async function markRecordRead(key: string) {
+  const db = getDB();
+  const p = await db.profile.get("me");
+  if (!p || p.readRecords?.includes(key)) return;
+  await db.profile.update("me", { readRecords: [...(p.readRecords ?? []), key], updatedAt: now() });
+}

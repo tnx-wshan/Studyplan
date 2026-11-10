@@ -33,4 +33,5 @@ export const XP_REWARDS = {
   dailyQuestDone: 30,
   reflectionWritten: 20,
   methodPractice: 15,
+  examResult: 30,
 } as const;

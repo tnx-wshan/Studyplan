@@ -11,7 +11,16 @@ const Body = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("subscribe"),
     subscription: z.object({ endpoint: z.string().url().max(2000), keys: z.object({ p256dh: z.string().max(200), auth: z.string().max(100) }) }),
-    settings: z.object({ review: time, plan: time, streak: time, style: z.enum(["cute", "noir"]) }),
+    settings: z.object({
+      review: time,
+      plan: time,
+      streak: time,
+      style: z.enum(["cute", "noir"]),
+      routines: z
+        .array(z.object({ id: z.string().max(60), title: z.string().max(60), time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), days: z.array(z.number().int().min(0).max(6)).max(7), minutes: z.number().int().min(1).max(600) }))
+        .max(20)
+        .optional(),
+    }),
   }),
   z.object({ action: z.literal("unsubscribe"), endpoint: z.string().max(2000) }),
   z.object({ action: z.literal("test"), endpoint: z.string().max(2000) }),

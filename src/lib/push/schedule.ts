@@ -7,12 +7,23 @@ export interface ReminderSettings {
   plan: string | null;
   streak: string | null;
   style: "cute" | "noir";
+  /** 시작 시각이 있는 고정 루틴 */
+  routines?: RoutineReminder[];
+}
+
+export interface RoutineReminder {
+  id: string;
+  title: string;
+  time: string;
+  /** 요일 (0=일 ~ 6=토) */
+  days: number[];
+  minutes: number;
 }
 
 export interface SubscriptionState {
   settings: ReminderSettings;
   /** 종류별 마지막으로 보낸 날짜 (YYYY-MM-DD, 한국 시간) */
-  lastSent: Partial<Record<ReminderKind, string>>;
+  lastSent: Record<string, string>;
   /** 마지막으로 공부한 날 (앱이 알려줌) */
   lastStudyDate?: string;
 }
@@ -25,13 +36,44 @@ export function toMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
-export function seoulClock(now = new Date()): { date: string; minutes: number } {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
-  return { date: `${get("year")}-${get("month")}-${get("day")}`, minutes: Number(get("hour")) * 60 + Number(get("minute")) };
+export interface Clock {
+  date: string;
+  minutes: number;
+  /** 요일 (0=일 ~ 6=토). 없으면 날짜로 계산한다 */
+  weekday?: number;
 }
 
-export function dueReminders(sub: SubscriptionState, clock: { date: string; minutes: number }): ReminderKind[] {
+export function seoulClock(now = new Date()): Required<Clock> {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  const date = `${get("year")}-${get("month")}-${get("day")}`;
+  return { date, minutes: Number(get("hour")) * 60 + Number(get("minute")), weekday: weekdayOf(date) };
+}
+
+function weekdayOf(date: string): number {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+export const routineKey = (id: string) => `r:${id}`;
+
+/** 지금 보낼 루틴 알림 */
+export function dueRoutineReminders(sub: SubscriptionState, clock: Clock): RoutineReminder[] {
+  const weekday = clock.weekday ?? weekdayOf(clock.date);
+  return (sub.settings.routines ?? []).filter((r) => {
+    if (!r.days.includes(weekday) || sub.lastSent[routineKey(r.id)] === clock.date) return false;
+    const diff = clock.minutes - toMinutes(r.time);
+    return diff >= 0 && diff < WINDOW_MIN;
+  });
+}
+
+export function routineMessage(r: RoutineReminder, style: ReminderSettings["style"]): { title: string; body: string; url: string } {
+  return style === "noir"
+    ? { title: "루틴 시각", body: `${r.title} — ${r.minutes}분. 정해 둔 시간이다.`, url: "/planner" }
+    : { title: "루틴 시간이에요 🔁", body: `${r.title} ${r.minutes}분, 지금 시작해 볼까요?`, url: "/planner" };
+}
+
+export function dueReminders(sub: SubscriptionState, clock: Clock): ReminderKind[] {
   const due: ReminderKind[] = [];
   for (const kind of ["review", "plan", "streak"] as ReminderKind[]) {
     const at = sub.settings[kind];

@@ -24,3 +24,8 @@ export function withIGa(word: string): string {
 export function withWaGwa(word: string): string {
   return word + (jong(word) ? "과" : "와");
 }
+
+/** "에코" → "에코라", "민준" → "민준이라" */
+export function withIRa(word: string): string {
+  return word + (jong(word) ? "이라" : "라");
+}

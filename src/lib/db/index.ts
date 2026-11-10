@@ -24,6 +24,7 @@ export class HomeStudyDB extends Dexie {
   images!: EntityTable<T.StoredImage, "id">;
   methodLogs!: EntityTable<T.MethodLog, "id">;
   coachReports!: EntityTable<T.CoachReport, "id">;
+  routines!: EntityTable<T.Routine, "id">;
 
   constructor(name = "homestudy") {
     super(name);
@@ -72,6 +73,8 @@ export class HomeStudyDB extends Dexie {
       });
     // v3: 3단계 코칭 (학습법 실습 기록, AI 코칭)
     this.version(3).stores({ methodLogs: "id, methodId, date", coachReports: "id, period" });
+    // v4: 고정 공부 루틴
+    this.version(4).stores({ routines: "id", tasks: "id, date, subjectId, examId, routineId, [date+order]" });
   }
 }
 

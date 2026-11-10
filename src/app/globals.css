@@ -278,3 +278,20 @@ body {
 :root:not([data-style="noir"]) .bg-primary.text-white,
 :root:not([data-style="noir"]) .bg-success.text-white { color: #2b1a0e; }
 :root:not([data-style="noir"])[data-theme="dark"] .bg-accent.text-white { color: #ffffff; }
+
+/* 동료의 기록: 문단이 차례로 떠오른다 */
+@keyframes story-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.story-line { animation: story-in 0.7s ease-out both; }
+.story-noir { font-family: var(--font-serif), var(--font-body), serif; }
+@media (prefers-reduced-motion: reduce) {
+  .story-line { animation: none; }
+}
+
+/* 차트 선·점 (SVG): 막대와 같은 색 규칙 */
+.mark-stroke { stroke: var(--c); }
+.mark-fill { fill: var(--c); }
+:root[data-theme="dark"] .mark-stroke { stroke: color-mix(in oklab, var(--c) 88%, black); }
+:root[data-theme="dark"] .mark-fill { fill: color-mix(in oklab, var(--c) 88%, black); }

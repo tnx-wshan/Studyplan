@@ -6,7 +6,9 @@ import { stageForLevel } from "@/lib/game/pet";
 import { usePetState } from "@/lib/hooks";
 import { Pet } from "./Pet";
 import { useUiStyle } from "./ThemeSync";
-import { Button, cn } from "./ui";
+import Link from "next/link";
+import { storyFor } from "@/data/story";
+import { Button, buttonStyles, cn } from "./ui";
 
 const CONFETTI = ["#ff8a3d", "#6c5ce7", "#3fbf6f", "#ffc83d", "#f05454"];
 
@@ -22,6 +24,8 @@ export function LevelUp() {
   const stage = stageForLevel(level);
   const grew = stage.stage !== stageForLevel(from).stage;
   const name = state.profile.pet.name;
+  // 이번에 오른 레벨 구간에서 새로 열린 기록
+  const newRecords = storyFor(style).filter((e) => "level" in e.unlock && e.unlock.level > from && e.unlock.level <= level);
 
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="levelup-title" className={cn("fixed inset-0 z-50 flex items-center justify-center p-6", noir ? "bg-black/80" : "bg-black/50")}>
@@ -48,7 +52,12 @@ export function LevelUp() {
           <Pet species={state.profile.pet.species} stage={stage.stage} mood="excited" size={150} accessory={state.profile.equipped?.accessory} />
         </div>
         <p className="mb-4">{grew ? t.grew(name, t.stageLabel(stage.stage)) : t.pleased(name)}</p>
-        <Button className="w-full" onClick={() => dismissLevelUp()}>
+        {newRecords.length > 0 && (
+          <Link href="/companion/records" onClick={() => dismissLevelUp()} className={buttonStyles("accent", "md", "mb-2 w-full")}>
+            {noir ? `새 기록이 열렸다 — 「${newRecords.at(-1)!.title}」` : `📔 새 일기가 열렸어요: ${newRecords.at(-1)!.title}`}
+          </Link>
+        )}
+        <Button className="w-full" variant={newRecords.length > 0 ? "ghost" : "primary"} onClick={() => dismissLevelUp()}>
           {t.ok}
         </Button>
       </div>

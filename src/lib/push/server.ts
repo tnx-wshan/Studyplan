@@ -2,7 +2,7 @@ import "server-only";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { generateVAPIDKeys, sendNotification } from "web-push";
-import { dueReminders, reminderMessage, seoulClock, type ReminderKind, type ReminderSettings, type SubscriptionState } from "./schedule";
+import { dueReminders, dueRoutineReminders, reminderMessage, routineKey, routineMessage, seoulClock, type ReminderKind, type ReminderSettings, type SubscriptionState } from "./schedule";
 
 /**
  * 푸시 알림 저장소와 발송. 개인용이라 .data/push.json 파일에 저장한다.
@@ -136,6 +136,12 @@ export function runReminders(now = new Date()) {
         if (r === "ok") sent++;
         // 실패해도 같은 날 반복해서 보내지 않도록 기록
         sub.lastSent[kind] = clock.date;
+      }
+      for (const routine of dueRoutineReminders(sub, clock)) {
+        const r = await send(store, sub, routineMessage(routine, sub.settings.style));
+        if (r === "gone") gone.add(sub.endpoint);
+        if (r === "ok") sent++;
+        sub.lastSent[routineKey(routine.id)] = clock.date;
       }
     }
     store.subscriptions = store.subscriptions.filter((s) => !gone.has(s.endpoint));

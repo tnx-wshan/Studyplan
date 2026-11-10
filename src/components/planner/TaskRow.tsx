@@ -45,6 +45,8 @@ export function TaskRow({ task, subject }: { task: Task; subject?: Subject }) {
           <p className={cn("break-words", task.done && "line-through")}>{task.title}</p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-soft">
             <SubjectChip subject={subject} />
+            {task.time && <span className="font-display tabular-nums text-ink">{task.time}</span>}
+            {task.routineId && <span className="font-display rounded-full bg-surface px-2 py-0.5">🔁 루틴</span>}
             {badge && <span className={cn("font-display rounded-full px-2 py-0.5", badge.className)}>{badge.label}</span>}
             {task.estimatedMinutes ? <span>약 {task.estimatedMinutes}분</span> : null}
           </div>

@@ -93,3 +93,18 @@ export async function reportStudied(date: string) {
     localStorage.setItem("hs-push-studied", date);
   } catch {}
 }
+
+/** 루틴이 바뀌면 알림 서버에도 알려 준다 (알림이 켜져 있을 때만) */
+export async function syncRoutineReminders(routines: NonNullable<ReminderSettings["routines"]>) {
+  const state = readPushState();
+  const settings = { ...state.settings, routines };
+  if (!state.enabled) {
+    writePushState({ ...state, settings });
+    return;
+  }
+  try {
+    await enablePush(settings);
+  } catch {
+    writePushState({ ...state, settings });
+  }
+}
