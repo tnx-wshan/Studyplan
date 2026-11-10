@@ -25,8 +25,8 @@ async function claim(id: string, questId: string, period: string, reward: number
 /** 이번 주 퀘스트 진행 상황 */
 export async function weeklyStatus(today = toDateKey()) {
   const week = weekKey(today);
-  const input = await loadReportInput();
-  const stats = computeReport(input, weekPeriod(week));
+  const period = weekPeriod(week);
+  const stats = computeReport(await loadReportInput(period), period);
   const reflectionWritten = !!(await getDB().reflections.get(week));
   const claimed = new Set((await getDB().userQuests.where("period").equals(week).toArray()).map((q) => q.questId));
   return {

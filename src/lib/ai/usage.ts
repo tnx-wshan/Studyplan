@@ -29,7 +29,11 @@ export function seoulDate(now = new Date()): string {
 let memory: Store | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 
+/** 가짜 AI(테스트)로 쓴 횟수는 파일에 남기지 않는다 */
+const persistent = () => (process.env.AI_PROVIDER || "").toLowerCase() !== "mock";
+
 async function load(today: string): Promise<Store> {
+  if (!memory && !persistent()) memory = { date: today, counts: {} };
   if (!memory) {
     try {
       // 경로를 코드에 고정해야 빌드가 프로젝트 전체를 서버 코드에 넣지 않는다
@@ -43,6 +47,7 @@ async function load(today: string): Promise<Store> {
 }
 
 async function save(store: Store) {
+  if (!persistent()) return;
   try {
     await mkdir(path.join(process.cwd(), ".data"), { recursive: true });
     await writeFile(path.join(process.cwd(), ".data", "ai-usage.json.tmp"), JSON.stringify(store));

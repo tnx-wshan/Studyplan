@@ -3,9 +3,9 @@ import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 type Variant = "primary" | "accent" | "success" | "ghost";
 
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-primary text-white shadow-[0_4px_0_var(--primary-deep)]",
-  accent: "bg-accent text-white shadow-[0_4px_0_var(--accent-deep)]",
-  success: "bg-success text-white shadow-[0_4px_0_var(--success-deep)]",
+  primary: "bg-primary text-white shadow-[0_4px_0_var(--primary-shadow)]",
+  accent: "bg-accent text-white shadow-[0_4px_0_var(--accent-shadow)]",
+  success: "bg-success text-white shadow-[0_4px_0_var(--success-shadow)]",
   ghost: "bg-surface text-ink border-2 border-line shadow-[0_4px_0_var(--line)]",
 };
 

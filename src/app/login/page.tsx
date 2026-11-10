@@ -37,7 +37,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col items-center justify-center gap-4 px-4">
       <Pet species="cloud" stage="egg" mood="happy" size={120} />
-      <h1 className="font-display text-3xl text-primary">홈스터디</h1>
+      <h1 className="font-display text-3xl logo">홈스터디</h1>
       <Card className="w-full">
         <form onSubmit={onSubmit} className="space-y-3">
           <label className="block space-y-1.5">

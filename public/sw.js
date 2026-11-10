@@ -1,5 +1,5 @@
 // 홈스터디 서비스 워커: 정적 파일은 캐시 우선, 페이지는 네트워크 우선(오프라인이면 캐시)
-const VERSION = "v2";
+const VERSION = "v3";
 const STATIC = `hs-static-${VERSION}`;
 const PAGES = `hs-pages-${VERSION}`;
 
@@ -45,7 +45,8 @@ self.addEventListener("fetch", (event) => {
           if (res.ok && !res.redirected) caches.open(PAGES).then((c) => c.put(req, res.clone()));
           return res;
         })
-        .catch(() => caches.match(req).then((hit) => hit || caches.match("/offline.html"))),
+        // 오프라인: 같은 화면의 저장본(주소 뒤 ?id= 등은 무시) → 없으면 안내 화면
+        .catch(() => caches.match(req, { ignoreSearch: true }).then((hit) => hit || caches.match("/offline.html"))),
     );
   }
 });
@@ -73,4 +74,31 @@ self.addEventListener("notificationclick", (event) => {
       return self.clients.openWindow(url);
     }),
   );
+});
+
+// 주요 화면과 그 화면이 쓰는 파일을 미리 저장해 둔다 (로그인한 뒤 앱이 요청)
+async function warm(routes) {
+  const pages = await caches.open(PAGES);
+  const statics = await caches.open(STATIC);
+  const assets = new Set();
+  for (const route of routes) {
+    try {
+      const res = await fetch(route, { credentials: "same-origin" });
+      if (!res.ok || res.redirected) continue;
+      const html = await res.clone().text();
+      await pages.put(route, res);
+      for (const m of html.matchAll(/["'(](\/_next\/static\/[^"')\s\\]+)/g)) assets.add(m[1]);
+    } catch {}
+  }
+  for (const url of assets) {
+    try {
+      if (await statics.match(url)) continue;
+      const res = await fetch(url);
+      if (res.ok) await statics.put(url, res);
+    } catch {}
+  }
+}
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "warm" && Array.isArray(event.data.routes)) event.waitUntil(warm(event.data.routes));
 });

@@ -1,6 +1,6 @@
 import { getDB, newId } from "./index";
 import { addXpInTx } from "./profile";
-import type { AiFeedback, CoachReport, MethodLog, Reflection } from "./types";
+import type { AiFeedback, CoachReport, MethodLog, Question, Reflection, StudySession, Task, XpEvent } from "./types";
 import { scoreDiagnosis, type Answers } from "@/data/diagnosis";
 import { toDateKey } from "@/lib/date";
 import { XP_REWARDS } from "@/lib/game/level";
@@ -72,16 +72,22 @@ export async function saveCoachReport(input: Omit<CoachReport, "id" | "createdAt
   return report;
 }
 
-export async function loadReportInput(): Promise<ReportInput> {
+/**
+ * 리포트 계산에 쓸 기록을 불러온다.
+ * range를 주면 날짜 색인으로 그 기간의 기록만 읽어서, 기록이 많이 쌓여도 홈 화면이 느려지지 않는다.
+ */
+export async function loadReportInput(range?: { start: string; end: string }): Promise<ReportInput> {
   const db = getDB();
+  const byDate = <T>(table: { where(index: string): { between(a: string, b: string, lo: boolean, hi: boolean): { toArray(): Promise<T[]> } }; toArray(): Promise<T[]> }) =>
+    range ? table.where("date").between(range.start, range.end, true, false).toArray() : table.toArray();
   const [sessions, tasks, xpEvents, wrongAnswers, quizzes, questions, methodLogs] = await Promise.all([
-    db.studySessions.toArray(),
-    db.tasks.toArray(),
-    db.xpEvents.toArray(),
+    byDate<StudySession>(db.studySessions),
+    byDate<Task>(db.tasks),
+    byDate<XpEvent>(db.xpEvents),
     db.wrongAnswers.toArray(),
     db.quizzes.toArray(),
-    db.questions.toArray(),
-    db.methodLogs.toArray(),
+    range ? Promise.resolve([] as Question[]) : db.questions.toArray(),
+    byDate<MethodLog>(db.methodLogs),
   ]);
   return {
     sessions,

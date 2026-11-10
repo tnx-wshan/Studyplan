@@ -8,6 +8,7 @@ import { GRADES, type GradeId } from "@/data/curriculum";
 import { completeOnboarding } from "@/lib/db/profile";
 import { PET_SPECIES, type PetSpecies } from "@/lib/game/pet";
 import { terms } from "@/lib/game/companion";
+import { withWaGwa } from "@/lib/korean";
 import { useUiStyle } from "@/components/ThemeSync";
 import { useProfile } from "@/lib/hooks";
 
@@ -51,8 +52,8 @@ export default function OnboardingPage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-4 py-8">
       <div className="text-center">
-        <p className="font-display text-3xl text-primary">홈스터디</p>
-        <p className="text-sm text-ink-soft">{t.pet}와(과) 함께 성장하는 자기주도 학습</p>
+        <p className="font-display text-3xl logo">홈스터디</p>
+        <p className="text-sm text-ink-soft">{withWaGwa(t.pet)} 함께 성장하는 자기주도 학습</p>
       </div>
 
       <ol className="flex justify-center gap-2" aria-label="진행 단계">
@@ -140,7 +141,7 @@ export default function OnboardingPage() {
       {hatching && (
         <div className="flex flex-col items-center gap-2" aria-live="polite">
           <Pet species={species} stage="egg" mood="excited" size={120} />
-          <p className="font-display">{noir ? `${petName}와(과) 계약했다. 공부하면 봉인이 풀린다.` : `${petName}의 알을 받았어요! 공부하면 알이 부화해요.`}</p>
+          <p className="font-display">{noir ? `${withWaGwa(petName)} 계약했다. 공부하면 봉인이 풀린다.` : `${petName}의 알을 받았어요! 공부하면 알이 부화해요.`}</p>
         </div>
       )}
       {error && <p className="text-center text-danger">{error}</p>}

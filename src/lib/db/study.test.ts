@@ -152,3 +152,44 @@ describe("timer records", () => {
     expect((await getProfile())?.totalXp).toBe(25);
   });
 });
+
+describe("backup with photos and old formats", () => {
+  it("round-trips images", async () => {
+    const { exportBackup, importBackup } = await import("./backup");
+    const w = await addWrongAnswer({ question: "q", myAnswer: "1", correctAnswer: "2", reason: "mistake" }, new Blob(["hello"], { type: "image/jpeg" }), TODAY);
+    const json = await exportBackup();
+    setDB(new HomeStudyDB(`study-${n++}`));
+    await importBackup(json);
+    const restored = await getDB().images.get(w.imageId!);
+    expect(restored?.blob.type).toBe("image/jpeg");
+    expect(await restored!.blob.text()).toBe("hello");
+  });
+
+  it("upgrades a stage-0 style backup and drops dangling photo links", async () => {
+    const { importBackup } = await import("./backup");
+    const old = {
+      app: "homestudy",
+      version: 1,
+      tables: {
+        profile: [{ id: "me", grade: "h1", nickname: "a", pet: { species: "cloud", name: "b" }, totalXp: 0, coins: 0, theme: "system" }],
+        subjects: [{ id: "s1", name: "수학", group: "math", color: "#f2a93b" }],
+        tasks: [{ id: "t1", date: TODAY, title: "x", done: false, order: 1 }],
+        images: [{ id: "i1", createdAt: 1 }],
+        wrongAnswers: [{ id: "w1", question: "q", myAnswer: "", correctAnswer: "a", reason: "concept", nextRetry: TODAY, imageId: "i1" }],
+      },
+    };
+    await importBackup(JSON.stringify(old));
+    const db = getDB();
+    expect((await db.subjects.get("s1"))?.courseIds).toEqual(["h1-math-1", "h1-math-2"]);
+    expect((await db.tasks.get("t1"))?.kind).toBe("custom");
+    expect(await db.images.count()).toBe(0);
+    const w = await db.wrongAnswers.get("w1");
+    expect(w).toMatchObject({ streak: 0, mastered: false, retries: [] });
+    expect(w?.imageId).toBeUndefined();
+  });
+
+  it("rejects unreadable files", async () => {
+    const { importBackup } = await import("./backup");
+    await expect(importBackup("not json")).rejects.toThrow("읽을 수 없어요");
+  });
+});

@@ -1,5 +1,6 @@
 import type { PetMood, PetSpecies, PetStage } from "./pet";
 import { PET_MOOD_TEXT, PET_SPECIES, PET_STAGES } from "./pet";
+import { withIGa } from "@/lib/korean";
 
 /**
  * 스타일별 이름과 문구. 누아르에서는 펫을 '동료'로 부르고 성장을 '각성'으로 표현한다.
@@ -37,8 +38,8 @@ export function terms(style: UiStyleName) {
     stageSuffix: noir ? "" : " 단계",
     mood: (m: PetMood) => (noir ? NOIR_MOOD[m] : PET_MOOD_TEXT[m]),
     levelUp: noir ? "RANK UP" : "LEVEL UP!",
-    grew: (name: string, stage: string) => (noir ? `${name}의 봉인이 풀렸다 — ${stage}` : `${name}(이)가 ${stage} 단계로 자랐어요!`),
-    pleased: (name: string) => (noir ? `${name}이(가) 고개를 끄덕인다.` : `${name}(이)가 기뻐하고 있어요!`),
+    grew: (name: string, stage: string) => (noir ? `${name}의 봉인이 풀렸다 — ${stage}` : `${withIGa(name)} ${stage} 단계로 자랐어요!`),
+    pleased: (name: string) => (noir ? `${withIGa(name)} 고개를 끄덕인다.` : `${withIGa(name)} 기뻐하고 있어요!`),
     ok: noir ? "확인" : "좋아요!",
   };
 }

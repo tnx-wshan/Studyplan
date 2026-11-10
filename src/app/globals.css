@@ -12,14 +12,17 @@
   --ink-soft: #6b6474;
   --line: #f0e0c8;
   --primary: #ff8a3d;
-  --primary-deep: #d9661c;
+  --primary-deep: #a8410a; /* 글자용 강조색 (대비 4.5:1 이상) */
+  --primary-shadow: #d9661c;
   --accent: #6c5ce7;
   --accent-deep: #4b3cc4;
+  --accent-shadow: #4b3cc4;
   --success: #3fbf6f;
-  --success-deep: #279a52;
+  --success-deep: #176a39;
+  --success-shadow: #279a52;
   --xp: #ffc83d;
-  --xp-deep: #e0a106;
-  --danger: #f05454;
+  --xp-deep: #8a6200;
+  --danger: #d63c3c;
   --shadow: 0 4px 0 rgba(45, 42, 50, 0.08);
 }
 
@@ -32,14 +35,17 @@
   --ink-soft: #aaa3bd;
   --line: #3a3650;
   --primary: #ff9a52;
-  --primary-deep: #c76a26;
-  --accent: #8f82ff;
-  --accent-deep: #5f52d6;
+  --primary-deep: #ffb07a;
+  --primary-shadow: #c76a26;
+  --accent: #7466e8;
+  --accent-deep: #b3aaff;
+  --accent-shadow: #5f52d6;
   --success: #4fd083;
-  --success-deep: #2f9a5b;
+  --success-deep: #7fe0a6;
+  --success-shadow: #2f9a5b;
   --xp: #ffd25c;
-  --xp-deep: #c99a12;
-  --danger: #ff6b6b;
+  --xp-deep: #ffd25c;
+  --danger: #ff8080;
   --shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
 }
 
@@ -158,9 +164,9 @@ body {
   --ink-soft: #9c9388;
   --line: #3a3332;
   --primary: #b8323a;
-  --primary-deep: #7c1f25;
+  --primary-deep: #e58a8f;
   --accent: #c9a45c;
-  --accent-deep: #a2843f;
+  --accent-deep: #d6b673;
   --success: #6f9a7a;
   --success-deep: #8fbd9a;
   --xp: #c9a45c;
@@ -262,3 +268,13 @@ body {
   .confetti, .levelup-rays { animation: none; }
   .confetti { display: none; }
 }
+
+/* 로고 */
+.logo { color: #b9480c; }
+:root[data-theme="dark"] .logo { color: var(--primary); }
+:root[data-style="noir"] .logo { color: #d1474f; }
+
+/* 귀여운 테마: 밝은 주황·초록 바탕 위 흰 글자는 대비가 부족해서 어두운 글자를 쓴다 */
+:root:not([data-style="noir"]) .bg-primary.text-white,
+:root:not([data-style="noir"]) .bg-success.text-white { color: #2b1a0e; }
+:root:not([data-style="noir"])[data-theme="dark"] .bg-accent.text-white { color: #ffffff; }

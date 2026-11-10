@@ -8,10 +8,12 @@ import { usePetState, useProfile } from "@/lib/hooks";
 import { cn, Pill } from "./ui";
 import { LevelUp } from "./LevelUp";
 import { BadgeWatcher } from "./game/BadgeWatcher";
+import { OfflineWarmup } from "./ServiceWorker";
 import { TimerWatcher } from "./TimerWatcher";
 import { Toaster } from "./Toaster";
 import { formatClock, remaining, elapsed } from "@/lib/study/timer";
-import { useNow, useTimerState } from "@/lib/timerStore";
+import { useMinuteTick, useNow, useTimerState } from "@/lib/timerStore";
+import { toDateKey } from "@/lib/date";
 
 const NAV = [
   { href: "/", label: "홈", icon: "🏠" },
@@ -51,13 +53,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col">
       <TopBar />
-      <main className="flex-1 px-4 pb-28 pt-2">{children}</main>
+      <DatedMain>{children}</DatedMain>
       <BottomNav />
       <TimerWatcher />
       <Toaster />
       <LevelUp />
       <BadgeWatcher />
+      <OfflineWarmup />
     </div>
+  );
+}
+
+/** 자정이 지나면 화면을 다시 그려서 '오늘'이 새 날짜가 되게 한다 (프로필을 불러온 뒤에만 그려진다) */
+function DatedMain({ children }: { children: ReactNode }) {
+  useMinuteTick();
+  return (
+    <main key={toDateKey()} className="flex-1 px-4 pb-28 pt-2">
+      {children}
+    </main>
   );
 }
 
@@ -65,7 +78,7 @@ function TopBar() {
   const state = usePetState();
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-bg/90 px-4 pb-2 pt-[max(12px,env(safe-area-inset-top))] backdrop-blur">
-      <Link href="/" className="font-display text-xl text-primary">
+      <Link href="/" className="font-display text-xl logo">
         홈스터디
       </Link>
       {state && (

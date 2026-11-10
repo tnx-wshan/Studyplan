@@ -14,3 +14,13 @@ export function withRo(word: string): string {
   const j = jong(word);
   return word + (j === 0 || j === 8 ? "로" : "으로");
 }
+
+/** "에코" → "에코가", "쑥쑥이" → "쑥쑥이가", "민준" → "민준이" */
+export function withIGa(word: string): string {
+  return word + (jong(word) ? "이" : "가");
+}
+
+/** "동료" → "동료와", "펫" → "펫과" */
+export function withWaGwa(word: string): string {
+  return word + (jong(word) ? "과" : "와");
+}

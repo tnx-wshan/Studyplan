@@ -22,6 +22,7 @@ npm test          # 단위 테스트 (Vitest)
 npm run typecheck
 npm run lint
 npm run build
+npm run e2e        # 브라우저 전체 흐름 테스트 (빌드 후 실행, 가짜 AI 사용)
 ```
 
 ## 구조

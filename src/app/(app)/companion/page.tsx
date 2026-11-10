@@ -10,6 +10,7 @@ import { SHOP_ITEMS, backgroundStyle, type ShopItem } from "@/data/shop";
 import { buyItem, equipItem } from "@/lib/db/game";
 import { terms } from "@/lib/game/companion";
 import { usePetState } from "@/lib/hooks";
+import { withEulReul } from "@/lib/korean";
 
 export default function CompanionPage() {
   const state = usePetState();
@@ -25,7 +26,7 @@ export default function CompanionPage() {
 
   async function onBuy(item: ShopItem) {
     const name = noir ? item.noirName : item.name;
-    if (!confirm(`${name}을(를) ${item.price} 코인에 살까요?`)) return;
+    if (!confirm(`${withEulReul(name)} ${item.price} 코인에 살까요?`)) return;
     const r = await buyItem(item.id);
     if (r === "ok") toast(`${name} 구매 완료!`);
     else if (r === "coins") toast("코인이 부족해요. 공부해서 경험치를 모으면 코인도 쌓여요.");
