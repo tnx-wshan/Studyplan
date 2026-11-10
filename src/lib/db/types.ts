@@ -17,6 +17,14 @@ export interface Profile extends Base {
   totalXp: number;
   coins: number;
   theme: "system" | "light" | "dark";
+  /** 화면 스타일: cute(밝고 귀여운) / noir(어둡고 절제된). 없으면 noir */
+  style?: "cute" | "noir";
+  /** 상점에서 산 꾸미기 아이템 id */
+  owned?: string[];
+  /** 착용 중인 꾸미기 */
+  equipped?: { accessory?: string; background?: string };
+  /** 칭호로 쓰는 업적 id */
+  titleBadge?: string;
   onboardedAt: number;
   /** 레벨이 올랐지만 아직 축하 화면을 보지 않았을 때, 오르기 전 레벨 */
   levelUpFrom?: number;

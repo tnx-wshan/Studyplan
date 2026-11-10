@@ -146,3 +146,119 @@ body {
 .md table { border-collapse: collapse; display: block; overflow-x: auto; }
 .md th, .md td { border: 1px solid var(--line); padding: 0.3em 0.6em; }
 .md .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }
+
+
+/* ───────── 누아르 스타일: 어둡고 절제된 어른스러운 테마 ───────── */
+:root[data-style="noir"] {
+  --bg: #121011;
+  --bg-soft: #1b1718;
+  --surface: #1a1718;
+  --surface-2: #241f20;
+  --ink: #ece6dc;
+  --ink-soft: #9c9388;
+  --line: #3a3332;
+  --primary: #b8323a;
+  --primary-deep: #7c1f25;
+  --accent: #c9a45c;
+  --accent-deep: #a2843f;
+  --success: #6f9a7a;
+  --success-deep: #8fbd9a;
+  --xp: #c9a45c;
+  --xp-deep: #d6b673;
+  --danger: #e0575e;
+  --shadow: none;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+  --radius-2xl: 3px;
+  --radius-3xl: 4px;
+}
+:root[data-style="noir"] body {
+  background:
+    radial-gradient(ellipse 120% 60% at 50% -10%, rgba(184, 50, 58, 0.10), transparent 60%),
+    linear-gradient(180deg, #151213 0%, #100e0f 100%) fixed;
+  letter-spacing: -0.005em;
+}
+:root[data-style="noir"] .font-display {
+  font-family: var(--font-serif), var(--font-body), serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+/* 카드: 얇은 테두리와 황동색 모서리 표시 */
+:root[data-style="noir"] .card {
+  border-width: 1px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 40%), var(--surface);
+}
+:root[data-style="noir"] .card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+  pointer-events: none;
+}
+/* 버튼: 입체감 대신 선과 면 */
+:root[data-style="noir"] .btn {
+  box-shadow: none !important;
+  border: 1px solid transparent;
+  letter-spacing: 0.02em;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+:root[data-style="noir"] .btn:active { transform: translateY(1px); }
+:root[data-style="noir"] .btn-primary { background: var(--primary); color: #f5efe6; border-color: #d1474f; }
+:root[data-style="noir"] .btn-accent { background: transparent; color: var(--accent); border-color: var(--accent); }
+:root[data-style="noir"] .btn-accent:hover { background: rgba(201, 164, 92, 0.1); }
+:root[data-style="noir"] .btn-success { background: var(--success); color: #0f0d0e; border-color: #8fbd9a; }
+:root[data-style="noir"] .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+:root[data-style="noir"] .btn-ghost:hover { border-color: var(--ink-soft); }
+/* 황동색 위 흰 글자는 읽기 어려워 어두운 글자로 */
+:root[data-style="noir"] .bg-accent.text-white:not(.btn) { color: #141112; }
+:root[data-style="noir"] .bg-success.text-white { color: #0f0d0e; }
+:root[data-style="noir"] .md strong { color: var(--accent); }
+/* 작은 영문 머리표 (기록 문서 느낌) */
+.kicker { display: none; }
+:root[data-style="noir"] .kicker {
+  display: block;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+@keyframes companion-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3%); }
+}
+@keyframes eye-pulse {
+  0% { opacity: 0.8; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+.companion-float { animation: companion-float 4.5s ease-in-out infinite; }
+.eye-pulse { animation: eye-pulse 2.2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) {
+  .companion-float, .eye-pulse { animation: none; }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-20px) rotate(0); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(540deg); opacity: 0.6; }
+}
+.confetti { animation: confetti-fall 2.4s ease-in forwards; }
+@keyframes rays {
+  0% { opacity: 0; transform: scale(0.6); }
+  40% { opacity: 1; }
+  100% { opacity: 0.55; transform: scale(1); }
+}
+.levelup-rays {
+  background: repeating-conic-gradient(from 0deg at 50% 45%, rgba(201, 164, 92, 0.10) 0deg 4deg, transparent 4deg 18deg);
+  mask-image: radial-gradient(circle at 50% 45%, black 0%, transparent 60%);
+  animation: rays 1.2s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti, .levelup-rays { animation: none; }
+  .confetti { display: none; }
+}

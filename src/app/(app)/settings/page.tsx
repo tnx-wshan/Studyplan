@@ -1,7 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { applyTheme } from "@/components/ThemeSync";
+import { applyTheme, DEFAULT_STYLE } from "@/components/ThemeSync";
+import { Pet } from "@/components/Pet";
+import { NotificationSettings } from "@/components/NotificationSettings";
+import { setStyle } from "@/lib/db/game";
 import Link from "next/link";
 import { Button, Card, SectionTitle, buttonStyles, cn } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS, coursesFor, gradeLabel, type GradeId } from "@/data/curriculum";
@@ -75,27 +78,55 @@ export default function SettingsPage() {
       </section>
 
       <section>
-        <SectionTitle>화면</SectionTitle>
-        <Card className="grid grid-cols-3 gap-2">
-          {THEMES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              aria-pressed={profile.theme === t.id}
-              onClick={() => {
-                applyTheme(t.id);
-                updateProfile({ theme: t.id });
-              }}
-              className={cn(
-                "font-display rounded-2xl border-2 py-2 text-sm",
-                profile.theme === t.id ? "border-primary bg-bg-soft text-primary-deep" : "border-line",
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </Card>
+        <SectionTitle>화면 스타일</SectionTitle>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="화면 스타일">
+          {(
+            [
+              ["noir", "누아르", "어둡고 절제된 어른스러운 화면"],
+              ["cute", "귀여운", "밝고 동글동글한 화면"],
+            ] as const
+          ).map(([id, label, desc]) => {
+            const on = (profile.style ?? DEFAULT_STYLE) === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={async () => {
+                  applyTheme(profile.theme, id);
+                  await setStyle(id);
+                }}
+                className={cn("card relative flex flex-col items-center gap-1 rounded-3xl border-2 bg-surface p-3", on ? "border-primary" : "border-line")}
+              >
+                <Pet species={profile.pet.species} stage="child" mood="happy" size={64} styleOverride={id} />
+                <span className="font-display">{label}</span>
+                <span className="text-center text-[11px] text-ink-soft">{desc}</span>
+              </button>
+            );
+          })}
+        </div>
+        {(profile.style ?? DEFAULT_STYLE) === "cute" && (
+          <Card className="mt-2 grid grid-cols-3 gap-2">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={profile.theme === t.id}
+                onClick={() => {
+                  applyTheme(t.id, "cute");
+                  updateProfile({ theme: t.id });
+                }}
+                className={cn("font-display rounded-2xl border-2 py-2 text-sm", profile.theme === t.id ? "border-primary bg-bg-soft text-primary-deep" : "border-line")}
+              >
+                {t.label}
+              </button>
+            ))}
+          </Card>
+        )}
       </section>
+
+      <NotificationSettings />
 
       <Link href="/settings/subjects" className={buttonStyles("ghost", "md", "w-full")}>
         📚 과목·단원 관리

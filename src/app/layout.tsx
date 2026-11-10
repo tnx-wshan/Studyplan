@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Jua, Noto_Sans_KR } from "next/font/google";
+import { IBM_Plex_Mono, Jua, Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import { ServiceWorker } from "@/components/ServiceWorker";
 import { themeInitScript } from "@/components/ThemeSync";
 import "./globals.css";
 
 const display = Jua({ variable: "--font-display", weight: "400", subsets: ["latin"], preload: false });
 const body = Noto_Sans_KR({ variable: "--font-body", subsets: ["latin"], preload: false });
+const serif = Noto_Serif_KR({ variable: "--font-serif", weight: ["500", "700"], subsets: ["latin"], preload: false });
+const mono = IBM_Plex_Mono({ variable: "--font-mono", weight: ["400", "500"], subsets: ["latin"], preload: false });
 
 export const metadata: Metadata = {
   title: "홈스터디",
@@ -27,7 +29,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ko" className={`${display.variable} ${body.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="ko" className={`${display.variable} ${body.variable} ${serif.variable} ${mono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>

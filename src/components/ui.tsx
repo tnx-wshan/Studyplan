@@ -18,7 +18,8 @@ type Size = "sm" | "md" | "lg";
 /** 게임 버튼 스타일: 누르면 아래로 눌리는 입체 버튼. 링크에도 같은 모양을 쓸 수 있다. */
 export function buttonStyles(variant: Variant = "primary", size: Size = "md", className?: string) {
   return cn(
-    "font-display inline-flex items-center justify-center gap-2 rounded-2xl transition-[transform,box-shadow] duration-75 select-none",
+    "btn font-display inline-flex items-center justify-center gap-2 rounded-2xl transition-[transform,box-shadow] duration-75 select-none",
+    `btn-${variant}`,
     "active:translate-y-[4px] active:shadow-none disabled:opacity-50 disabled:active:translate-y-0",
     "focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-accent",
     size === "sm" && "shrink-0 whitespace-nowrap px-3 py-1.5 text-sm",
@@ -41,7 +42,7 @@ export function Button({
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-3xl border-2 border-line bg-surface p-4 shadow-[var(--shadow)]", className)}
+      className={cn("card relative rounded-3xl border-2 border-line bg-surface p-4 shadow-[var(--shadow)]", className)}
       {...props}
     />
   );

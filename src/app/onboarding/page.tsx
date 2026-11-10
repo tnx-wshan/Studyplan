@@ -7,6 +7,8 @@ import { Button, Card, cn } from "@/components/ui";
 import { GRADES, type GradeId } from "@/data/curriculum";
 import { completeOnboarding } from "@/lib/db/profile";
 import { PET_SPECIES, type PetSpecies } from "@/lib/game/pet";
+import { terms } from "@/lib/game/companion";
+import { useUiStyle } from "@/components/ThemeSync";
 import { useProfile } from "@/lib/hooks";
 
 const inputClass =
@@ -15,6 +17,9 @@ const inputClass =
 export default function OnboardingPage() {
   const router = useRouter();
   const profile = useProfile();
+  const style = useUiStyle();
+  const t = terms(style);
+  const noir = style === "noir";
   const [step, setStep] = useState(0);
   const [nickname, setNickname] = useState("");
   const [grade, setGrade] = useState<GradeId | null>(null);
@@ -47,7 +52,7 @@ export default function OnboardingPage() {
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 px-4 py-8">
       <div className="text-center">
         <p className="font-display text-3xl text-primary">홈스터디</p>
-        <p className="text-sm text-ink-soft">펫과 함께 성장하는 자기주도 학습</p>
+        <p className="text-sm text-ink-soft">{t.pet}와(과) 함께 성장하는 자기주도 학습</p>
       </div>
 
       <ol className="flex justify-center gap-2" aria-label="진행 단계">
@@ -106,7 +111,7 @@ export default function OnboardingPage() {
 
       {step === 2 && (
         <Card className="space-y-4">
-          <h1 className="font-display text-xl">함께할 펫 알을 골라주세요</h1>
+          <h1 className="font-display text-xl">{noir ? "함께할 동료를 고르세요" : "함께할 펫 알을 골라주세요"}</h1>
           <div className="grid grid-cols-3 gap-2">
             {(Object.keys(PET_SPECIES) as PetSpecies[]).map((s) => (
               <button
@@ -120,13 +125,13 @@ export default function OnboardingPage() {
                 )}
               >
                 <Pet species={s} stage="baby" mood="happy" size={72} />
-                <span className="font-display text-sm">{PET_SPECIES[s].label}</span>
+                <span className="font-display text-sm">{t.speciesLabel(s)}</span>
               </button>
             ))}
           </div>
-          <p className="text-sm text-ink-soft">{PET_SPECIES[species].description}</p>
+          <p className="text-sm text-ink-soft">{t.speciesDescription(species)}</p>
           <label className="block space-y-1.5">
-            <span className="text-sm text-ink-soft">펫 이름</span>
+            <span className="text-sm text-ink-soft">{t.pet} 이름</span>
             <input className={inputClass} value={petName} maxLength={10} onChange={(e) => setPetName(e.target.value)} placeholder="예: 쑥쑥이" />
           </label>
         </Card>
@@ -135,7 +140,7 @@ export default function OnboardingPage() {
       {hatching && (
         <div className="flex flex-col items-center gap-2" aria-live="polite">
           <Pet species={species} stage="egg" mood="excited" size={120} />
-          <p className="font-display">{petName}의 알을 받았어요! 공부하면 알이 부화해요.</p>
+          <p className="font-display">{noir ? `${petName}와(과) 계약했다. 공부하면 봉인이 풀린다.` : `${petName}의 알을 받았어요! 공부하면 알이 부화해요.`}</p>
         </div>
       )}
       {error && <p className="text-center text-danger">{error}</p>}

@@ -7,6 +7,7 @@ import { getDB } from "@/lib/db";
 import { usePetState, useProfile } from "@/lib/hooks";
 import { cn, Pill } from "./ui";
 import { LevelUp } from "./LevelUp";
+import { BadgeWatcher } from "./game/BadgeWatcher";
 import { TimerWatcher } from "./TimerWatcher";
 import { Toaster } from "./Toaster";
 import { formatClock, remaining, elapsed } from "@/lib/study/timer";
@@ -55,6 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TimerWatcher />
       <Toaster />
       <LevelUp />
+      <BadgeWatcher />
     </div>
   );
 }

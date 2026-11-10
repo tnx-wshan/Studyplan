@@ -1,56 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { Pet } from "@/components/Pet";
+import { CompanionCard } from "@/components/game/CompanionCard";
+import { QuestBoard } from "@/components/game/QuestBoard";
 import { StudyGrass } from "@/components/StudyGrass";
-import { Button, buttonStyles, Card, ProgressBar, SectionTitle } from "@/components/ui";
+import { buttonStyles, Card, SectionTitle } from "@/components/ui";
 import { usePetState, useStudyDays } from "@/lib/hooks";
 import { useLiveQuery } from "dexie-react-hooks";
 import { SubjectChip, useSubjectMap } from "@/components/kit";
-import { toast } from "@/components/Toaster";
 import { getDB } from "@/lib/db";
-import { claimQuest, dailyStats } from "@/lib/db/study";
 import { toDateKey } from "@/lib/date";
-import { DAILY_QUESTS, questProgress } from "@/lib/game/quests";
 import { useMinuteTick } from "@/lib/timerStore";
 import { recommendedMethods, type Dimension } from "@/data/diagnosis";
 import { METHODS, methodById } from "@/data/methods";
 import { daysBetween } from "@/lib/date";
-import { withRo } from "@/lib/korean";
-import { PET_MOOD_TEXT } from "@/lib/game/pet";
 
 export default function HomePage() {
   const state = usePetState();
   const study = useStudyDays();
   if (!state || !study) return null;
-  const { profile, level, stage, next, mood, streak } = state;
+  const { profile, streak } = state;
 
   return (
     <div className="space-y-5">
-      <Card className="relative overflow-hidden bg-gradient-to-b from-bg-soft to-surface text-center">
-        <p className="font-display text-sm text-ink-soft">{stage.label} 단계</p>
-        <h1 className="font-display text-2xl">{profile.pet.name}</h1>
-        <div className="flex justify-center py-2">
-          <Pet species={profile.pet.species} stage={stage.stage} mood={mood} size={180} />
-        </div>
-        <p className="mx-auto mb-3 inline-block rounded-2xl bg-surface px-3 py-1.5 text-sm shadow-[var(--shadow)]">
-          “{PET_MOOD_TEXT[mood]}”
-        </p>
-        <div className="space-y-1 text-left">
-          <div className="flex justify-between text-sm">
-            <span className="font-display">Lv.{level.level}</span>
-            <span className="text-ink-soft">
-              {level.current} / {level.needed} XP
-            </span>
-          </div>
-          <ProgressBar value={level.progress} label="다음 레벨까지 경험치" />
-          {next && (
-            <p className="text-xs text-ink-soft">Lv.{next.minLevel}에 도달하면 {withRo(next.label)} 자라요!</p>
-          )}
-        </div>
-      </Card>
+      <CompanionCard />
 
-      <DailyQuests />
+      <QuestBoard />
 
       <TodayOverview />
 
@@ -86,61 +61,6 @@ export default function HomePage() {
         </Card>
       )}
     </div>
-  );
-}
-
-function DailyQuests() {
-  const today = toDateKey();
-  const stats = useLiveQuery(() => dailyStats(today), [today]);
-  const claimed = useLiveQuery(async () => new Set((await getDB().userQuests.where("period").equals(today).toArray()).map((q) => q.questId)), [today]);
-  if (!stats || !claimed) return null;
-  const doneCount = DAILY_QUESTS.filter((q) => claimed.has(q.id)).length;
-
-  return (
-    <section>
-      <SectionTitle action={<span className="font-display text-sm text-ink-soft">{doneCount}/{DAILY_QUESTS.length} 완료</span>}>오늘의 퀘스트</SectionTitle>
-      <Card className="space-y-2">
-        {DAILY_QUESTS.map((q) => {
-          const p = questProgress(q, stats);
-          const got = claimed.has(q.id);
-          return (
-            <div key={q.id} className="flex items-center gap-3 rounded-2xl bg-surface-2 p-3">
-              <span aria-hidden className="text-2xl">
-                {got ? "🏅" : q.icon}
-              </span>
-              <div className="min-w-0 flex-1">
-                <Link href={q.href} className={got ? "text-sm text-ink-soft line-through" : "text-sm"}>
-                  {q.title}
-                </Link>
-                {!got && (
-                  <div className="mt-1 flex items-center gap-2">
-                    <ProgressBar value={p.ratio} className="h-2.5 border-0" color={p.done ? "var(--success)" : "var(--xp)"} label={`${q.title} 진행률`} />
-                    <span className="shrink-0 text-xs tabular-nums text-ink-soft">
-                      {p.value}/{q.target}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {got ? (
-                <span className="font-display text-sm text-success-deep">완료</span>
-              ) : p.done ? (
-                <Button
-                  size="sm"
-                  variant="success"
-                  onClick={async () => {
-                    if (await claimQuest(q.id, today)) toast(`퀘스트 완료! +${q.reward} XP`);
-                  }}
-                >
-                  +{q.reward} 받기
-                </Button>
-              ) : (
-                <span className="font-display text-sm text-xp-deep">+{q.reward} XP</span>
-              )}
-            </div>
-          );
-        })}
-      </Card>
-    </section>
   );
 }
 

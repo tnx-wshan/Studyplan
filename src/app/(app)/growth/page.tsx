@@ -82,7 +82,9 @@ export default function GrowthPage() {
           이번 주 회고
         </Link>
       </div>
-      <Card className="text-sm text-ink-soft">🔒 배지 모음은 4단계에서 열려요.</Card>
+      <Link href="/growth/badges" className={buttonStyles("ghost", "md", "w-full")}>
+        🏆 업적과 칭호
+      </Link>
     </div>
   );
 }
