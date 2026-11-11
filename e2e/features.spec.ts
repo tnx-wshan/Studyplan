@@ -214,6 +214,9 @@ test("시험 고치기와 하루 새 카드 수", async ({ page }) => {
   // 새 카드 상한: 5장으로 줄이면 8장 중 5장만 복습에 나온다
   await page.goto("/settings");
   await page.getByLabel("하루에 새로 배우는 카드").selectOption("5");
+  await page.waitForTimeout(500);
+  await page.reload(); // 저장이 끝난 뒤에도 값이 남아 있는지 함께 확인
+  await expect(page.getByLabel("하루에 새로 배우는 카드")).toHaveValue("5");
   await page.goto("/review/cards");
   await page.getByRole("button", { name: "+ 새 묶음" }).click();
   await page.locator("dialog[open] input").fill("영어 단어");
@@ -223,5 +226,22 @@ test("시험 고치기와 하루 새 카드 수", async ({ page }) => {
   await page.locator("dialog[open] textarea").fill(Array.from({ length: 8 }, (_, i) => `word${i} - 뜻${i}`).join("\n"));
   await page.locator("dialog[open]").getByRole("button", { name: "8장 추가하기" }).click();
   await expect(page.getByRole("link", { name: /복습하기 \(5장\)/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("리포트 이미지 저장, 로그인 없는 소개 페이지", async ({ page, browser }) => {
+  const errors = await startFresh(page);
+  await page.goto("/growth/report");
+  const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: /이미지로 저장/ }).click()]);
+  expect(download.suggestedFilename()).toMatch(/^homestudy-week-\d{4}-\d{2}-\d{2}\.png$/);
+  await expect(page.getByText("리포트 이미지를 저장했어요")).toBeVisible();
+
+  // 로그인 없이도 소개 페이지는 볼 수 있다
+  const guest = await browser.newContext();
+  const g = await guest.newPage();
+  await g.goto(new URL("/intro", page.url()).toString());
+  await expect(g.getByRole("heading", { level: 1 })).toContainText("꾸준히 하게 돕는 학습 앱");
+  await expect(g.getByRole("link", { name: "앱 열기" })).toBeVisible();
+  await guest.close();
   expect(errors).toEqual([]);
 });

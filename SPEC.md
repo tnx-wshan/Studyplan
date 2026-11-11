@@ -23,7 +23,7 @@
 - 기기 저장: Dexie 4 (IndexedDB, 현재 4번째 버전) + `useLiveQuery`
 - AI: Vercel AI SDK v7 (`ai`, `@ai-sdk/google|anthropic|openai`), zod로 답 형식 지정
 - 알림: Web Push (`web-push`), 서버 시작 때 스케줄러 실행 (`src/instrumentation.ts`)
-- 테스트: Vitest(단위 145개), Playwright(브라우저 15개, 가짜 AI)
+- 테스트: Vitest(단위 150개), Playwright(브라우저 17개, 가짜 AI)
 
 ### 폴더
 
@@ -66,16 +66,22 @@ e2e/                        브라우저 테스트
 | 학습법 | `/methods` | 학습법 안내, 학습 유형 진단, 연습 기록 |
 | 성장 | `/growth` | 통계, 주간 리포트와 AI 코칭 `/growth/report`, 업적 `/growth/badges`, 성적 변화 `/growth/exams` |
 | 동료 | `/companion` | 동료 성장 단계, 상점(코인), 칭호, 이야기 기록 `/companion/records` |
-| 설정 | `/settings` | 이름·학년·테마, 과목 관리, 알림, 백업/복원(사진 포함) |
+| 설정 | `/settings` | 이름·학년·하루 새 카드 수·테마, 과목 관리, 알림, 백업/복원(사진 포함) |
 
 ### 게임 요소
 경험치와 레벨, 코인, 연속 학습일(보호권으로 하루 메움), 일간·주간·시험 퀘스트, 업적과 칭호, 상점, 오래 쉬었다 돌아오면 가벼운 복귀 퀘스트, 레벨이 오르면 열리는 이야기(본편 12편 + 외전 3편, 테마별 문체).
 
 ### AI 동작 원칙
-- 모든 요청에 제한 시간이 있고, 모델이 붐비거나 한도에 걸리면 예비 모델로 넘어간다.
+- 모든 요청에 제한 시간이 있다. 붐비거나(503) 요청이 너무 많으면(429) 1.5초·4초 기다렸다 같은 모델로 다시 하고, 그래도 안 되면 예비 모델로 넘어간다. 지출 한도·키 오류는 재시도하지 않는다.
 - 웹 검색이 실패하면 검색 없이 답하고 그 사실을 화면에 알린다.
 - 실패하면 사용 횟수를 돌려주고, 학생이 이해할 말로 이유를 알린다 (`src/lib/ai/route-helpers.ts`).
 - 하루 사용량은 서버의 `.data/ai-usage.json`에 서울 날짜 기준으로 저장한다.
+
+### 공개 화면
+`/login`, `/intro`(소개 페이지)만 로그인 없이 열린다 (`src/proxy.ts`의 `PUBLIC_PATHS`).
+
+### 확인 창
+`confirm`/`prompt`는 쓰지 않는다. `askConfirm`, `askText`(`src/components/Dialogs.tsx`)를 쓴다.
 
 ## 4. 데이터 (기기 안 Dexie)
 

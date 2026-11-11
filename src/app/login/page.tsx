@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Pet } from "@/components/Pet";
 import { Button, Card } from "@/components/ui";
@@ -62,6 +63,9 @@ export default function LoginPage() {
           </Button>
         </form>
       </Card>
+      <Link href="/intro" className="text-sm text-ink-soft underline">
+        홈스터디는 어떤 앱인가요?
+      </Link>
     </main>
   );
 }

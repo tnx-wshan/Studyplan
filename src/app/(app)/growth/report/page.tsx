@@ -18,6 +18,7 @@ import { addTask } from "@/lib/db/study";
 import type { Reflection } from "@/lib/db/types";
 import { toDateKey } from "@/lib/date";
 import { useProfile } from "@/lib/hooks";
+import { canvasToBlob, drawReportImage, shareOrDownload } from "@/lib/reportImage";
 import { reportToText } from "@/lib/study/coachText";
 import { periodFor, shiftPeriod, weekKey, type Period } from "@/lib/study/period";
 import { change, computeReport, type ReportStats } from "@/lib/study/report";
@@ -32,6 +33,7 @@ export default function ReportPage() {
   const isCurrent = today >= period.start && today < period.end;
   const subjectMap = useSubjectMap();
   const input = useLiveQuery(loadReportInput, []);
+  const profile = useProfile();
 
   useEffect(() => {
     if (input && window.location.hash === "#reflection") document.getElementById("reflection")?.scrollIntoView();
@@ -81,6 +83,27 @@ export default function ReportPage() {
         <Tile label="얻은 경험치" value={`${now.xp} XP`} delta={change(now.xp, before.xp)} />
       </div>
       <p className="-mt-3 text-right text-xs text-ink-soft">↑↓ 지난 {period.kind === "week" ? "주" : "달"}와 비교</p>
+      <Button
+        variant="ghost"
+        className="w-full"
+        onClick={async () => {
+          const css = getComputedStyle(document.documentElement);
+          const v = (name: string) => css.getPropertyValue(name).trim() || undefined;
+          const canvas = drawReportImage({
+            title: period.kind === "week" ? "주간 리포트" : "월간 리포트",
+            periodLabel: period.label,
+            nickname: profile?.nickname ?? "",
+            stats: now,
+            rate: rate(now),
+            subjectName,
+            colors: { bg: v("--bg"), surface: v("--surface"), ink: v("--ink"), inkSoft: v("--ink-soft"), primary: v("--primary"), line: v("--line") },
+          });
+          const r = await shareOrDownload(await canvasToBlob(canvas), `homestudy-${period.kind}-${period.start}.png`);
+          if (r === "saved") toast("리포트 이미지를 저장했어요");
+        }}
+      >
+        🖼️ 리포트를 이미지로 저장·공유
+      </Button>
 
       <section>
         <SectionTitle>날짜별 집중 시간</SectionTitle>
