@@ -4,6 +4,7 @@ import "katex/dist/katex.min.css";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
+import { cleanAiText } from "@/lib/ai/text";
 import { cn } from "./ui";
 
 /** AI 답변 표시: 마크다운 + 수식(KaTeX). 링크는 새 탭으로, 원시 HTML은 렌더링하지 않는다. */
@@ -21,7 +22,7 @@ export function Markdown({ children, className }: { children: string; className?
           ),
         }}
       >
-        {children}
+        {cleanAiText(children)}
       </ReactMarkdown>
     </div>
   );
