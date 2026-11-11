@@ -24,6 +24,7 @@ export function friendlyAiError(e: unknown): NextResponse {
   if (e instanceof AiNotConfiguredError) return jsonError(503, `AI가 아직 설정되지 않았어요. ${e.message}`);
   const message = e instanceof Error ? e.message : String(e);
   console.error("[ai]", message);
+  if (/spending cap|billing/i.test(message)) return jsonError(502, "AI 계정의 지출 한도에 걸렸어요. AI 회사의 결제·지출 설정에서 한도를 확인해 주세요.");
   if (/timeout|timed out|aborted|abort/i.test(message)) return jsonError(504, "AI 응답이 너무 오래 걸려서 멈췄어요. 잠시 뒤에 다시 시도해 주세요.");
   if (/503|unavailable|overloaded|high demand/i.test(message)) return jsonError(503, "AI 서버가 지금 붐벼요. 잠시 뒤에 다시 시도해 주세요.");
   if (/api key|apikey|unauthor|permission|401|403/i.test(message)) return jsonError(502, "AI 키가 올바르지 않거나 권한이 없어요. 키를 확인해 주세요.");

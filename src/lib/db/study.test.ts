@@ -227,3 +227,35 @@ describe("exam goals and results", () => {
     expect(trend.find((t) => t.subjectId === eng.id)?.points).toHaveLength(1);
   });
 });
+
+describe("maintenance and edits", () => {
+  it("adds focus time to the linked task", async () => {
+    const t = await addTask({ date: TODAY, title: "수학" });
+    const start = at(TODAY, 9);
+    await recordStudySession({ startedAt: start, endedAt: start + 25 * 60_000, focusMinutes: 25, mode: "pomodoro", taskId: t.id }, "s-a");
+    await recordStudySession({ startedAt: start + 1, endedAt: start + 10 * 60_000, focusMinutes: 10, mode: "pomodoro", taskId: t.id }, "s-b");
+    await recordStudySession({ startedAt: start, endedAt: start + 25 * 60_000, focusMinutes: 25, mode: "pomodoro", taskId: t.id }, "s-a"); // 중복
+    expect((await getDB().tasks.get(t.id))?.actualMinutes).toBe(35);
+  });
+
+  it("prunes spaced reviews overdue by more than two weeks only", async () => {
+    const { pruneStaleReviews } = await import("./study");
+    const t = await addTask({ date: "2026-10-01", title: "단원", unit: "u" });
+    await setTaskDone(t.id, true, at("2026-10-01")); // 복습: 10/2, 10/4, 10/8, 10/15
+    await addTask({ date: "2026-10-01", title: "내 할 일" });
+    expect(await pruneStaleReviews("2026-10-20")).toBe(2); // 10/2, 10/4만 (10/6 이전)
+    const left = (await getDB().tasks.filter((x) => x.kind === "spaced").toArray()).map((x) => x.date).sort();
+    expect(left).toEqual(["2026-10-08", "2026-10-15"]);
+    expect(await getDB().tasks.filter((x) => x.title === "내 할 일").count()).toBe(1);
+  });
+
+  it("relinks subjects when the grade changes and keeps custom units", async () => {
+    const { relinkSubjectsToGrade, updateSubject } = await import("./study");
+    const math = (await getDB().subjects.toArray()).find((s) => s.group === "math")!;
+    await updateSubject(math.id, { customUnits: ["내 단원"] });
+    await relinkSubjectsToGrade("m2");
+    const after = await getDB().subjects.get(math.id);
+    expect(after?.courseIds).toEqual(["m2-math-1"]);
+    expect(after?.customUnits).toEqual(["내 단원"]);
+  });
+});

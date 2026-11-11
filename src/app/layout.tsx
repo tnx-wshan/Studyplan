@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, Jua, Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
 import { ServiceWorker } from "@/components/ServiceWorker";
-import { themeInitScript } from "@/components/ThemeSync";
+import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 const display = Jua({ variable: "--font-display", weight: "400", subsets: ["latin"], preload: false });

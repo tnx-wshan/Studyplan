@@ -18,7 +18,7 @@ export async function flushPendingFocus() {
   try {
     for (const c of getTimer().pending ?? []) {
       const saved = await recordStudySession(
-        { startedAt: c.startedAt, endedAt: c.endedAt, focusMinutes: c.minutes, mode: c.mode, subjectId: c.subjectId },
+        { startedAt: c.startedAt, endedAt: c.endedAt, focusMinutes: c.minutes, mode: c.mode, subjectId: c.subjectId, taskId: c.taskId },
         focusId(c),
       );
       const now = getTimer();

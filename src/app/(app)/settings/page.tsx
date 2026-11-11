@@ -10,6 +10,7 @@ import { Button, Card, SectionTitle, buttonStyles, cn } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS, coursesFor, gradeLabel, type GradeId } from "@/data/curriculum";
 import { exportBackup, importBackup } from "@/lib/db/backup";
 import { updateProfile } from "@/lib/db/profile";
+import { relinkSubjectsToGrade } from "@/lib/db/study";
 import { useProfile } from "@/lib/hooks";
 
 const THEMES = [
@@ -64,7 +65,14 @@ export default function SettingsPage() {
             <span className="text-sm text-ink-soft">학년</span>
             <select
               value={profile.grade}
-              onChange={(e) => updateProfile({ grade: e.target.value as GradeId })}
+              onChange={async (e) => {
+                const grade = e.target.value as GradeId;
+                await updateProfile({ grade });
+                if (confirm("과목의 교육과정 연결도 새 학년에 맞게 바꿀까요? 직접 추가한 단원은 그대로 남아요.")) {
+                  await relinkSubjectsToGrade(grade);
+                  setMessage("과목을 새 학년 교육과정에 연결했어요. 선택과목은 과목·단원 관리에서 골라 주세요.");
+                }
+              }}
               className="w-full rounded-2xl border-2 border-line bg-surface px-3 py-2.5"
             >
               {GRADES.map((g) => (

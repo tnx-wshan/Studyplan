@@ -3,11 +3,12 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useState } from "react";
-import { Empty, PageHeader, SubjectChip, SubjectPicker, formatDateKey, useSubjectMap, useSubjects } from "@/components/kit";
+import { Empty, Field, PageHeader, Sheet, SubjectChip, SubjectPicker, TextArea, TextInput, formatDateKey, useSubjectMap, useSubjects } from "@/components/kit";
 import { StoredImage } from "@/components/StoredImage";
-import { Card, buttonStyles, cn } from "@/components/ui";
+import { Button, Card, buttonStyles, cn } from "@/components/ui";
 import { getDB } from "@/lib/db";
-import { deleteWrongAnswer } from "@/lib/db/study";
+import { deleteWrongAnswer, updateWrongAnswer } from "@/lib/db/study";
+import type { WrongAnswer } from "@/lib/db/types";
 import { toDateKey } from "@/lib/date";
 import { WRONG_REASONS } from "@/lib/study/wrongReasons";
 
@@ -26,6 +27,7 @@ export default function WrongListPage() {
   const [filter, setFilter] = useState<Filter>("active");
   const [subjectId, setSubjectId] = useState<string>();
   const [openId, setOpenId] = useState<string>();
+  const [editing, setEditing] = useState<WrongAnswer | null>(null);
   const all = useLiveQuery(() => getDB().wrongAnswers.orderBy("nextRetry").toArray(), []);
 
   const items = (all ?? []).filter((w) => {
@@ -118,7 +120,10 @@ export default function WrongListPage() {
                       <p className="text-xs text-ink-soft">
                         다시 푼 기록: {w.retries.length ? w.retries.map((r) => (r.correct ? "⭕" : "❌")).join(" ") : "아직 없음"} · 연속 정답 {w.streak}/3
                       </p>
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-4">
+                        <button type="button" className="underline" onClick={() => setEditing(w)}>
+                          고치기
+                        </button>
                         <button type="button" className="text-danger underline" onClick={() => confirm("이 오답을 지울까요?") && deleteWrongAnswer(w.id)}>
                           삭제
                         </button>
@@ -131,6 +136,52 @@ export default function WrongListPage() {
           })}
         </ul>
       )}
+      <Sheet open={!!editing} onClose={() => setEditing(null)} title="오답 고치기">
+        {editing && <EditWrongForm key={editing.id} item={editing} onDone={() => setEditing(null)} />}
+      </Sheet>
     </div>
+  );
+}
+
+function EditWrongForm({ item, onDone }: { item: WrongAnswer; onDone: () => void }) {
+  const [question, setQuestion] = useState(item.question);
+  const [myAnswer, setMyAnswer] = useState(item.myAnswer);
+  const [correctAnswer, setCorrectAnswer] = useState(item.correctAnswer);
+  const [reason, setReason] = useState(item.reason);
+  const [note, setNote] = useState(item.note ?? "");
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        await updateWrongAnswer(item.id, { question: question.trim(), myAnswer: myAnswer.trim(), correctAnswer: correctAnswer.trim(), reason, note: note.trim() || undefined });
+        onDone();
+      }}
+    >
+      <Field label="문제 내용">
+        <TextArea value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={2000} />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="내가 쓴 답">
+          <TextInput value={myAnswer} onChange={(e) => setMyAnswer(e.target.value)} maxLength={200} />
+        </Field>
+        <Field label="정답">
+          <TextInput value={correctAnswer} onChange={(e) => setCorrectAnswer(e.target.value)} maxLength={500} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {(Object.keys(WRONG_REASONS) as WrongAnswer["reason"][]).map((k) => (
+          <button key={k} type="button" aria-pressed={reason === k} onClick={() => setReason(k)} className={cn("font-display rounded-2xl border-2 py-2 text-sm", reason === k ? "border-primary bg-bg-soft" : "border-line")}>
+            {WRONG_REASONS[k].icon} {WRONG_REASONS[k].label}
+          </button>
+        ))}
+      </div>
+      <Field label="메모">
+        <TextInput value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
+      </Field>
+      <Button type="submit" className="w-full" disabled={!correctAnswer.trim()}>
+        저장
+      </Button>
+    </form>
   );
 }

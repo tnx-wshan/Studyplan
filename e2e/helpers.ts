@@ -3,7 +3,7 @@ import { expect, type Page } from "@playwright/test";
 /** 로그인하고 첫 실행 설정을 마친다 (누아르 테마 기준 문구) */
 export async function startFresh(page: Page, grade = "고1") {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (e) => errors.push(`[${page.url().replace(/^https?:\/\/[^/]+/, "")}] ${e.message}`));
   page.on("dialog", (d) => d.accept());
   await page.goto("/login");
   await page.fill("input[type=password]", "e2e-pass");

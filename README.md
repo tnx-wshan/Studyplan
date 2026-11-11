@@ -1,6 +1,6 @@
 # 홈스터디
 
-펫과 함께 성장하는 중·고등학생 자기주도 학습 웹앱(PWA)입니다. 전체 계획은 [PLAN.md](./PLAN.md)를 보세요.
+펫과 함께 성장하는 중·고등학생 자기주도 학습 웹앱(PWA)입니다. 앱 설명은 [SPEC.md](./SPEC.md), 한 일과 남은 일은 [TASKS.md](./TASKS.md), 작업 규칙은 [AGENTS.md](./AGENTS.md), 단계별 기록은 [PLAN.md](./PLAN.md)를 보세요.
 
 ## 실행 방법
 

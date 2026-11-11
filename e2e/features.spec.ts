@@ -152,3 +152,30 @@ test("시험 결과: 끝난 시험의 점수를 기록하면 성적 그래프에
   await noHorizontalScroll(page);
   expect(errors).toEqual([]);
 });
+
+test("고치기: 할 일과 오답 내용을 나중에 바꿀 수 있다", async ({ page }) => {
+  const errors = await startFresh(page);
+  await page.goto("/planner");
+  await page.getByRole("button", { name: "+ 할 일" }).click();
+  await page.locator("dialog[open] input").first().fill("수학 익힘책");
+  await page.locator("dialog[open]").getByRole("button", { name: "추가하기" }).click();
+  await page.getByRole("button", { name: "더보기" }).click();
+  await page.getByRole("button", { name: "고치기" }).click();
+  const sheet = page.locator("dialog[open]");
+  await sheet.getByLabel("할 일").fill("수학 익힘책 40~45쪽");
+  await sheet.getByLabel("예상 시간(분)").fill("50");
+  await sheet.getByRole("button", { name: "저장" }).click();
+  await expect(page.getByText("수학 익힘책 40~45쪽")).toBeVisible();
+  await expect(page.getByText("약 50분").first()).toBeVisible();
+
+  await page.goto("/review/wrong/new");
+  await page.locator("textarea").fill("1+1은?");
+  await page.getByLabel("정답").fill("3");
+  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await page.getByText("1+1은?").click();
+  await page.getByRole("button", { name: "고치기" }).click();
+  await page.locator("dialog[open]").getByLabel("정답").fill("2");
+  await page.locator("dialog[open]").getByRole("button", { name: "저장" }).click();
+  await expect(page.locator("main b", { hasText: /^2$/ })).toBeVisible();
+  expect(errors).toEqual([]);
+});

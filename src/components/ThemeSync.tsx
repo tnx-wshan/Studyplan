@@ -3,14 +3,10 @@
 import { useEffect } from "react";
 import { useProfile } from "@/lib/hooks";
 import type { Profile } from "@/lib/db/types";
+import { DEFAULT_STYLE as DEFAULT_STYLE_VALUE, STYLE_KEY, THEME_KEY } from "@/lib/theme";
 
-export const THEME_KEY = "hs-theme";
-export const STYLE_KEY = "hs-style";
 export type UiStyle = NonNullable<Profile["style"]>;
-export const DEFAULT_STYLE: UiStyle = "noir";
-
-/** 첫 화면 깜빡임을 막기 위해 <head>에서 실행하는 스크립트 */
-export const themeInitScript = `(function(){try{var r=document.documentElement;var s=localStorage.getItem('${STYLE_KEY}')||'${DEFAULT_STYLE}';r.dataset.style=s;var t=localStorage.getItem('${THEME_KEY}')||'system';var d=s==='noir'||t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);r.dataset.theme=d?'dark':'light';}catch(e){}})();`;
+export const DEFAULT_STYLE: UiStyle = DEFAULT_STYLE_VALUE;
 
 /** 누아르 스타일은 항상 어두운 화면 */
 export function applyTheme(theme: Profile["theme"], style: UiStyle = DEFAULT_STYLE) {

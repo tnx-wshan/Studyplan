@@ -5,6 +5,7 @@ import { toast } from "../Toaster";
 import { useUiStyle } from "../ThemeSync";
 import { applyStreakFreeze, detectComeback } from "@/lib/db/retention";
 import { generateRoutineTasks } from "@/lib/db/routines";
+import { pruneStaleReviews } from "@/lib/db/study";
 
 /**
  * 앱을 열 때(그리고 날짜가 바뀔 때) 한 번:
@@ -22,6 +23,7 @@ export function RetentionWatcher({ today }: { today: string }) {
       await detectComeback(today);
       // 고정 루틴의 할 일을 일주일 치까지 채운다
       await generateRoutineTasks(today);
+      await pruneStaleReviews(today);
     })();
     return () => {
       cancelled = true;

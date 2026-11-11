@@ -88,6 +88,8 @@ export interface Task extends Base {
   examId?: string;
   /** 간격 복습 할 일이 몇 번째 복습인지 (1·3·7·14일) */
   spacedStep?: number;
+  /** 집중 타이머로 이 할 일에 쓴 실제 시간(분) */
+  actualMinutes?: number;
   /** 루틴에서 만들어진 할 일 */
   routineId?: string;
   /** 시작 시각 "HH:MM" (루틴) */
@@ -110,6 +112,8 @@ export interface Routine extends Base {
 
 export interface StudySession extends Base {
   subjectId?: string;
+  /** 타이머에 연결했던 할 일 */
+  taskId?: string;
   date: string;
   startedAt: number;
   endedAt: number;

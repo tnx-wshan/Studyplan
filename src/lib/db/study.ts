@@ -2,6 +2,7 @@ import { getDB, newId } from "./index";
 import { addXpInTx } from "./profile";
 import type { Card, Exam, StudySession, Subject, Task, WrongAnswer } from "./types";
 import { addDays, toDateKey } from "@/lib/date";
+import { defaultCourseIds, type GradeId } from "@/data/curriculum";
 import { XP_REWARDS } from "@/lib/game/level";
 import { DAILY_QUESTS, type DailyStats } from "@/lib/game/quests";
 import { generateExamPlan, type TaskDraft } from "@/lib/study/examPlan";
@@ -209,9 +210,14 @@ export async function recordStudySession(input: Omit<StudySession, "id" | "creat
     createdAt: input.endedAt,
     updatedAt: input.endedAt,
   };
-  return db.transaction("rw", db.studySessions, db.profile, db.xpEvents, async () => {
+  return db.transaction("rw", db.studySessions, db.tasks, db.profile, db.xpEvents, async () => {
     if (await db.studySessions.get(id)) return null;
     await db.studySessions.add(session);
+    // 연결한 할 일에 실제 공부 시간을 쌓는다
+    if (input.taskId) {
+      const task = await db.tasks.get(input.taskId);
+      if (task) await db.tasks.update(task.id, { actualMinutes: (task.actualMinutes ?? 0) + minutes, updatedAt: input.endedAt });
+    }
     await addXpInTx(db, minutes * XP_REWARDS.studyMinute, "focus", input.endedAt);
     return session;
   });
@@ -328,7 +334,23 @@ export async function dueWrongAnswers(today = toDateKey()) {
     .toArray();
 }
 
+/** 2주 넘게 밀린 간격 복습 할 일은 지운다 (끝없이 쌓이지 않도록. 카드·오답·기억 지도가 복습을 대신 챙긴다) */
+export async function pruneStaleReviews(today = toDateKey(), olderThanDays = 14) {
+  const db = getDB();
+  const limit = addDays(today, -olderThanDays);
+  const stale = await db.tasks.where("date").below(limit).filter((t) => !t.done && t.kind === "spaced").primaryKeys();
+  await db.tasks.bulkDelete(stale);
+  return stale.length;
+}
+
 // ───────── 과목 ─────────
+
+/** 학년이 바뀌었을 때: 과목의 교육과정 연결을 새 학년 기본값으로 바꾼다 (직접 추가한 단원은 유지) */
+export async function relinkSubjectsToGrade(grade: GradeId) {
+  const db = getDB();
+  const subjects = await db.subjects.toArray();
+  await db.subjects.bulkUpdate(subjects.map((s) => ({ key: s.id, changes: { courseIds: defaultCourseIds(grade, s.group), updatedAt: now() } })));
+}
 
 export async function updateSubject(id: string, patch: Partial<Pick<Subject, "name" | "color" | "courseIds" | "customUnits" | "archived">>) {
   await getDB().subjects.update(id, { ...patch, updatedAt: now() });

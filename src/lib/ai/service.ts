@@ -143,16 +143,17 @@ export async function makeMaterial(req: MaterialRequest, models: Models, webSear
   if (req.kind === "web") {
     // 검색 도구와 구조화 출력은 함께 못 쓰는 모델이 있어서, 마크다운으로 받고 나눈다
     try {
-      const result = await withFallback(models, (model) =>
-        generateText({
-          model,
-          tools: webSearch(),
-          stopWhen: isStepCount(4),
-          prompt: webSearchPrompt(req.grade, req.query, req.subject),
-          maxOutputTokens: 6000,
-          ...REQUEST_LIMITS,
-        }),
-      );
+      // 검색이 막혀 있으면(요금제 한도 등) 모델을 바꿔도 마찬가지라서, 첫 모델로 한 번만 시도한다
+      const primary = Array.isArray(models) ? models[0] : models;
+      const result = await generateText({
+        model: primary,
+        tools: webSearch(),
+        stopWhen: isStepCount(4),
+        prompt: webSearchPrompt(req.grade, req.query, req.subject),
+        maxOutputTokens: 6000,
+        maxRetries: 0,
+        timeout: { totalMs: 60_000 },
+      });
       const seen = new Set<string>();
       const sources = result.sources
         .filter((s): s is Extract<typeof s, { sourceType: "url" }> => s.sourceType === "url")

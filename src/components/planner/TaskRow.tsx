@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { SubjectChip } from "@/components/kit";
+import { Field, Sheet, SubjectChip, TextInput } from "@/components/kit";
 import { toast } from "@/components/Toaster";
-import { cn } from "@/components/ui";
+import { Button, cn } from "@/components/ui";
 import { addDays } from "@/lib/date";
 import { deleteTask, setTaskDone, updateTask } from "@/lib/db/study";
 import type { Subject, Task } from "@/lib/db/types";
@@ -17,6 +17,7 @@ const KIND_BADGE: Partial<Record<Task["kind"], { label: string; className: strin
 
 export function TaskRow({ task, subject }: { task: Task; subject?: Subject }) {
   const [menu, setMenu] = useState(false);
+  const [editing, setEditing] = useState(false);
   const badge = KIND_BADGE[task.kind];
 
   async function toggle() {
@@ -49,6 +50,7 @@ export function TaskRow({ task, subject }: { task: Task; subject?: Subject }) {
             {task.routineId && <span className="font-display rounded-full bg-surface px-2 py-0.5">🔁 루틴</span>}
             {badge && <span className={cn("font-display rounded-full px-2 py-0.5", badge.className)}>{badge.label}</span>}
             {task.estimatedMinutes ? <span>약 {task.estimatedMinutes}분</span> : null}
+            {task.actualMinutes ? <span className="text-success-deep">실제 {task.actualMinutes}분</span> : null}
           </div>
         </div>
         {!task.done && (
@@ -62,6 +64,9 @@ export function TaskRow({ task, subject }: { task: Task; subject?: Subject }) {
       </div>
       {menu && (
         <div className="mt-2 flex flex-wrap justify-end gap-2 text-sm">
+          <button type="button" className="font-display rounded-full border-2 border-line px-3 py-1" onClick={() => setEditing(true)}>
+            고치기
+          </button>
           {!task.done && (
             <button type="button" className="font-display rounded-full border-2 border-line px-3 py-1" onClick={() => updateTask(task.id, { date: addDays(task.date, 1) })}>
               내일로 미루기
@@ -76,6 +81,42 @@ export function TaskRow({ task, subject }: { task: Task; subject?: Subject }) {
           </button>
         </div>
       )}
+      <Sheet open={editing} onClose={() => setEditing(false)} title="할 일 고치기">
+        {editing && <EditTaskForm task={task} onDone={() => setEditing(false)} />}
+      </Sheet>
     </li>
+  );
+}
+
+function EditTaskForm({ task, onDone }: { task: Task; onDone: () => void }) {
+  const [title, setTitle] = useState(task.title);
+  const [date, setDate] = useState(task.date);
+  const [minutes, setMinutes] = useState(String(task.estimatedMinutes ?? ""));
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!title.trim()) return;
+        const m = Number(minutes);
+        await updateTask(task.id, { title: title.trim(), date, estimatedMinutes: minutes.trim() && Number.isFinite(m) && m > 0 ? Math.round(m) : undefined });
+        onDone();
+      }}
+    >
+      <Field label="할 일">
+        <TextInput value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} autoFocus />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="날짜">
+          <TextInput type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+        </Field>
+        <Field label="예상 시간(분)">
+          <TextInput type="number" inputMode="numeric" min={1} max={600} value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+        </Field>
+      </div>
+      <Button type="submit" className="w-full" disabled={!title.trim()}>
+        저장
+      </Button>
+    </form>
   );
 }
