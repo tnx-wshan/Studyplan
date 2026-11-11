@@ -3,6 +3,7 @@ import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import { getModel } from "@/lib/ai/provider";
 import { friendlyAiError, withQuota } from "@/lib/ai/route-helpers";
 import { makeUnit } from "@/lib/ai/service";
+import { figureMarkdown } from "@/lib/server/media";
 import { admin, adminError, ok, readBody } from "@/lib/server/admin-api";
 import { childrenOf, getItem, type MaterialData, type QuizData } from "@/lib/server/bank";
 import { courseOutline, createUnit, getSection } from "@/lib/server/learn";
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
         },
         ai.models,
         section.subject === "math",
+        figureMarkdown,
       );
       if (made.steps.length === 0) throw new Error("no usable steps");
       const r = createUnit(section.id, { title: made.title, steps: made.steps, status: "draft", sourceIds: items.map((x) => x!.id) });

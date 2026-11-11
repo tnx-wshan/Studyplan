@@ -108,12 +108,12 @@ describe("AI unit output", () => {
   it("converts and filters generated questions", () => {
     const { steps, problems } = unitSteps({
       title: "t",
-      summaries: [{ title: "정리", body: "본문", points: [] }],
+      summaries: [{ title: "정리", body: "본문", points: [], figure: "" }],
       questions: [
-        { type: "choice", prompt: "q", choices: ["a", "b"], answer: "a", accepted: [], text: "", distractors: [], explanation: "" },
-        { type: "choice", prompt: "q", choices: ["a", "b"], answer: "z", accepted: [], text: "", distractors: [], explanation: "" },
-        { type: "short", prompt: "q", choices: [], answer: "3", accepted: ["삼"], text: "", distractors: [], explanation: "" },
-        { type: "puzzle", prompt: "뜻", choices: [], answer: "엽 록 소", accepted: [], text: "", distractors: [], explanation: "" },
+        { type: "choice", prompt: "q", choices: ["a", "b"], answer: "a", accepted: [], text: "", distractors: [], explanation: "", figure: "" },
+        { type: "choice", prompt: "q", choices: ["a", "b"], answer: "z", accepted: [], text: "", distractors: [], explanation: "", figure: "" },
+        { type: "short", prompt: "q", choices: [], answer: "3", accepted: ["삼"], text: "", distractors: [], explanation: "", figure: "" },
+        { type: "puzzle", prompt: "뜻", choices: [], answer: "엽 록 소", accepted: [], text: "", distractors: [], explanation: "", figure: "" },
       ],
     });
     expect(steps.map((s) => s.type)).toEqual(["summary", "choice", "short", "puzzle"]);
@@ -142,5 +142,45 @@ describe("저장된 수식 명령 보정", () => {
     const s = createSection("m1", "math", "새 섹션");
     const r = createUnit(s.id, { title: "u", steps: [{ type: "short", prompt: "$\frac{6}{3}$은?", answers: ["2"] }] });
     expect((r.unit!.steps[0] as { prompt: string }).prompt).toBe(String.raw`$\frac{6}{3}$은?`);
+  });
+});
+
+describe("그림 저장", () => {
+  it("SVG에서 스크립트·이벤트·외부 링크를 지운다", async () => {
+    const { sanitizeSvg } = await import("./svg");
+    const out = sanitizeSvg('```svg\n<svg viewBox="0 0 10 10" onload="x()"><script>alert(1)</script><a href="https://evil"><text>가</text></a><image xlink:href="http://x/y.png"/><use href="#p"/><foreignObject><div/></foreignObject><style>@import url(http://x);</style></svg>\n```')!;
+    expect(out).toContain('xmlns="http://www.w3.org/2000/svg"');
+    expect(out).not.toMatch(/script|onload|evil|http:\/\/x|foreignObject|@import/);
+    expect(out).toContain('href="#p"');
+    expect(sanitizeSvg("<div>그림 아님</div>")).toBeNull();
+    expect(sanitizeSvg(`<svg>${"a".repeat(200_000)}</svg>`)).toBeNull();
+  });
+
+  it("같은 그림은 한 번만 저장하고, 쓸 수 없는 그림은 거절한다", async () => {
+    const { figureMarkdown, getMedia, saveDataUrl, saveMedia } = await import("./media");
+    const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const a = saveDataUrl(png, "admin")!;
+    expect(saveDataUrl(png, "admin")).toBe(a);
+    expect(getMedia(a)?.mime).toBe("image/png");
+    expect(saveDataUrl("data:text/html;base64,PGI+", "admin")).toBeNull();
+    expect(saveMedia("image/svg+xml", new TextEncoder().encode("<p>no</p>"), "ai")).toBeNull();
+    const md = figureMarkdown('<svg viewBox="0 0 1 1"><script>x</script></svg>');
+    expect(md).toMatch(/^!\[문제 그림\]\(\/api\/media\?id=[0-9a-f-]+\)$/);
+    const id = md.match(/id=([0-9a-f-]+)/)![1];
+    expect(new TextDecoder().decode(getMedia(id)!.data)).not.toContain("script");
+    expect(figureMarkdown("")).toBe("");
+  });
+
+  it("AI 유닛의 그림은 정리와 문제에 붙는다", () => {
+    const { steps } = unitSteps(
+      {
+        title: "t",
+        summaries: [{ title: "정리", body: "본문", points: [], figure: "<svg/>" }],
+        questions: [{ type: "choice", prompt: "q", choices: ["a", "b"], answer: "a", accepted: [], text: "", distractors: [], explanation: "", figure: "<svg/>" }],
+      },
+      (_svg, alt) => `![${alt}](/api/media?id=1)`,
+    );
+    expect(steps[0]).toMatchObject({ body: "본문\n\n![정리](/api/media?id=1)" });
+    expect(steps[1]).toMatchObject({ prompt: "q\n\n![문제 그림](/api/media?id=1)" });
   });
 });

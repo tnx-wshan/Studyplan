@@ -93,6 +93,21 @@ const MIGRATIONS: Migration[] = [
     repairJsonColumn(db, "bank_items", "data");
     repairJsonColumn(db, "learn_units", "steps");
   },
+  // 3: 문제·설명에 들어가는 그림 (같은 그림은 sha로 한 번만 저장)
+  (db) => {
+    db.exec(`
+      CREATE TABLE media (
+        id TEXT PRIMARY KEY,
+        mime TEXT NOT NULL,
+        data BLOB NOT NULL,
+        size INTEGER NOT NULL,
+        sha TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'admin',
+        created_at INTEGER NOT NULL
+      );
+      CREATE UNIQUE INDEX media_sha ON media(sha);
+    `);
+  },
 ];
 
 function migrate(db: DatabaseSync) {

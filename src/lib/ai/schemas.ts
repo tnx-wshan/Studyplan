@@ -14,8 +14,13 @@ export const QuestionSchema = z.object({
   answer: z.string().describe("정답. 객관식은 정답 보기의 내용을 그대로"),
   explanation: z.string().describe("풀이와 해설"),
   concept: z.string().describe("이 문제가 확인하는 핵심 개념 한 줄"),
+  figure: z.string().describe("그림이 있어야 이해가 쉬운 문제면 그 그림의 SVG 코드(<svg ...>...</svg>), 아니면 빈 문자열").default(""),
 });
 export type QuestionOutput = z.infer<typeof QuestionSchema>;
+/** 저장·화면용 문제: 그림은 서버에 저장한 뒤 문제 글(prompt)에 마크다운 그림으로 들어간다 */
+export type StoredQuestion = Omit<QuestionOutput, "figure">;
+/** 관리 도구가 고쳐서 보내는 문제 (그림 칸 없음) */
+export const StoredQuestionSchema = QuestionSchema.omit({ figure: true });
 
 export const QuizSchema = z.object({
   title: z.string().describe("퀴즈 제목 (20자 이내)"),
@@ -135,6 +140,7 @@ export const UnitSchema = z.object({
         title: z.string().describe("정리 제목"),
         body: z.string().describe("짧은 핵심 정리 (마크다운, 5줄 이내, 수식은 $...$)"),
         points: z.array(z.string()).describe("꼭 기억할 점 1~3개"),
+        figure: z.string().describe("그림이 있어야 이해가 쉬운 정리면 그 그림의 SVG 코드(<svg ...>...</svg>), 아니면 빈 문자열").default(""),
       }),
     )
     .describe("핵심 정리 1~2개"),
@@ -149,6 +155,7 @@ export const UnitSchema = z.object({
         text: z.string().describe("빈칸 채우기 문장. 빈칸이 될 낱말을 [[ ]]로 감싼다. 다른 유형은 빈 문자열"),
         distractors: z.array(z.string()).describe("빈칸 채우기의 헷갈리는 낱말 2개. 다른 유형은 빈 배열"),
         explanation: z.string().describe("짧은 해설 한두 문장"),
+        figure: z.string().describe("그림이 있어야 이해가 쉬운 문제면 그 그림의 SVG 코드(<svg ...>...</svg>), 아니면 빈 문자열").default(""),
       }),
     )
     .describe("문제 5~7개"),

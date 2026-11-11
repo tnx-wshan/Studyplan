@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_URL, adminLogin, answerDialog, startFresh } from "./helpers";
+import { ADMIN_URL, TINY_PNG, adminLogin, answerDialog, imagesLoaded, startFresh } from "./helpers";
 
 test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용·편집, AI로 유닛 만들기, 사용자 정지·값 고치기", async ({ page }) => {
   const errors = await startFresh(page);
@@ -43,6 +43,17 @@ test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용
   await page.getByRole("link", { name: "광합성 원리" }).first().click();
   await page.getByLabel("제목").fill("광합성 (검토함)");
   await page.getByLabel("핵심 (한 줄에 하나)").fill("엽록체에서 일어난다\n산소가 나온다");
+  // 복사한 그림을 정리 칸에 붙여넣기(Ctrl+V)
+  const summary = page.getByRole("textbox", { name: /^정리 \(마크다운/ });
+  await summary.evaluate((el, b64) => {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    const dt = new DataTransfer();
+    dt.items.add(new File([bytes], "copied.png", { type: "image/png" }));
+    el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, TINY_PNG.buffer.toString("base64"));
+  await expect(page.getByText("그림 1개를 넣었어요.")).toBeVisible();
+  await expect(summary).toHaveValue(/!\[그림\]\(\/api\/media\?id=[0-9a-f-]+\)/);
+  await imagesLoaded(page, "ul img");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect(page.getByText(/저장했어요/)).toBeVisible();
 
@@ -63,6 +74,12 @@ test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용
   await expect(page.getByLabel("유닛 이름")).toHaveValue("광합성의 원리");
   // AI가 만든 잘못된 문제(정답이 보기에 없음)는 빠져 있다
   await expect(page.getByText(/단계 5개/)).toBeVisible();
+  // AI가 그린 정리 그림이 들어 있고, 관리자가 그림을 더 넣을 수 있다
+  await expect(page.getByRole("list", { name: /핵심 정리.*에 들어간 그림/ }).getByRole("img")).toHaveCount(1);
+  await page.getByLabel(/핵심 정리.*에 넣을 그림 파일/).setInputFiles(TINY_PNG);
+  await expect(page.getByText("그림 1개를 넣었어요.")).toBeVisible();
+  await expect(page.getByRole("list", { name: /핵심 정리.*에 들어간 그림/ }).getByRole("img")).toHaveCount(2);
+  await imagesLoaded(page, "ul img");
   await page.getByRole("button", { name: "저장하고 공개" }).click();
   await expect(page.getByText(/학생의 학습 탭에 보여요/)).toBeVisible();
 
@@ -99,6 +116,10 @@ test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용
   await page.getByRole("navigation").getByRole("link", { name: "학습", exact: true }).click();
   await page.getByRole("button", { name: "고1 과학 유닛 1개" }).click();
   await expect(page.getByRole("link", { name: "광합성의 원리 (지금 할 유닛)" })).toBeVisible();
+  // 학생 학습 화면: 핵심 정리에 AI 그림과 관리자가 넣은 그림이 보인다
+  await page.getByRole("link", { name: "광합성의 원리 (지금 할 유닛)" }).click();
+  await expect(page.locator(".md img")).toHaveCount(2);
+  await imagesLoaded(page);
 
   expect(errors).toEqual([]);
 });

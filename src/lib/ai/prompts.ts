@@ -66,6 +66,13 @@ ${grade} 학생이 '${course}' 과목의 '${unit}' 단원을 공부하려고 해
 const DIFFICULTY = { easy: "기본 개념 확인 수준", normal: "학교 시험 평균 수준", hard: "응용·심화 수준" };
 const TYPES = { multiple: "객관식(보기 5개, 정답 1개)", short: "단답형", essay: "서술형" };
 
+/** 그림(SVG) 문제를 낼 때의 규칙. 교과서·문제집처럼 그림을 보고 푸는 문제를 섞는다 */
+export const FIGURE_RULES = `[그림]
+- 도형, 좌표평면·그래프, 수직선, 표·도표, 실험 장치, 지도·모식도처럼 그림이 있어야 이해가 쉬운 내용이면 figure에 그림을 SVG 코드로 그려. 그림이 필요 없으면 빈 문자열.
+- 그림을 보고 답을 찾는 문제라면 문제 글에 "그림과 같이", "그림에서"처럼 그림을 가리켜. 정답이 그림에만 있고 글로는 알 수 없게 해도 돼.
+- SVG 규칙: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">처럼 viewBox를 쓰고 가로 400 이하. 흰 바탕에 검은 선(stroke="#222"), 강조는 한두 가지 색만. 글자는 <text>로 쓰고 font-size 14 이상. 수식 기호는 글자 그대로(x², π). 스크립트·외부 이미지·외부 글꼴은 쓰지 마.
+- 그림의 길이·각도·눈금은 문제의 숫자와 정확히 맞게 그려.`;
+
 export function quizPrompt(input: Omit<QuizRequest, "verify">) {
   return `${COMMON}
 아래 학습 자료로 ${input.grade}${input.subject ? ` ${input.subject}` : ""} 학생용 문제 ${input.count}개를 만들어 줘.
@@ -75,17 +82,20 @@ export function quizPrompt(input: Omit<QuizRequest, "verify">) {
 - 객관식 정답(answer)은 보기(choices) 중 하나와 글자까지 똑같이 써. 보기 앞에 번호를 붙이지 마.
 - 단답형 정답은 짧게(단어나 수). 서술형은 채점 기준이 되는 모범 답안을 써.
 - 해설(explanation)은 왜 그 답인지, 객관식이면 다른 보기가 왜 틀렸는지까지 알려줘.
+- 그림이 도움이 되는 내용이면 문제 중 1~2개는 그림을 보고 푸는 문제로 내.
+
+${FIGURE_RULES}
 
 [학습 자료]
 ${input.material}`;
 }
 
-export function verifyPrompt(questions: { prompt: string; choices: string[]; answer: string }[]) {
+export function verifyPrompt(questions: { prompt: string; choices: string[]; answer: string; figure?: string }[]) {
   return `너는 꼼꼼한 검산 선생님이야. 아래 문제들을 직접 다시 풀어서 주어진 정답이 맞는지 확인해.
 틀린 정답이 있으면 올바른 정답과 고친 해설을 줘. 객관식이면 fixedAnswer는 보기 중 하나와 글자까지 똑같이 써.
 
 ${questions
-  .map((q, i) => `[${i}] ${q.prompt}${q.choices.length ? `\n보기: ${q.choices.join(" / ")}` : ""}\n주어진 정답: ${q.answer}`)
+  .map((q, i) => `[${i}] ${q.prompt}${q.figure ? `\n그림(SVG): ${q.figure.slice(0, 3000)}` : ""}${q.choices.length ? `\n보기: ${q.choices.join(" / ")}` : ""}\n주어진 정답: ${q.answer}`)
   .join("\n\n")}`;
 }
 
@@ -142,6 +152,8 @@ ${req.grade} ${req.subject} 과목, '${req.section}' 섹션에 넣을 학습 유
 - 주관식은 답이 짧고 하나로 분명한 것만. 같은 답의 다른 표기(예: 8, 8개)는 accepted에 넣어.
 - 빈칸 채우기는 text에 문장을 쓰고 빈칸이 될 낱말을 [[ ]]로 감싸. 빈칸은 1~2개.
 - 낱말 퍼즐은 prompt에 뜻풀이, answer에 2~6글자 낱말(띄어쓰기 없이).
+- 그림이 도움이 되는 내용이면 핵심 정리나 문제 중 1~2개에 그림(figure)을 넣어.
+${FIGURE_RULES}
 ${req.existing.length ? `- 이 섹션에 이미 있는 유닛: ${req.existing.join(", ")}. 이것들과 겹치지 않는 내용으로.\n` : ""}${req.focus ? `- 특히 다룰 주제: ${req.focus}\n` : ""}
 ${sources}`;
 }

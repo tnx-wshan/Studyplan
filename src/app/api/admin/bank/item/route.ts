@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { admin, adminError, ok, readBody } from "@/lib/server/admin-api";
 import { childrenOf, deleteItem, getItem, updateItem } from "@/lib/server/bank";
-import { QuestionSchema } from "@/lib/ai/schemas";
+import { StoredQuestionSchema } from "@/lib/ai/schemas";
 import { normalizeQuestion } from "@/lib/ai/service";
 
 export async function GET(request: Request) {
@@ -19,7 +19,7 @@ const MaterialData = z.object({
   sources: z.array(z.object({ title: z.string().max(200), url: z.string().max(1000) })).max(20),
   notice: z.string().max(500).optional(),
 });
-const QuizData = z.object({ questions: z.array(QuestionSchema).max(30), verified: z.boolean(), difficulty: z.enum(["easy", "normal", "hard"]) });
+const QuizData = z.object({ questions: z.array(StoredQuestionSchema).max(30), verified: z.boolean(), difficulty: z.enum(["easy", "normal", "hard"]) });
 
 const Body = z.object({
   id: z.string(),

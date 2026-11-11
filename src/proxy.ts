@@ -5,6 +5,8 @@ const PUBLIC_PATHS = ["/login", "/intro", "/api/auth/login", "/manifest.webmanif
 const ADMIN_PUBLIC = ["/admin/login", "/api/admin/login"];
 
 const isAdminPath = (p: string) => p === "/admin" || p.startsWith("/admin/") || p.startsWith("/api/admin/");
+/** 문제 그림: 관리 화면 미리 보기에서도 쓰므로 관리 서버에서도 연다 (관리자 로그인 필요) */
+const isSharedPath = (p: string) => p === "/api/media";
 
 /**
  * 관리 서버(ADMIN_SERVER=1, 다른 포트): 관리 화면만 열고, 관리자 로그인이 필요하다.
@@ -14,7 +16,7 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (isAdminServer()) {
-    if (!isAdminPath(pathname)) {
+    if (!isAdminPath(pathname) && !isSharedPath(pathname)) {
       if (pathname.startsWith("/api/")) return NextResponse.json({ error: "not found" }, { status: 404 });
       return NextResponse.redirect(new URL("/admin", request.url));
     }

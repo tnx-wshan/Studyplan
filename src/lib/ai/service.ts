@@ -21,6 +21,7 @@ import {
   type MaterialOutput,
   type MaterialRequest,
   type QuestionOutput,
+  type StoredQuestion,
   type QuizRequest,
   type TutorRequest,
   type CoachRequest,
@@ -235,7 +236,7 @@ const CIRCLED = "①②③④⑤⑥";
  * 객관식 정답을 보기와 맞춘다. 모델이 "③", "3번", "3) 내용"처럼 답해도 보기의 글자로 바꾸고,
  * 끝내 맞출 수 없는 문제는 버린다.
  */
-export function normalizeQuestion(q: QuestionOutput): QuestionOutput | null {
+export function normalizeQuestion<Q extends StoredQuestion>(q: Q): Q | null {
   const prompt = q.prompt.trim();
   const answer = q.answer.trim();
   if (!prompt || !answer) return null;
@@ -252,7 +253,19 @@ export function normalizeQuestion(q: QuestionOutput): QuestionOutput | null {
   return fixed ? { ...q, prompt, choices, answer: fixed } : null;
 }
 
-export async function makeQuiz(req: QuizRequest, models: Models) {
+/**
+ * AI가 그린 그림(SVG)을 저장하고 문제 글에 붙일 마크다운을 돌려주는 함수.
+ * 서버 DB에 저장하는 일은 라우트가 맡는다(src/lib/server/media.ts의 figureMarkdown). 없으면 그림은 버린다.
+ */
+export type FigureSaver = (svg: string, alt: string) => string;
+
+/** 글 끝에 그림을 붙인다 */
+function withFigure(text: string, svg: string | undefined, save: FigureSaver | undefined, alt: string): string {
+  const md = svg?.trim() && save ? save(svg, alt) : "";
+  return md ? `${text}\n\n${md}` : text;
+}
+
+export async function makeQuiz(req: QuizRequest, models: Models, saveFigure?: FigureSaver): Promise<{ title: string; questions: StoredQuestion[]; verified: boolean }> {
   const { output } = await withFallback(models, (model) =>
     generateText({
       model,
@@ -288,7 +301,9 @@ export async function makeQuiz(req: QuizRequest, models: Models) {
       // 검산이 실패해도 문제는 그대로 준다
     }
   }
-  return { title: output.title.trim() || "AI 퀴즈", questions, verified };
+  // 그림은 저장한 뒤 문제 글에 마크다운 그림으로 넣는다
+  const stored = questions.map(({ figure, ...q }) => ({ ...q, prompt: withFigure(q.prompt, figure, saveFigure, "문제 그림") }));
+  return { title: output.title.trim() || "AI 퀴즈", questions: stored, verified };
 }
 
 export async function makeFeedback(req: FeedbackRequest, models: Models) {
@@ -312,10 +327,11 @@ export async function makeCoaching(req: CoachRequest, models: Models) {
 }
 
 /** AI가 만든 유닛을 학습 탭 단계로 바꾼다. 모양이 잘못된 문제는 버리고 그 이유를 남긴다 */
-export function unitSteps(output: UnitOutput): { steps: Step[]; problems: string[] } {
+export function unitSteps(output: UnitOutput, saveFigure?: FigureSaver): { steps: Step[]; problems: string[] } {
   const raw = [
-    ...output.summaries.map((s) => ({ type: "summary", ...s })),
-    ...output.questions.map((q) => {
+    ...output.summaries.map(({ figure, ...s }) => ({ type: "summary", ...s, body: withFigure(s.body, figure, saveFigure, s.title || "정리 그림") })),
+    ...output.questions.map(({ figure, ...rest }) => {
+      const q = { ...rest, prompt: withFigure(rest.prompt, figure, saveFigure, "문제 그림") };
       switch (q.type) {
         case "choice":
           return { type: "choice", prompt: q.prompt, choices: q.choices, answer: q.answer, explanation: q.explanation };
@@ -332,12 +348,12 @@ export function unitSteps(output: UnitOutput): { steps: Step[]; problems: string
 }
 
 /** 모아 둔 자료로 학습 유닛 초안을 만든다 (관리 도구) */
-export async function makeUnit(req: UnitRequest, models: Models, math = false) {
+export async function makeUnit(req: UnitRequest, models: Models, math = false, saveFigure?: FigureSaver) {
   const { output } = await withFallback(models, (model) =>
     generateText({ model, prompt: unitPrompt(req), output: Output.object({ schema: UnitSchema }), maxOutputTokens: 10_000, ...REQUEST_LIMITS }),
   );
   const fixed = fixDeep(output);
-  const { steps, problems } = unitSteps(fixed);
+  const { steps, problems } = unitSteps(fixed, saveFigure);
   return {
     title: fixed.title.trim() || req.section,
     steps: math ? steps.map((s) => (s.type === "short" ? { ...s, math: true } : s)) : steps,
