@@ -35,6 +35,9 @@ export const VerifySchema = z.object({
 });
 export type VerifyOutput = z.infer<typeof VerifySchema>;
 
+/** 자료 모음에 학년·과목별로 모으기 위한 과목 그룹 */
+const SubjectGroupSchema = z.enum(["korean", "english", "math", "social", "science"]).optional();
+
 const DATA_URL = /^data:(image\/(png|jpeg|webp|gif)|application\/pdf);base64,[A-Za-z0-9+/=]+$/;
 
 /** 튜터 요청 본문 */
@@ -57,10 +60,10 @@ export type TutorRequest = z.infer<typeof TutorRequestSchema>;
 
 /** 자료 만들기 요청 본문 */
 export const MaterialRequestSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("photo"), grade: z.string().max(20), subject: z.string().max(20).optional(), images: z.array(z.string().max(8_000_000).regex(DATA_URL)).min(1).max(5) }),
-  z.object({ kind: z.literal("pdf"), grade: z.string().max(20), subject: z.string().max(20).optional(), pdf: z.string().max(20_000_000).regex(DATA_URL) }),
-  z.object({ kind: z.literal("web"), grade: z.string().max(20), subject: z.string().max(20).optional(), query: z.string().min(1).max(200) }),
-  z.object({ kind: z.literal("curriculum"), grade: z.string().max(20), course: z.string().min(1).max(40), unit: z.string().min(1).max(80) }),
+  z.object({ kind: z.literal("photo"), grade: z.string().max(20), subject: z.string().max(20).optional(), subjectGroup: SubjectGroupSchema, images: z.array(z.string().max(8_000_000).regex(DATA_URL)).min(1).max(5) }),
+  z.object({ kind: z.literal("pdf"), grade: z.string().max(20), subject: z.string().max(20).optional(), subjectGroup: SubjectGroupSchema, pdf: z.string().max(20_000_000).regex(DATA_URL) }),
+  z.object({ kind: z.literal("web"), grade: z.string().max(20), subject: z.string().max(20).optional(), subjectGroup: SubjectGroupSchema, query: z.string().min(1).max(200) }),
+  z.object({ kind: z.literal("curriculum"), grade: z.string().max(20), subjectGroup: SubjectGroupSchema, course: z.string().min(1).max(40), unit: z.string().min(1).max(80) }),
 ]);
 export type MaterialRequest = z.infer<typeof MaterialRequestSchema>;
 
@@ -74,6 +77,9 @@ export const QuizRequestSchema = z.object({
   difficulty: z.enum(["easy", "normal", "hard"]),
   /** 수학·과학처럼 계산이 있는 과목은 정답을 한 번 더 검산 */
   verify: z.boolean(),
+  subjectGroup: SubjectGroupSchema,
+  /** 이 문제의 바탕이 된 자료 모음 항목 */
+  bankMaterialId: z.string().max(64).optional(),
 });
 export type QuizRequest = z.infer<typeof QuizRequestSchema>;
 
@@ -118,3 +124,45 @@ export const CoachRequestSchema = z.object({
   methods: z.array(z.object({ id: z.string().max(30), name: z.string().max(40) })).max(30),
 });
 export type CoachRequest = z.infer<typeof CoachRequestSchema>;
+
+// ───────── 학습 탭 유닛 만들기 (관리 도구) ─────────
+
+export const UnitSchema = z.object({
+  title: z.string().describe("유닛 이름 (15자 이내)"),
+  summaries: z
+    .array(
+      z.object({
+        title: z.string().describe("정리 제목"),
+        body: z.string().describe("짧은 핵심 정리 (마크다운, 5줄 이내, 수식은 $...$)"),
+        points: z.array(z.string()).describe("꼭 기억할 점 1~3개"),
+      }),
+    )
+    .describe("핵심 정리 1~2개"),
+  questions: z
+    .array(
+      z.object({
+        type: z.enum(["choice", "short", "blank", "puzzle"]),
+        prompt: z.string().describe("문제. 빈칸 채우기는 지시문, 낱말 퍼즐은 뜻풀이"),
+        choices: z.array(z.string()).describe("객관식 보기 3~4개. 객관식이 아니면 빈 배열"),
+        answer: z.string().describe("정답. 객관식은 보기 글자 그대로, 낱말 퍼즐은 2~6글자 낱말"),
+        accepted: z.array(z.string()).describe("주관식에서 정답으로 인정할 다른 표현. 없으면 빈 배열"),
+        text: z.string().describe("빈칸 채우기 문장. 빈칸이 될 낱말을 [[ ]]로 감싼다. 다른 유형은 빈 문자열"),
+        distractors: z.array(z.string()).describe("빈칸 채우기의 헷갈리는 낱말 2개. 다른 유형은 빈 배열"),
+        explanation: z.string().describe("짧은 해설 한두 문장"),
+      }),
+    )
+    .describe("문제 5~7개"),
+});
+export type UnitOutput = z.infer<typeof UnitSchema>;
+
+export interface UnitRequest {
+  grade: string;
+  subject: string;
+  section: string;
+  /** 합칠 자료들 (정리와 문제) */
+  sources: { title: string; summary: string; keyPoints: string[]; questions: { prompt: string; answer: string }[] }[];
+  /** 같은 섹션에 이미 있는 유닛 이름 (겹치지 않게) */
+  existing: string[];
+  /** 관리자가 원하는 주제 (선택) */
+  focus?: string;
+}

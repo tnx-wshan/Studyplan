@@ -15,6 +15,19 @@ function promptText(options: { prompt: unknown }) {
 }
 
 function jsonFor(text: string): unknown {
+  if (text.includes("[유닛 만들기]")) {
+    return {
+      title: "광합성의 원리",
+      summaries: [{ title: "광합성", body: "식물이 **빛 에너지**로 이산화 탄소와 물을 써서 포도당과 산소를 만드는 과정이에요.", points: ["엽록체에서 일어난다"] }],
+      questions: [
+        { type: "choice", prompt: "광합성이 일어나는 곳은?", choices: ["엽록체", "미토콘드리아", "핵"], answer: "엽록체", accepted: [], text: "", distractors: [], explanation: "엽록체의 엽록소가 빛을 흡수해요." },
+        { type: "blank", prompt: "빈칸을 채우세요.", choices: [], answer: "", accepted: [], text: "광합성 결과 [[산소]]가 만들어진다.", distractors: ["질소", "수소"], explanation: "포도당과 함께 산소가 나와요." },
+        { type: "short", prompt: "광합성에 필요한 기체는?", choices: [], answer: "이산화 탄소", accepted: ["이산화탄소", "CO2"], text: "", distractors: [], explanation: "이산화 탄소와 물이 재료예요." },
+        { type: "puzzle", prompt: "빛을 흡수하는 초록색 색소", choices: [], answer: "엽록소", accepted: [], text: "", distractors: [], explanation: "엽록체 안에 있어요." },
+        { type: "choice", prompt: "보기에 없는 정답은 버려져야 한다", choices: ["가", "나"], answer: "다", accepted: [], text: "", distractors: [], explanation: "" },
+      ],
+    };
+  }
   if (text.includes("학습 코치")) {
     return {
       summary: "이번 주는 꾸준히 공부한 날이 많았어요. 집중 시간도 잘 쌓였어요.",

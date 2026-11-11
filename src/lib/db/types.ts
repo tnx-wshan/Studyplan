@@ -42,6 +42,14 @@ export interface Profile extends Base {
   onboardedAt: number;
   /** 레벨이 올랐지만 아직 축하 화면을 보지 않았을 때, 오르기 전 레벨 */
   levelUpFrom?: number;
+  /** 서버(관리 도구)에서 이 사용자를 알아보는 id. 처음 동기화할 때 만든다 */
+  serverId?: string;
+  /** 관리자가 내린 명령을 여기까지 적용했다 */
+  lastCommandId?: number;
+  /** 학습 탭에서 고른 코스 */
+  learnCourse?: { grade: GradeId; subject: SubjectGroup };
+  /** 학습 탭 하루 목표(분) */
+  learnGoal?: number;
   /** 학습 습관 진단 결과 */
   diagnosis?: { answers: Record<string, number>; scores: Record<string, number>; at: number };
 }
@@ -282,6 +290,33 @@ export interface CoachReport extends Base {
   recommendations: { methodId: string; reason: string }[];
   goals: string[];
   madeBy: string;
+}
+
+/** 학습 탭: 유닛별 진도 (id = 유닛 id) */
+export interface LearnProgress extends Base {
+  /** 학년:과목 */
+  courseKey: string;
+  title: string;
+  completedAt: number;
+  /** 가장 잘한 기록 (처음에 맞힌 문제 수) */
+  bestCorrect: number;
+  total: number;
+  attempts: number;
+  /** 관리자가 완료로 표시함 */
+  byAdmin?: boolean;
+}
+
+/** 학습 탭: 한 번 학습한 기록 (하루 목표, 통계) */
+export interface LearnLog {
+  id: string;
+  date: string;
+  at: number;
+  unitId: string;
+  courseKey: string;
+  seconds: number;
+  correct: number;
+  total: number;
+  xp: number;
 }
 
 export interface AiUsage {

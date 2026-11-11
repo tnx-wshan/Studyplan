@@ -20,6 +20,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 ### 명령
 ```
 npm run dev          # 개발 서버 (비밀번호는 .env.local의 APP_PASSWORD)
+npm run dev:admin    # 관리 도구 개발 서버 (포트 3300, ADMIN_PASSWORD)
 npm test             # 단위 테스트 (Vitest)
 npm run lint && npm run typecheck
 npm run build && npm run e2e -- --trace off   # 브라우저 테스트 (가짜 AI, 포트 3210)
@@ -37,6 +38,8 @@ npm run build && npm run e2e -- --trace off   # 브라우저 테스트 (가짜 A
 - AI 호출은 `src/lib/ai/service.ts`를 거친다: 제한 시간, 예비 모델 전환(`withFallback`), 하루 사용량(`withQuota`)을 빠뜨리지 않는다. 새 AI 기능은 가짜 AI(`AI_PROVIDER=mock`)에서도 동작해야 한다.
 - 화면은 휴대폰 폭(390px) 기준. 색은 `globals.css`의 토큰만 쓰고, 두 테마(`noir`/`cute`)와 밝은/어두운 화면 모두 확인한다. 접근성(이름 있는 버튼, 대비)을 지킨다.
 - 날짜는 `src/lib/date.ts`의 `toDateKey()`(기기 시간대)로 다룬다. 서버의 하루 사용량만 서울 기준.
+- 서버 DB(`src/lib/server/db.ts`, node:sqlite)의 구조를 바꾸면 `MIGRATIONS`에 새 항목을 덧붙인다. 관리 화면·API는 관리 서버(`ADMIN_SERVER=1`)에서만 열리게 `src/proxy.ts`가 막는다. 관리 API는 `admin()`(`src/lib/server/admin-api.ts`)으로 감싼다.
+- 학습 탭 문제는 저장 전에 `sanitizeSteps`(`src/lib/learn/check.ts`)로 검사한다.
 
 ### Git
 - 지정된 작업 브랜치에서만 커밋·푸시한다. PR은 사용자가 요청할 때만 만든다.

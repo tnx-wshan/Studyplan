@@ -1,4 +1,4 @@
-import type { CoachRequest, FeedbackRequest, QuizRequest } from "./schemas";
+import type { CoachRequest, FeedbackRequest, QuizRequest, UnitRequest } from "./schemas";
 
 const COMMON = `너는 한국 중·고등학생의 자기주도 학습을 돕는 '홈스터디' 앱의 AI 선생님이야.
 - 학생의 학년과 한국 교육과정 수준에 맞춰 쉬운 한국어로 설명해.
@@ -117,4 +117,29 @@ ${req.stats}
 ${req.reflection ? `\n[학생의 회고]\n${req.reflection}\n` : ""}${req.weakAreas.length ? `\n[습관 진단에서 보완할 영역] ${req.weakAreas.join(", ")}\n` : ""}
 [학습법 목록]
 ${req.methods.map((m) => `${m.id}: ${m.name}`).join("\n")}`;
+}
+
+/** 관리 도구: 모아 둔 자료 여러 개를 듀오링고식 2~3분짜리 유닛 하나로 합친다 */
+export function unitPrompt(req: UnitRequest) {
+  const sources = req.sources
+    .map(
+      (s, i) =>
+        `<자료 ${i + 1}: ${s.title}>\n${s.summary.slice(0, 4000)}\n핵심: ${s.keyPoints.join(" / ")}${
+          s.questions.length ? `\n기존 문제: ${s.questions.slice(0, 8).map((q) => `${q.prompt} (답: ${q.answer})`).join(" | ")}` : ""
+        }`,
+    )
+    .join("\n\n");
+  return `${COMMON}
+[유닛 만들기]
+${req.grade} ${req.subject} 과목, '${req.section}' 섹션에 넣을 학습 유닛 하나를 만들어 줘.
+학생은 휴대폰으로 2~3분 동안 핵심 정리를 짧게 읽고 바로 문제를 푼다.
+- 아래 자료들은 여러 학생이 AI로 만든 것이라 내용이 겹치거나 틀린 곳이 있을 수 있어. 겹치는 내용은 하나로 합치고, 교육과정과 다른 내용은 고쳐서 써.
+- 핵심 정리는 1~2개, 각각 5줄 이내로 아주 짧게.
+- 문제는 5~7개. 객관식(choice), 주관식(short), 빈칸 채우기(blank), 낱말 퍼즐(puzzle)을 골고루 섞어.
+- 객관식 answer는 choices 중 하나와 글자까지 같게. 보기 앞에 번호를 붙이지 마.
+- 주관식은 답이 짧고 하나로 분명한 것만. 같은 답의 다른 표기(예: 8, 8개)는 accepted에 넣어.
+- 빈칸 채우기는 text에 문장을 쓰고 빈칸이 될 낱말을 [[ ]]로 감싸. 빈칸은 1~2개.
+- 낱말 퍼즐은 prompt에 뜻풀이, answer에 2~6글자 낱말(띄어쓰기 없이).
+${req.existing.length ? `- 이 섹션에 이미 있는 유닛: ${req.existing.join(", ")}. 이것들과 겹치지 않는 내용으로.\n` : ""}${req.focus ? `- 특히 다룰 주제: ${req.focus}\n` : ""}
+${sources}`;
 }

@@ -32,12 +32,17 @@ const OFFLINE_ROUTES = [
   "/settings/subjects",
   "/ai",
   "/ai/quiz",
+  "/ai/library",
+  "/learn",
+  "/learn/lesson",
 ];
 const WARM_KEY = "hs-sw-warm";
 
 export function ServiceWorker() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
+    // 관리 도구(다른 포트)는 오프라인 앱이 아니다
+    if (location.pathname.startsWith("/admin")) return;
     navigator.serviceWorker.register("/sw.js").catch(() => {});
     // 기기 저장 공간이 부족해도 데이터가 지워지지 않도록 요청
     navigator.storage?.persist?.().catch(() => {});

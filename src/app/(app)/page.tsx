@@ -6,6 +6,7 @@ import { QuestBoard } from "@/components/game/QuestBoard";
 import { ComebackCard, QuickStartCard, WeeklyGoalCard } from "@/components/game/RetentionCards";
 import { MAX_FREEZES } from "@/lib/game/streak";
 import { StudyGrass } from "@/components/StudyGrass";
+import { DailyGoalCard } from "@/components/learn/DailyGoalCard";
 import { buttonStyles, Card, SectionTitle } from "@/components/ui";
 import { usePetState, useStudyDays } from "@/lib/hooks";
 import { useLiveQuery } from "dexie-react-hooks";
@@ -30,6 +31,8 @@ export default function HomePage() {
       <ComebackCard />
 
       <QuickStartCard studiedToday={streak.studiedToday} streak={streak.current} />
+
+      <DailyGoalCard withLink />
 
       <WeeklyGoalCard />
 

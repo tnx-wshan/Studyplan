@@ -7,16 +7,18 @@ import path from "node:path";
  * 지금은 개인용이라 프로젝트의 .data 폴더에 파일로 저장한다.
  * 나중에 배포하면 서버 DB(Supabase 등)로 옮겨야 한다.
  */
-export type AiFeature = "tutor" | "quiz" | "material" | "coach";
+export type AiFeature = "tutor" | "quiz" | "material" | "coach" | "unit";
 
 export const DAILY_LIMITS: Record<AiFeature, number> = {
   tutor: Number(process.env.AI_LIMIT_TUTOR) || 30,
   quiz: Number(process.env.AI_LIMIT_QUIZ) || 10,
   material: Number(process.env.AI_LIMIT_MATERIAL) || 10,
   coach: Number(process.env.AI_LIMIT_COACH) || 10,
+  // 관리 도구의 'AI로 유닛 만들기'
+  unit: Number(process.env.AI_LIMIT_UNIT) || 50,
 };
 
-export const FEATURE_LABELS: Record<AiFeature, string> = { tutor: "튜터 질문", quiz: "문제 만들기", material: "자료 정리", coach: "코칭·피드백" };
+export const FEATURE_LABELS: Record<AiFeature, string> = { tutor: "튜터 질문", quiz: "문제 만들기", material: "자료 정리", coach: "코칭·피드백", unit: "유닛 만들기" };
 
 type Store = { date: string; counts: Partial<Record<AiFeature, number>> };
 

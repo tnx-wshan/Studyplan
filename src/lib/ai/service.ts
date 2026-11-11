@@ -7,6 +7,7 @@ import {
   materialFromPdfPrompt,
   quizPrompt,
   tutorSystem,
+  unitPrompt,
   verifyPrompt,
   webSearchPrompt,
 } from "./prompts";
@@ -15,6 +16,7 @@ import {
   FeedbackSchema,
   MaterialSchema,
   QuizSchema,
+  UnitSchema,
   VerifySchema,
   type MaterialOutput,
   type MaterialRequest,
@@ -23,7 +25,11 @@ import {
   type TutorRequest,
   type CoachRequest,
   type FeedbackRequest,
+  type UnitOutput,
+  type UnitRequest,
 } from "./schemas";
+import { sanitizeSteps } from "@/lib/learn/check";
+import type { Step } from "@/lib/learn/types";
 
 /**
  * 일부 모델은 구조화된 응답 안의 줄바꿈을 글자 그대로 "\\n"으로 보낸다. 진짜 줄바꿈으로 바꾼다.
@@ -300,5 +306,39 @@ export async function makeCoaching(req: CoachRequest, models: Models) {
   return {
     ...fixDeep(output),
     recommendations: output.recommendations.filter((r) => ids.has(r.methodId) && !seen.has(r.methodId) && seen.add(r.methodId)).slice(0, 3),
+  };
+}
+
+/** AI가 만든 유닛을 학습 탭 단계로 바꾼다. 모양이 잘못된 문제는 버리고 그 이유를 남긴다 */
+export function unitSteps(output: UnitOutput): { steps: Step[]; problems: string[] } {
+  const raw = [
+    ...output.summaries.map((s) => ({ type: "summary", ...s })),
+    ...output.questions.map((q) => {
+      switch (q.type) {
+        case "choice":
+          return { type: "choice", prompt: q.prompt, choices: q.choices, answer: q.answer, explanation: q.explanation };
+        case "short":
+          return { type: "short", prompt: q.prompt, answers: [q.answer, ...q.accepted], explanation: q.explanation };
+        case "blank":
+          return { type: "blank", prompt: q.prompt, text: q.text, distractors: q.distractors, explanation: q.explanation };
+        case "puzzle":
+          return { type: "puzzle", prompt: q.prompt, answer: q.answer.replace(/\s+/g, ""), decoys: "", explanation: q.explanation };
+      }
+    }),
+  ];
+  return sanitizeSteps(raw);
+}
+
+/** 모아 둔 자료로 학습 유닛 초안을 만든다 (관리 도구) */
+export async function makeUnit(req: UnitRequest, models: Models, math = false) {
+  const { output } = await withFallback(models, (model) =>
+    generateText({ model, prompt: unitPrompt(req), output: Output.object({ schema: UnitSchema }), maxOutputTokens: 10_000, ...REQUEST_LIMITS }),
+  );
+  const fixed = fixDeep(output);
+  const { steps, problems } = unitSteps(fixed);
+  return {
+    title: fixed.title.trim() || req.section,
+    steps: math ? steps.map((s) => (s.type === "short" ? { ...s, math: true } : s)) : steps,
+    problems,
   };
 }

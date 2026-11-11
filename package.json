@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:admin": "ADMIN_SERVER=1 NEXT_DIST_DIR=.next-admin next dev -p ${ADMIN_PORT:-3300}",
     "build": "next build",
     "start": "next start",
+    "admin": "ADMIN_SERVER=1 next start -p ${ADMIN_PORT:-3300}",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

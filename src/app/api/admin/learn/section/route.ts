@@ -1,0 +1,50 @@
+import { z } from "zod";
+import { coursesFor } from "@/data/curriculum";
+import { admin, adminError, ok, readBody } from "@/lib/server/admin-api";
+import { courseOutline, createSection, deleteSection, isGrade, isSubject, moveSection, updateSection } from "@/lib/server/learn";
+
+const Create = z.object({
+  grade: z.string(),
+  subject: z.string(),
+  title: z.string().trim().max(60).optional(),
+  description: z.string().max(300).optional(),
+  /** 교육과정 대표 단원으로 섹션(목차)을 한꺼번에 만든다 */
+  fromCurriculum: z.boolean().optional(),
+});
+
+export async function POST(request: Request) {
+  return admin(async () => {
+    const body = await readBody(request, Create);
+    if (body instanceof Response) return body;
+    const { grade, subject } = body;
+    if (!isGrade(grade) || !isSubject(subject)) return adminError(400, "학년과 과목을 골라 주세요.");
+    if (body.fromCurriculum) {
+      const have = new Set(courseOutline(grade, subject, true).sections.map((s) => s.title));
+      const titles = coursesFor(grade, subject).flatMap((c) => c.units).filter((t) => !have.has(t));
+      titles.forEach((t) => createSection(grade, subject, t));
+      return ok({ added: titles.length });
+    }
+    if (!body.title) return adminError(400, "섹션 이름을 써 주세요.");
+    return ok({ section: createSection(grade, subject, body.title, body.description) });
+  });
+}
+
+const Update = z.object({ id: z.string(), title: z.string().trim().min(1).max(60).optional(), description: z.string().max(300).optional(), move: z.union([z.literal(-1), z.literal(1)]).optional() });
+
+export async function PUT(request: Request) {
+  return admin(async () => {
+    const body = await readBody(request, Update);
+    if (body instanceof Response) return body;
+    if (body.move) moveSection(body.id, body.move);
+    const section = updateSection(body.id, body);
+    return section ? ok({ section }) : adminError(404, "섹션을 찾을 수 없어요.");
+  });
+}
+
+/** 섹션을 지우면 그 안의 유닛도 지워진다 */
+export async function DELETE(request: Request) {
+  return admin(() => {
+    deleteSection(new URL(request.url).searchParams.get("id") ?? "");
+    return ok();
+  });
+}

@@ -13,6 +13,8 @@ npm run dev                  # http://localhost:3000
 - `.env.local`은 저장소에 올라가지 않습니다. 비밀번호를 바꾸면 기존 로그인은 모두 풀립니다.
 - 알림: 처음 켤 때 VAPID 키가 `.data/push.json`에 자동으로 만들어져요. 직접 정하려면 `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`.
 - AI 기능: `AI_PROVIDER`(gemini · claude · openai)와 그 회사의 키 하나를 넣으세요. 키 없이 화면만 보려면 `AI_PROVIDER=mock`.
+- 관리 도구: `.env.local`에 `ADMIN_PASSWORD`를 넣고, 빌드한 뒤 `npm run admin`으로 관리 서버를 따로 띄워요 (기본 http://localhost:3300/admin, 포트는 `ADMIN_PORT`). 학생용 서버(`npm start`)에서는 관리 화면이 열리지 않아요. 개발 중에는 `npm run dev:admin`.
+- 서버 DB: `.data/homestudy.db`(Node 내장 SQLite, Node 22.13 이상)에 사용자 요약, AI 학습실 자료 모음, 학습 탭 코스가 저장돼요. 처음 열 때 예제 유닛 3개(중1 수학)가 들어가요.
 - 홈 화면 설치와 오프라인 지원(서비스 워커)은 `npm run build && npm start`로 실행한 경우에만 동작합니다.
 
 ## 검사
@@ -46,4 +48,7 @@ npm run e2e        # 브라우저 전체 흐름 테스트 (빌드 후 실행, �
 | `src/data/curriculum.ts` | 국·영·수·사·과 교육과정 기본 데이터 (중1~고3) |
 | `src/components/` | 게임 UI 컴포넌트, 펫 SVG, 앱 셸 |
 | `src/app/` | 화면 (홈, 플래너·시험 계획, 타이머, 복습·카드·오답노트, AI 학습실·튜터·문제 만들기·퀴즈, 학습법·실습·진단, 성장·리포트·회고, 설정·과목 관리, 로그인, 첫 실행) |
+| `src/lib/learn/`, `src/app/(app)/learn/` | 학습 탭: 단계 형식, 채점, 진행 순서, 학습 지도와 유닛 화면 |
+| `src/lib/server/` | 서버 DB(SQLite): 사용자·명령, 자료 모음, 학습 과정 |
+| `src/app/admin/`, `src/app/api/admin/` | 관리 도구 (관리 서버에서만) |
 | `public/sw.js` | 서비스 워커 |

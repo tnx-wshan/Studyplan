@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AiStatusCard } from "@/components/ai/AiStatusCard";
@@ -80,10 +81,11 @@ export default function CreateQuizPage() {
     setError(null);
     try {
       let body: MaterialRequest;
-      if (source === "photo") body = { kind: "photo", grade, subject: subject?.name, images: await Promise.all(photos.map(blobToDataUrl)) };
-      else if (source === "pdf") body = { kind: "pdf", grade, subject: subject?.name, pdf: await blobToDataUrl(pdf!) };
-      else if (source === "web") body = { kind: "web", grade, subject: subject?.name, query: query.trim() };
-      else body = { kind: "curriculum", grade, course: courseById(courseId)?.name ?? subject!.name, unit };
+      const subjectGroup = subject?.group;
+      if (source === "photo") body = { kind: "photo", grade, subject: subject?.name, subjectGroup, images: await Promise.all(photos.map(blobToDataUrl)) };
+      else if (source === "pdf") body = { kind: "pdf", grade, subject: subject?.name, subjectGroup, pdf: await blobToDataUrl(pdf!) };
+      else if (source === "web") body = { kind: "web", grade, subject: subject?.name, subjectGroup, query: query.trim() };
+      else body = { kind: "curriculum", grade, subjectGroup, course: courseById(courseId)?.name ?? subject!.name, unit };
       setMaterial(await requestMaterial(body));
       setShowSummary(true);
     } catch (e) {
@@ -100,7 +102,7 @@ export default function CreateQuizPage() {
     setError(null);
     try {
       const text = `# ${material.title}\n\n${material.summary}\n\n## 핵심\n${material.keyPoints.map((k) => `- ${k}`).join("\n")}`;
-      const quiz = await requestQuiz({ grade, subject: subject?.name, material: text.slice(0, 30_000), count, types, difficulty, verify });
+      const quiz = await requestQuiz({ grade, subject: subject?.name, subjectGroup: subject?.group, bankMaterialId: material.bankId, material: text.slice(0, 30_000), count, types, difficulty, verify });
       const saved = await saveMaterialAndQuiz(
         {
           kind: source,
@@ -111,7 +113,7 @@ export default function CreateQuizPage() {
           subjectId,
           query: source === "web" ? query.trim() : source === "curriculum" ? unit : undefined,
         },
-        { title: quiz.title, difficulty, verified: quiz.verified, madeBy: status?.providerLabel ?? "AI", questions: quiz.questions },
+        { title: quiz.title, difficulty, verified: quiz.verified, madeBy: quiz.fromBank ? "모두의 자료실" : (status?.providerLabel ?? "AI"), questions: quiz.questions },
       );
       router.push(`/ai/quiz?id=${saved.id}`);
     } catch (e) {
@@ -135,6 +137,10 @@ export default function CreateQuizPage() {
     <div className="space-y-5">
       <PageHeader title="✨ 문제 만들기" back="/ai" />
       {status && !status.configured && <AiStatusCard status={status} error={statusError} />}
+      <Link href="/ai/library" className="block rounded-2xl border-2 border-dashed border-line p-3 text-sm">
+        📚 <span className="font-display">모두의 자료실</span>
+        <span className="block text-xs text-ink-soft">다른 학생들이 만든 정리와 문제를 AI 없이 바로 쓸 수 있어요.</span>
+      </Link>
 
       <section>
         <SectionTitle>1. 어떤 자료로 만들까요?</SectionTitle>
@@ -295,7 +301,7 @@ export default function CreateQuizPage() {
         )}
 
         {!material && (
-          <Button className="w-full" disabled={!ready || !status?.configured || remaining("material") === 0} onClick={onMakeMaterial}>
+          <Button className="w-full" disabled={!ready} onClick={onMakeMaterial}>
             자료 정리하기 {remaining("material") !== null && <span className="text-xs opacity-80">(오늘 {remaining("material")}회 남음)</span>}
           </Button>
         )}
@@ -320,6 +326,7 @@ export default function CreateQuizPage() {
               📄 {material.title}
             </SectionTitle>
             <Card className="space-y-3">
+              {material.fromBank && <p className="rounded-2xl bg-accent/10 p-3 text-sm">📚 다른 학생이 먼저 정리한 자료를 모두의 자료실에서 가져왔어요. AI 사용 횟수는 쓰지 않았어요.</p>}
               {material.notice && <p className="rounded-2xl bg-xp/10 p-3 text-sm">⚠️ {material.notice}</p>}
               {showSummary && <Markdown>{material.summary}</Markdown>}
               {material.keyPoints.length > 0 && (
@@ -381,7 +388,7 @@ export default function CreateQuizPage() {
                   <span className="block text-xs text-ink-soft">AI가 문제를 한 번 더 풀어서 정답을 확인해요. 조금 더 오래 걸려요.</span>
                 </span>
               </label>
-              <Button size="lg" variant="accent" className="w-full" disabled={!status?.configured || remaining("quiz") === 0} onClick={onMakeQuiz}>
+              <Button size="lg" variant="accent" className="w-full" disabled={busy !== null} onClick={onMakeQuiz}>
                 ✨ 문제 만들기 {remaining("quiz") !== null && <span className="text-xs opacity-80">(오늘 {remaining("quiz")}회 남음)</span>}
               </Button>
               <button type="button" className="w-full text-center text-sm text-ink-soft underline" onClick={() => setMaterial(null)}>

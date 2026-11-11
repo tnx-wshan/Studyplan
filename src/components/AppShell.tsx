@@ -13,12 +13,15 @@ import { DialogHost } from "./Dialogs";
 import { OfflineWarmup } from "./ServiceWorker";
 import { TimerWatcher } from "./TimerWatcher";
 import { Toaster } from "./Toaster";
+import { SyncWatcher } from "./SyncWatcher";
+import { useUserStatus } from "@/lib/syncStore";
 import { formatClock, remaining, elapsed } from "@/lib/study/timer";
 import { useMinuteTick, useNow, useTimerState } from "@/lib/timerStore";
 import { toDateKey } from "@/lib/date";
 
 const NAV = [
   { href: "/", label: "홈", icon: "🏠" },
+  { href: "/learn", label: "학습", icon: "📘" },
   { href: "/planner", label: "플래너", icon: "🗓️" },
   { href: "/review", label: "복습", icon: "🃏" },
   { href: "/ai", label: "AI 학습실", icon: "🤖" },
@@ -28,6 +31,7 @@ const NAV = [
 export function AppShell({ children }: { children: ReactNode }) {
   const profile = useProfile();
   const router = useRouter();
+  const userStatus = useUserStatus();
 
   useEffect(() => {
     if (profile !== null) return;
@@ -52,8 +56,22 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  if (userStatus === "suspended") {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-xl flex-col items-center justify-center gap-3 px-6 text-center">
+        <SyncWatcher />
+        <p aria-hidden className="text-5xl">
+          🔒
+        </p>
+        <h1 className="font-display text-2xl">이용이 잠시 멈췄어요</h1>
+        <p className="text-sm text-ink-soft">관리자가 이 계정의 이용을 정지했어요. 기기에 저장된 기록은 그대로 남아 있어요. 관리자에게 문의해 주세요.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-xl flex-col">
+      <SyncWatcher />
       <TopBar />
       <DatedMain>{children}</DatedMain>
       <BottomNav />
@@ -116,7 +134,7 @@ function BottomNav() {
       aria-label="주요 메뉴"
       className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl border-t-2 border-line bg-surface px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-6">
         {NAV.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
@@ -125,7 +143,7 @@ function BottomNav() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 rounded-2xl py-1.5 text-xs transition-colors",
+                  "flex flex-col items-center gap-0.5 whitespace-nowrap rounded-2xl py-1.5 text-[11px] tracking-tight transition-colors",
                   active ? "bg-bg-soft text-primary-deep font-display" : "text-ink-soft",
                 )}
               >

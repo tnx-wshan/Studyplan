@@ -42,6 +42,9 @@ export default function AiHubPage() {
           문제 만들기
         </Link>
       </div>
+      <Link href="/ai/library" className={buttonStyles("ghost", "md", "w-full")}>
+        📚 모두의 자료실 <span className="text-xs text-ink-soft">AI 없이 다른 학생이 만든 자료로</span>
+      </Link>
       <p className="text-center text-xs text-ink-soft">AI도 틀릴 수 있어요. 중요한 내용은 교과서로 한 번 더 확인하세요.</p>
 
       <section>

@@ -90,3 +90,15 @@ export async function answerDialog(page: Page, accept = true) {
   await (accept ? dialog.locator("button[type=submit]") : dialog.getByRole("button", { name: "취소" })).click();
   await expect(dialog).toBeHidden();
 }
+
+/** 관리 도구 서버 주소 (playwright.config.ts의 두 번째 서버) */
+export const ADMIN_URL = "http://localhost:3211";
+
+/** 관리 도구에 로그인한다 */
+export async function adminLogin(page: Page) {
+  await page.goto(`${ADMIN_URL}/admin`);
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await page.fill("input[type=password]", "e2e-admin");
+  await page.getByRole("button", { name: "들어가기" }).click();
+  await expect(page.getByRole("heading", { name: "대시보드" })).toBeVisible();
+}

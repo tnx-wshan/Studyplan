@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import type { ZodType } from "zod";
 import { AiNotConfiguredError } from "./provider";
 import { consume, refund, DAILY_LIMITS, FEATURE_LABELS, type AiFeature } from "./usage";
+import { rejectIfSuspended } from "@/lib/server/guard";
 
 export function jsonError(status: number, error: string) {
   return NextResponse.json({ error }, { status });
@@ -36,6 +37,8 @@ export function friendlyAiError(e: unknown): NextResponse {
 
 /** 하루 사용량을 쓰고 AI 작업을 실행한다. 실패하면 사용량을 돌려준다. */
 export async function withQuota(feature: AiFeature, run: () => Promise<Response>): Promise<Response> {
+  const blocked = await rejectIfSuspended();
+  if (blocked) return blocked;
   if (!(await consume(feature))) {
     return jsonError(429, `오늘 ${FEATURE_LABELS[feature]}를 모두 썼어요 (하루 ${DAILY_LIMITS[feature]}회). 내일 다시 쓸 수 있어요.`);
   }

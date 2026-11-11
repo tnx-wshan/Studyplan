@@ -18,12 +18,18 @@ export interface MaterialResponse {
   keyPoints: string[];
   sources: { title: string; url: string }[];
   notice?: string;
+  /** 자료 모음에 저장된 id */
+  bankId?: string;
+  /** 다른 학생이 이미 만든 것을 가져왔다 (AI 사용 횟수를 쓰지 않음) */
+  fromBank?: boolean;
 }
 
 export interface QuizResponse {
   title: string;
   questions: QuestionOutput[];
   verified: boolean;
+  bankId?: string;
+  fromBank?: boolean;
 }
 
 async function readError(res: Response): Promise<Error> {
