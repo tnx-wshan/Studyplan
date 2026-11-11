@@ -216,10 +216,10 @@ function Feedback({ question, subject, onNext, isLast }: { question: Question; s
         <Markdown>{question.prompt}</Markdown>
         <div className="grid gap-2 text-sm">
           {question.type !== "essay" && (
-            <p>
-              <span className="text-ink-soft">내 답 </span>
-              <span className={correct ? "" : "text-danger line-through"}>{question.userAnswer}</span>
-            </p>
+            <div className="flex gap-1">
+              <span className="shrink-0 text-ink-soft">내 답 </span>
+              <Markdown className={correct ? "" : "text-danger line-through"}>{question.userAnswer ?? ""}</Markdown>
+            </div>
           )}
           <div className="flex gap-1">
             <span className="shrink-0 text-ink-soft">정답 </span>

@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useState } from "react";
 import { Empty, PageHeader, SubjectChip, SubjectPicker, formatDateKey, useSubjectMap, useSubjects } from "@/components/kit";
+import { Markdown } from "@/components/Markdown";
 import { StoredImage } from "@/components/StoredImage";
 import { Card, buttonStyles, cn } from "@/components/ui";
 import { getDB } from "@/lib/db";
@@ -105,12 +106,12 @@ export default function WrongListPage() {
                   {open && (
                     <div className="mt-3 space-y-2 text-sm">
                       {w.imageId && <StoredImage id={w.imageId} alt="문제 사진" className="max-h-80 w-full rounded-2xl object-contain" />}
-                      <p>
-                        <span className="text-ink-soft">내 답</span> <span className="text-danger line-through">{w.myAnswer || "-"}</span>
-                      </p>
-                      <p>
-                        <span className="text-ink-soft">정답</span> <b className="text-success-deep">{w.correctAnswer || "-"}</b>
-                      </p>
+                      <div>
+                        <span className="text-ink-soft">내 답</span> <Markdown className="inline-block align-top text-danger line-through">{w.myAnswer || "-"}</Markdown>
+                      </div>
+                      <div>
+                        <span className="text-ink-soft">정답</span> <Markdown className="inline-block align-top font-bold text-success-deep">{w.correctAnswer || "-"}</Markdown>
+                      </div>
                       <p>
                         {reason.icon} {reason.label}
                         {w.note && <span className="text-ink-soft"> · {w.note}</span>}
