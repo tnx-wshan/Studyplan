@@ -3,7 +3,7 @@
 다른 세션·다른 모델이 이어서 작업할 수 있게 정리한 문서. 작업을 끝낼 때마다 이 파일을 고친다.
 앱 설명은 `SPEC.md`, 작업 규칙은 `AGENTS.md`, 단계별 상세 기록은 `PLAN.md`.
 
-- 저장소: `tnx-wshan/studyplan`, 작업 브랜치: `claude/amazing-goodall-xal17y`
+- 저장소: `tnx-wshan/studyplan`, 기준 브랜치: `main` (작업은 작업 브랜치에서 하고 PR로 합친다 — `AGENTS.md`의 "Git과 작업 흐름")
 - 마지막 확인(2026-11-11): 단위 테스트 186개, 브라우저 테스트 19개 통과, lint·typecheck 통과
 
 ## 1. 끝난 일
