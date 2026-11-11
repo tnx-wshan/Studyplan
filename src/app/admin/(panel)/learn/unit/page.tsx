@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { StatusBadge } from "@/components/admin/AdminShell";
 import { ImageTextArea } from "@/components/admin/ImageTextArea";
+import { LessonPreview } from "@/components/admin/LessonPreview";
+import type { PlayerUnit } from "@/components/learn/LessonPlayer";
 import { askConfirm } from "@/components/Dialogs";
 import { Field, Select, TextArea, TextInput } from "@/components/kit";
 import { Markdown } from "@/components/Markdown";
@@ -45,6 +47,7 @@ function UnitEditor() {
   const [problems, setProblems] = useState<string[]>([]);
   const [json, setJson] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [previewUnit, setPreviewUnit] = useState<PlayerUnit | null>(null);
 
   const load = useCallback(
     () =>
@@ -75,6 +78,26 @@ function UnitEditor() {
     [steps[i], steps[j]] = [steps[j], steps[i]];
     set({ steps });
   };
+
+  /** 고치는 중인 내용(저장 전)으로 학생 화면을 띄운다. 잘못된 단계가 있으면 이유를 먼저 보여준다 */
+  function startPreview() {
+    let steps: unknown = unit!.steps;
+    if (json !== null) {
+      try {
+        steps = JSON.parse(json);
+      } catch {
+        setProblems(["JSON 형식이 올바르지 않아요."]);
+        return;
+      }
+    }
+    const check = sanitizeSteps(steps);
+    if (check.problems.length || check.steps.length === 0) {
+      setProblems(check.problems.length ? check.problems : ["단계가 하나 이상 있어야 해요."]);
+      return;
+    }
+    setProblems([]);
+    setPreviewUnit({ id: unit!.id, title: unit!.title, steps: check.steps, section: unit!.section });
+  }
 
   async function save(status = unit!.status) {
     let steps: unknown = unit!.steps;
@@ -135,7 +158,10 @@ function UnitEditor() {
       </Card>
 
       <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg">단계 {unit.steps.length}개</h2>
+        <h2 className="font-display flex-1 text-lg">단계 {unit.steps.length}개</h2>
+        <button type="button" className="mr-3 text-sm underline" onClick={startPreview}>
+          ▶ 미리 풀기
+        </button>
         <button type="button" className="text-sm underline" onClick={() => setJson(json === null ? JSON.stringify(unit.steps, null, 2) : null)}>
           {json === null ? "JSON으로 고치기" : "화면에서 고치기"}
         </button>
@@ -184,6 +210,9 @@ function UnitEditor() {
       )}
 
       <div className="sticky bottom-3 flex flex-wrap gap-2">
+        <Button variant="accent" onClick={startPreview}>
+          ▶ 학생 화면으로 풀어 보기
+        </Button>
         <Button disabled={saving} onClick={() => save()}>
           저장
         </Button>
@@ -208,6 +237,7 @@ function UnitEditor() {
           지우기
         </Button>
       </div>
+      <LessonPreview unit={previewUnit} onClose={() => setPreviewUnit(null)} />
     </div>
   );
 }

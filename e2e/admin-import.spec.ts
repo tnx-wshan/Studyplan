@@ -48,6 +48,31 @@ test("관리 도구 일괄 넣기: 지시문 만들기 → 검사 → 넣기(초
   await expect(page.getByRole("list", { name: /핵심 정리.*에 들어간 그림/ }).getByRole("img")).toHaveCount(1);
   await imagesLoaded(page, "ul img");
 
+  // 학생 화면으로 미리 풀기: 같은 화면을 휴대폰 크기로 띄우고, 기록은 남기지 않는다
+  await page.getByRole("button", { name: "▶ 학생 화면으로 풀어 보기" }).click();
+  const preview = page.getByRole("dialog", { name: "학생 화면 미리 풀기" });
+  await expect(preview.getByRole("heading", { name: "수직선" })).toBeVisible();
+  await expect(preview.locator(".md img")).toHaveCount(1);
+  // 테마를 바꿔 볼 수 있다
+  await preview.getByRole("radio", { name: "귀여운 · 밝게" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-style", "cute");
+  await preview.getByRole("button", { name: "확인했다" }).or(preview.getByRole("button", { name: "알겠어요" })).click();
+  // 객관식 → 주관식(틀린 문제는 끝에 한 번 더 나오므로 끝날 때까지 푼다)
+  for (let i = 0; i < 6 && !(await preview.getByRole("heading", { name: /유닛 완료/ }).isVisible()); i++) {
+    const answer = preview.getByLabel("답", { exact: true });
+    if (await answer.isVisible()) await answer.fill("2");
+    else await preview.getByRole("radiogroup", { name: "보기" }).getByRole("radio").first().click();
+    await preview.getByRole("button", { name: "확인", exact: true }).click();
+    await preview.getByRole("button", { name: "계속" }).click();
+  }
+  await expect(preview.getByRole("heading", { name: /유닛 완료/ })).toBeVisible();
+  await expect(preview.getByText("미리 풀기라 진도·경험치는 기록되지 않아요.")).toBeVisible();
+  await preview.getByRole("button", { name: "처음부터 다시 풀기" }).click();
+  await expect(preview.getByRole("heading", { name: "수직선" })).toBeVisible();
+  await preview.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(preview).toBeHidden();
+  await expect(page.locator("html")).toHaveAttribute("data-style", "noir");
+
   // 초안이라 학생 학습 지도에는 아직 없다
   await page.goto("/learn");
   await page.getByRole("radio", { name: /중1/ }).click();
