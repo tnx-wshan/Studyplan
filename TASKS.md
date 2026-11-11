@@ -4,7 +4,7 @@
 앱 설명은 `SPEC.md`, 작업 규칙은 `AGENTS.md`, 단계별 상세 기록은 `PLAN.md`.
 
 - 저장소: `tnx-wshan/studyplan`, 작업 브랜치: `claude/amazing-goodall-xal17y`
-- 마지막 확인(2026-11-11): 단위 테스트 180개, 브라우저 테스트 19개 통과, lint·typecheck 통과
+- 마지막 확인(2026-11-11): 단위 테스트 184개, 브라우저 테스트 19개 통과, lint·typecheck 통과
 
 ## 1. 끝난 일
 

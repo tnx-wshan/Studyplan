@@ -29,6 +29,7 @@ import {
   type UnitRequest,
 } from "./schemas";
 import { sanitizeSteps } from "@/lib/learn/check";
+import { repairLatexEscapes } from "./text";
 import type { Step } from "@/lib/learn/types";
 
 /**
@@ -36,7 +37,8 @@ import type { Step } from "@/lib/learn/types";
  * 수식 명령(\\neq, \\nabla, \\nu …)은 건드리지 않도록 뒤에 영문자가 오면 그대로 둔다.
  */
 export function fixNewlines(text: string): string {
-  return text.replace(/\\n(?![a-zA-Z])/g, "\n").replace(/\\t(?![a-zA-Z])/g, " ");
+  // 백슬래시 하나로 와서 탭·줄바꿈 문자가 된 수식 명령(\times → 탭+imes)을 먼저 되돌린다
+  return repairLatexEscapes(text).replace(/\\n(?![a-zA-Z])/g, "\n").replace(/\\t(?![a-zA-Z])/g, " ");
 }
 
 function fixDeep<T>(value: T): T {

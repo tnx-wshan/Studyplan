@@ -5,7 +5,7 @@
  */
 export function cleanAiText(text: string): string {
   // "\n" 뒤에 영문자가 오면 \neq·\nabla 같은 수식 명령이므로 그대로 둔다
-  let out = text.replace(/\\n(?![a-zA-Z])/g, "\n");
+  let out = repairLatexEscapes(text).replace(/\\n(?![a-zA-Z])/g, "\n");
   if (!out.includes("$")) out = out.split("\n").map(wrapBareMath).join("\n");
   return out;
 }
@@ -24,3 +24,44 @@ function wrapBareMath(line: string): string {
     return core ? `${lead}$${core}$${trail}` : run;
   });
 }
+
+/**
+ * 모델이 JSON 안에 수식 명령의 백슬래시를 하나만 쓰면(\times, \frac …) JSON 규칙상
+ * \t·\f·\b·\r·\n이 탭·폼피드·백스페이스·CR·줄바꿈 문자로 바뀌어 "imes", "rac"처럼 보인다.
+ * 이런 제어 문자 뒤에 영문자가 붙어 있으면 원래 수식 명령으로 되돌린다.
+ * 진짜 줄바꿈과 헷갈릴 수 있는 \n은 수식($...$) 안에 있고 알려진 명령(\neq, \nabla …)일 때만 되돌린다.
+ */
+export function repairLatexEscapes(text: string): string {
+  if (!/[\t\f\b\r\n]/.test(text)) return text;
+  let out = text
+    .replace(/\t(?=[a-zA-Z])/g, "\\t")
+    .replace(/\f(?=[a-zA-Z])/g, "\\f")
+    .replace(/\x08(?=[a-zA-Z])/g, "\\b")
+    .replace(/\r(?=[a-zA-Z])/g, "\\r");
+  if (out.includes("\n") && out.includes("$")) {
+    let result = "";
+    let dollars = 0;
+    for (let i = 0; i < out.length; i++) {
+      const c = out[i];
+      if (c === "$" && out[i - 1] !== "\\") {
+        // $$...$$도 수식 한 덩어리로 센다
+        if (out[i + 1] === "$") {
+          result += "$$";
+          i++;
+        } else result += c;
+        dollars++;
+        continue;
+      }
+      if (c === "\n" && dollars % 2 === 1 && N_COMMAND.test(out.slice(i + 1, i + 12))) {
+        result += "\\n";
+        continue;
+      }
+      result += c;
+    }
+    out = result;
+  }
+  return out;
+}
+
+/** \n으로 시작하는 수식 명령에서 n 뒤의 글자 */
+const N_COMMAND = /^(eq|e|abla|u|otin|ot|i|mid|geq|leq|eg|exists|ewline|subseteq|parallel)(?![a-zA-Z])/;
