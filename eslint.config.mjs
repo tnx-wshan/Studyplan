@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // 관리 도구 개발 서버(npm run dev:admin)의 빌드 폴더
+    ".next-admin/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

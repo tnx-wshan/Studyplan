@@ -71,6 +71,7 @@
 - 사용자 지침: 기능과 화면 완성도를 우선한다. 게임 요소는 어른스럽게. 동료의 이야기(8번 기능)를 특히 마음에 들어 했다.
 - 테스트용 비밀번호: 개발 `.env.local`의 `APP_PASSWORD`, 브라우저 테스트는 `e2e-pass`, 관리 도구는 `e2e-admin` (`playwright.config.ts`). 브라우저 테스트는 앱 서버(3210)와 관리 서버(3211)를 함께 띄우고 `.data/e2e.db`를 매번 새로 만든다.
 - `node:sqlite`를 쓰면 "ExperimentalWarning: SQLite"가 서버 기록에 한 번 찍힌다. 동작에는 문제없다.
+- npm 스크립트에 `VAR=값 명령`이나 `rm` 같은 셸 문법을 쓰지 않는다. 사용자는 Windows에서도 실행한다. 관리 서버는 `scripts/admin.mjs`가 환경 변수를 넣어 띄운다.
 - 서버를 직접 띄웠다가 끌 때는 `pkill -f next`(프로세스 이름이 `next-server`라 `pkill -f "next start"`로는 안 꺼질 수 있음).
 - 브라우저 테스트의 `startFresh()`는 페이지 오류를 모아서 돌려준다. 새 테스트도 끝에 `expect(errors).toEqual([])`를 넣는다.
 - 간헐적인 오류를 찾을 때는 서비스 워커를 끄고(`serviceWorkers: "block"`) 새 브라우저 컨텍스트로 반복하면 재현이 잘 된다.
