@@ -29,6 +29,7 @@
 | AI 학습실에서 요청이 끝나지 않음 | AI 회사가 답하지 않을 때 제한 시간이 없었음 | 모든 요청에 제한 시간, 예비 모델 전환, 알기 쉬운 오류 문구 (`src/lib/ai/service.ts`, `route-helpers.ts`, `client.ts`) |
 | 로그인 직후 "불러오는 중…"에서 멈춤 | Next 실험 기능 `cacheComponents`, `partialPrefetching` | `next.config.ts`에서 끔. 다시 켜지 말 것 |
 | 가끔 React 오류 #418 (첫 방문 때) | 서버 레이아웃이 테마 스크립트 문자열을 "use client" 파일에서 가져옴 | 문자열을 `src/lib/theme.ts`로 옮김 |
+| 수식에 "imes", "rac"가 보임 (`\times`, `\frac`) | 모델이 JSON에 백슬래시를 하나만 써서 `\t`·`\f`·`\b`·`\r`·`\n`이 탭 같은 제어 문자로 읽힘 (gemini-4-argon에서 확인) | `repairLatexEscapes`(`src/lib/ai/text.ts`): AI 응답을 받을 때(`fixNewlines`)와 화면에 그릴 때(`cleanAiText`) 되돌림. 이미 저장된 문제도 화면에서는 바로 고쳐 보임 |
 | AI 답의 줄바꿈·굵은 글씨가 깨짐 | Gemini가 `\n`을 글자 그대로 보냄, 한글 조사 앞 `**` | `fixNewlines`, `fixKoreanBold` |
 
 함께 넣은 기능: 할 일·오답 고치기, 학년 변경 때 과목 다시 연결, 타이머 시간이 할 일의 '실제 N분'으로 쌓임, 오래 밀린 간격 복습 자동 정리, 로그인 시도 제한(10분에 8번).
