@@ -1,5 +1,5 @@
 // 홈스터디 서비스 워커: 정적 파일은 캐시 우선, 페이지는 네트워크 우선(오프라인이면 캐시)
-const VERSION = "v3";
+const VERSION = "v4";
 const STATIC = `hs-static-${VERSION}`;
 const PAGES = `hs-pages-${VERSION}`;
 
@@ -21,7 +21,23 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
+  if (url.origin !== self.location.origin) return;
+
+  // 문제·설명 그림: 한 번 저장한 그림은 바뀌지 않으므로 오프라인에서도 보이게 저장해 둔다
+  if (url.pathname === "/api/media") {
+    event.respondWith(
+      caches.match(req).then(
+        (hit) =>
+          hit ||
+          fetch(req).then((res) => {
+            if (res.ok) caches.open(STATIC).then((c) => c.put(req, res.clone()));
+            return res;
+          }),
+      ),
+    );
+    return;
+  }
+  if (url.pathname.startsWith("/api/")) return;
 
   if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
     event.respondWith(

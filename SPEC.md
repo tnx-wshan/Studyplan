@@ -24,7 +24,7 @@
 - 서버 저장: `node:sqlite` (Node 22.13 이상, 설치할 패키지 없음, WAL 모드로 앱 서버와 관리 서버가 같은 파일을 씀)
 - AI: Vercel AI SDK v7 (`ai`, `@ai-sdk/google|anthropic|openai`), zod로 답 형식 지정
 - 알림: Web Push (`web-push`), 서버 시작 때 스케줄러 실행 (`src/instrumentation.ts`)
-- 테스트: Vitest(단위 186개), Playwright(브라우저 19개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
+- 테스트: Vitest(단위 193개), Playwright(브라우저 19개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
 
 ### 폴더
 
@@ -94,6 +94,12 @@ e2e/                        브라우저 테스트
 - 모두의 자료실 `/ai/library`: AI 없이 다른 학생이 만든 정리와 문제를 가져와 푼다.
 - 관리 도구에서 고치거나 숨긴다(숨기면 같은 요청에 AI가 새로 만든다). 비슷한 주제끼리 '겹치는 자료'로 묶어 보여주고, 섹션을 고르면 어울리는 자료를 골라 AI가 겹치는 내용을 합쳐 유닛 초안을 만든다.
 
+### 그림 (문제·설명)
+- 그림은 서버 DB `media` 표에 저장하고 `/api/media?id=`로 보여준다(같은 그림은 한 번만 저장). 문제·정리 글에는 마크다운 그림 `![설명](/api/media?id=…)`으로 들어가고, 마크다운으로 그리는 모든 화면(학습 탭, AI 퀴즈, 오답노트, 자료실)에서 보인다. 흰 바탕(`--figure-bg`)에 그려서 어두운 테마에서도 보인다. 서비스 워커가 한 번 본 그림을 저장해 오프라인에서도 보인다. 암기 카드는 글자만 보여주므로 `[그림: 설명]`으로 바꾼다.
+- AI 문제: 퀴즈·유닛 만들기 응답의 `figure`에 AI가 SVG 그림(도형, 그래프, 수직선, 표, 실험 장치 등)을 그린다(`FIGURE_RULES`, `src/lib/ai/prompts.ts`). 서버가 스크립트·이벤트·외부 링크를 지운 뒤(`src/lib/server/svg.ts`) 저장해서 문제 글 끝에 붙인다. 그림 칸이 없는 응답도 받는다.
+- 관리 도구: 정리·문제·해설 칸(`ImageTextArea`)에 그림을 붙여넣기(Ctrl+V), 끌어다 놓기, '그림 넣기' 단추로 넣는다(PNG·JPG·WEBP·GIF·SVG, 5MB 이하, 큰 사진은 줄여서 올림). 넣은 그림은 칸 아래에 작게 보인다.
+- `/api/media`는 학생 서버(앱 비밀번호)와 관리 서버(관리자 로그인) 둘 다에서 열린다.
+
 ### 관리 도구
 - 같은 빌드를 `ADMIN_SERVER=1`로 다른 포트에 띄운 서버(`npm run admin`, 기본 3300)에서만 열린다. 이 서버는 `/admin`만 보여주고 `ADMIN_PASSWORD`로 로그인한다(12시간, 10분에 5번까지). 학생 서버에서 `/admin`·`/api/admin`은 404.
 - 사용자: 기기가 앱을 열 때와 5분마다 요약(레벨·경험치·코인·연속 기록·학습 진도·학습 시간)을 `/api/user/sync`로 보낸다. 관리자는 이용 정지(학생 화면 잠김, AI·학습·자료실 요청 403), 메모, 경험치(레벨)·코인·보호권·이름 고치기, 유닛 완료 표시·진도 지우기를 한다. 고친 값은 '명령'으로 쌓였다가 기기가 다음 동기화 때 적용하고, 적용된 명령은 다시 보내지 않는다.
@@ -116,7 +122,7 @@ e2e/                        브라우저 테스트
 
 표: `profile`(한 줄, id `me`), `subjects`, `tasks`, `exams`, `studySessions`, `decks`, `cards`, `wrongNotes`, `images`, `xpEvents`, `quizzes`, `materials`, `methodLogs`, `coachReports`, `routines`, `learnProgress`(유닛 진도), `learnLogs`(학습 기록).
 
-서버 DB(`src/lib/server/db.ts`, `PRAGMA user_version`으로 버전 관리): `users`, `user_commands`, `bank_items`, `learn_sections`, `learn_units`. 구조를 바꿀 때는 `MIGRATIONS`에 새 항목을 덧붙인다(기존 항목은 고치지 않는다).
+서버 DB(`src/lib/server/db.ts`, `PRAGMA user_version`으로 버전 관리, 지금 3번째 버전): `users`, `user_commands`, `bank_items`, `learn_sections`, `learn_units`, `media`(그림). 구조를 바꿀 때는 `MIGRATIONS`에 새 항목을 덧붙인다(기존 항목은 고치지 않는다).
 정확한 필드는 `src/lib/db/types.ts`, 버전 이력은 `src/lib/db/index.ts`.
 
 ## 5. 품질 기준

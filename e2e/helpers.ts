@@ -91,6 +91,13 @@ export async function answerDialog(page: Page, accept = true) {
   await expect(dialog).toBeHidden();
 }
 
+/** 화면의 그림이 모두 실제로 불러와졌는지 (깨진 그림이 없는지) */
+export async function imagesLoaded(page: Page, selector = ".md img") {
+  await expect
+    .poll(() => page.locator(selector).evaluateAll((imgs) => imgs.length > 0 && imgs.every((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0)))
+    .toBe(true);
+}
+
 /** 관리 도구 서버 주소 (playwright.config.ts의 두 번째 서버) */
 export const ADMIN_URL = "http://localhost:3211";
 

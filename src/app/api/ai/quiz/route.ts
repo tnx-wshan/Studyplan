@@ -3,6 +3,7 @@ import { getModel } from "@/lib/ai/provider";
 import { friendlyAiError, parseBody, withQuota } from "@/lib/ai/route-helpers";
 import { QuizRequestSchema } from "@/lib/ai/schemas";
 import { makeQuiz } from "@/lib/ai/service";
+import { figureMarkdown } from "@/lib/server/media";
 import { addItem, findByKey, getItem, gradeId, markUsed, quizLookupKey, subjectId, type QuizData } from "@/lib/server/bank";
 import { rejectIfSuspended } from "@/lib/server/guard";
 import { currentUserId } from "@/lib/server/identity";
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     return friendlyAiError(e);
   }
   return withQuota("quiz", async () => {
-    const quiz = await makeQuiz(body, ai.models);
+    const quiz = await makeQuiz(body, ai.models, figureMarkdown);
     if (quiz.questions.length === 0) throw new Error("no usable questions");
     const parent = body.bankMaterialId ? getItem(body.bankMaterialId) : null;
     const item = addItem({

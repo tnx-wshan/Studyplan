@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { TINY_PNG, noHorizontalScroll, startFresh } from "./helpers";
+import { TINY_PNG, imagesLoaded, noHorizontalScroll, startFresh } from "./helpers";
 
 test("AI 튜터(힌트·풀이·하루 한도)와 사진으로 문제 만들기 → 퀴즈 → 오답노트·카드", async ({ page }) => {
   const errors = await startFresh(page);
@@ -44,6 +44,9 @@ test("AI 튜터(힌트·풀이·하루 한도)와 사진으로 문제 만들기 
   await page.getByRole("button", { name: /✨ 문제 만들기/ }).click();
   await expect(page).toHaveURL(/ai\/quiz\?id=/, { timeout: 15_000 });
   await expect(page.getByText("정답 검산 완료")).toBeVisible();
+  // AI가 그린 그림(SVG)이 있는 문제: 서버에 저장된 그림이 문제 아래에 보인다
+  await expect(page.getByRole("img", { name: "문제 그림" })).toBeVisible();
+  await imagesLoaded(page);
 
   // 퀴즈: 객관식 정답 → 단답형 오답 → 서술형 자기 채점
   await page.getByRole("button", { name: /^② 5$/ }).click();

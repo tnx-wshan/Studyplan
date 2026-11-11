@@ -3,6 +3,7 @@ import { addXpInTx } from "./profile";
 import { addCard, addDeck, addWrongAnswer } from "./study";
 import type { Material, Question, Quiz, TutorChat, TutorMessage } from "./types";
 import { XP_REWARDS } from "@/lib/game/level";
+import { stripImages } from "@/lib/ai/text";
 
 const now = () => Date.now();
 
@@ -167,7 +168,8 @@ export async function saveQuestionToCards(q: Question, subjectId?: string, subje
   const name = `AI 퀴즈${subjectName ? ` · ${subjectName}` : ""}`;
   const deck = (await db.decks.filter((d) => d.name === name).first()) ?? (await addDeck(name, subjectId));
   const choices = q.choices.length ? `\n(${q.choices.join(" / ")})` : "";
-  await addCard(deck.id, `${q.prompt}${choices}`, `${answerText(q)}\n\n${q.explanation}`.slice(0, 500));
+  // 암기 카드는 글자만 보여주므로 그림은 "[그림]" 표시로 바꾼다
+  await addCard(deck.id, stripImages(`${q.prompt}${choices}`), stripImages(`${answerText(q)}\n\n${q.explanation}`).slice(0, 500));
   await db.questions.update(q.id, { savedToCard: true });
   return true;
 }

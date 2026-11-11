@@ -4,6 +4,8 @@
 
 /* 홈스터디 디자인 토큰: 밝고 통통한 게임 UI */
 :root {
+  /* 문제·설명 그림의 바탕: 그림은 흰 바탕에 검은 선으로 그리므로 어두운 테마에서도 흰색 */
+  --figure-bg: #ffffff;
   --bg: #fff8ef;
   --bg-soft: #fff1dc;
   --surface: #ffffff;
@@ -145,6 +147,7 @@ body {
 .md ol { list-style: decimal; padding-left: 1.4em; }
 .md li + li { margin-top: 0.2em; }
 .md strong { color: var(--primary-deep); }
+.md img { display: block; max-width: 100%; max-height: 18rem; width: auto; height: auto; margin: 0.5em auto; padding: 6px; background: var(--figure-bg); border: 1px solid var(--line); border-radius: 10px; }
 .md a { color: var(--accent); text-decoration: underline; }
 .md code { background: var(--surface-2); border-radius: 6px; padding: 0.1em 0.35em; font-size: 0.92em; }
 .md pre { background: var(--surface-2); border-radius: 12px; padding: 0.8em; overflow-x: auto; }

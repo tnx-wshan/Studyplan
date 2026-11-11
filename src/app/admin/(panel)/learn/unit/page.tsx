@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { StatusBadge } from "@/components/admin/AdminShell";
+import { ImageTextArea } from "@/components/admin/ImageTextArea";
 import { askConfirm } from "@/components/Dialogs";
 import { Field, Select, TextArea, TextInput } from "@/components/kit";
 import { Markdown } from "@/components/Markdown";
@@ -254,18 +255,14 @@ function StepEditor({ index, step, onChange, onMove, onRemove }: { index: number
           <Field label="제목">
             <TextInput value={step.title} onChange={(e) => onChange({ ...step, title: e.target.value })} />
           </Field>
-          <Field label="핵심 정리 (마크다운, 수식은 $...$) — 휴대폰에서 30초 안에 읽을 만큼">
-            <TextArea rows={6} value={step.body} onChange={(e) => onChange({ ...step, body: e.target.value })} className="font-mono text-sm" />
-          </Field>
+          <ImageTextArea label="핵심 정리 (마크다운, 수식은 $...$, 그림 가능) — 휴대폰에서 30초 안에 읽을 만큼" rows={6} value={step.body} onChange={(body) => onChange({ ...step, body })} className="font-mono text-sm" />
           <Field label="꼭 기억할 점 (한 줄에 하나)">
             <TextArea value={step.points.join("\n")} onChange={(e) => onChange({ ...step, points: lines(e.target.value) })} />
           </Field>
         </>
       )}
       {step.type !== "summary" && (
-        <Field label={step.type === "puzzle" ? "뜻풀이 (힌트)" : "문제"}>
-          <TextArea value={step.prompt} onChange={(e) => onChange({ ...step, prompt: e.target.value })} />
-        </Field>
+        <ImageTextArea label={step.type === "puzzle" ? "뜻풀이 (힌트)" : "문제 (그림을 넣으면 문제 아래에 보여요)"} value={step.prompt} onChange={(prompt) => onChange({ ...step, prompt })} />
       )}
       {step.type === "choice" && (
         <>
@@ -316,9 +313,7 @@ function StepEditor({ index, step, onChange, onMove, onRemove }: { index: number
         </div>
       )}
       {step.type !== "summary" && (
-        <Field label="해설">
-          <TextArea value={step.explanation} onChange={(e) => onChange({ ...step, explanation: e.target.value })} />
-        </Field>
+        <ImageTextArea label="해설" value={step.explanation} onChange={(explanation) => onChange({ ...step, explanation })} />
       )}
     </Card>
   );

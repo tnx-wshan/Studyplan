@@ -22,7 +22,7 @@ function jsonModel(...responses: unknown[]) {
   });
 }
 
-const q = (over: Partial<Parameters<typeof normalizeQuestion>[0]> = {}) => ({
+const q = (over: Partial<Parameters<typeof normalizeQuestion>[0] & { figure: string }> = {}) => ({
   type: "multiple" as const,
   prompt: "1+1은?",
   choices: ["1", "2", "3", "4"],
@@ -242,5 +242,32 @@ describe("output cleanup and web fallback", () => {
     expect(m.sources).toEqual([]);
     expect(m.summary).toBe("## 개념\n설명");
     expect(m.keyPoints).toEqual(["하나"]);
+  });
+});
+
+describe("그림(SVG) 문제", () => {
+  it("그림은 저장 함수에 넘기고 문제 글 끝에 마크다운 그림으로 붙인다", async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><circle r="5"/></svg>';
+    const quiz = { title: "t", questions: [q({ figure: svg }), q()] };
+    const saved: string[] = [];
+    const r = await makeQuiz(
+      { grade: "고1", material: "자료", count: 5, types: ["multiple"], difficulty: "normal", verify: false },
+      jsonModel(quiz),
+      (s, alt) => (saved.push(s), `![${alt}](/api/media?id=x)`),
+    );
+    expect(saved).toEqual([svg]);
+    expect(r.questions[0].prompt).toBe("1+1은?\n\n![문제 그림](/api/media?id=x)");
+    expect(r.questions[1].prompt).toBe("1+1은?");
+    expect("figure" in r.questions[0]).toBe(false);
+  });
+
+  it("저장 함수가 없으면 그림은 버린다", async () => {
+    const r = await makeQuiz({ grade: "고1", material: "자료", count: 5, types: ["multiple"], difficulty: "normal", verify: false }, jsonModel({ title: "t", questions: [q({ figure: "<svg></svg>" })] }));
+    expect(r.questions[0].prompt).toBe("1+1은?");
+  });
+
+  it("가짜 AI의 퀴즈와 유닛에도 그림이 들어 있다", async () => {
+    const r = await makeQuiz({ grade: "고1", material: "자료", count: 5, types: ["multiple", "short"], difficulty: "normal", verify: false }, mockModel(), () => "![문제 그림](/api/media?id=m)");
+    expect(r.questions.filter((x) => x.prompt.includes("/api/media?id=m"))).toHaveLength(1);
   });
 });

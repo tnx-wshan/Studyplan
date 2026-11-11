@@ -9,7 +9,7 @@ import { SUBJECT_GROUPS, type SubjectGroup } from "@/data/curriculum";
 import { saveMaterialAndQuiz } from "@/lib/db/ai";
 import { useProfile } from "@/lib/hooks";
 import { courseName, gradeShort } from "@/lib/learn/names";
-import type { QuestionOutput } from "@/lib/ai/schemas";
+import type { StoredQuestion } from "@/lib/ai/schemas";
 
 interface ListItem {
   id: string;
@@ -24,7 +24,7 @@ interface ListItem {
 
 interface Detail {
   material: { id: string; title: string; topic: string; sourceKind: string; subject: string; data: { summary: string; keyPoints: string[]; sources: { title: string; url: string }[] } };
-  quizzes: { id: string; title: string; data: { questions: QuestionOutput[]; verified: boolean; difficulty: "easy" | "normal" | "hard" } }[];
+  quizzes: { id: string; title: string; data: { questions: StoredQuestion[]; verified: boolean; difficulty: "easy" | "normal" | "hard" } }[];
 }
 
 const DIFFICULTY = { easy: "쉬움", normal: "보통", hard: "어려움" } as const;

@@ -73,3 +73,8 @@ export function repairDeep<T>(value: T): T {
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, repairDeep(v)])) as T;
   return value;
 }
+
+/** 마크다운 그림 ![설명](주소)을 "[그림: 설명]"으로 바꾼다 (그림을 그릴 수 없는 곳: 암기 카드 등) */
+export function stripImages(text: string): string {
+  return text.replace(/!\[([^\]]*)\]\([^)]*\)/g, (_, alt: string) => `[그림${alt.trim() ? `: ${alt.trim()}` : ""}]`);
+}

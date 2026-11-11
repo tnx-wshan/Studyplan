@@ -54,3 +54,11 @@ describe("repairLatexEscapes ($$ 수식)", () => {
     expect(repairLatexEscapes("$$a \neq b$$ 다음\n줄")).toBe(String.raw`$$a \neq b$$ 다음` + "\n줄");
   });
 });
+
+describe("stripImages", () => {
+  it("그림을 [그림] 표시로 바꾼다", async () => {
+    const { stripImages } = await import("./text");
+    expect(stripImages("다음 그림을 보고\n\n![문제 그림](/api/media?id=1) 답하시오")).toBe("다음 그림을 보고\n\n[그림: 문제 그림] 답하시오");
+    expect(stripImages("![](/x)")).toBe("[그림]");
+  });
+});

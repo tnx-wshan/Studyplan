@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
-import type { QuestionOutput } from "@/lib/ai/schemas";
+import type { StoredQuestion } from "@/lib/ai/schemas";
 import { repairDeep } from "@/lib/ai/text";
 import { newServerId, parseJson, serverDb } from "./db";
 
@@ -23,7 +23,7 @@ export interface MaterialData {
 }
 
 export interface QuizData {
-  questions: QuestionOutput[];
+  questions: StoredQuestion[];
   verified: boolean;
   difficulty: "easy" | "normal" | "hard";
 }

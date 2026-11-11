@@ -1,6 +1,6 @@
 "use client";
 
-import type { CoachRequest, FeedbackRequest, MaterialRequest, QuestionOutput, QuizRequest, TutorRequest } from "./schemas";
+import type { CoachRequest, FeedbackRequest, MaterialRequest, StoredQuestion, QuizRequest, TutorRequest } from "./schemas";
 import type { AiFeedback, CoachReport } from "@/lib/db/types";
 
 export interface AiStatus {
@@ -26,7 +26,7 @@ export interface MaterialResponse {
 
 export interface QuizResponse {
   title: string;
-  questions: QuestionOutput[];
+  questions: StoredQuestion[];
   verified: boolean;
   bankId?: string;
   fromBank?: boolean;

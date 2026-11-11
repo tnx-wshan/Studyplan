@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { StatusBadge } from "@/components/admin/AdminShell";
+import { ImageTextArea } from "@/components/admin/ImageTextArea";
 import { askConfirm } from "@/components/Dialogs";
 import { Field, Select, TextArea, TextInput } from "@/components/kit";
 import { Markdown } from "@/components/Markdown";
@@ -11,7 +12,7 @@ import { toast } from "@/components/Toaster";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import { adminApi, formatTime } from "@/lib/admin/client";
-import type { QuestionOutput } from "@/lib/ai/schemas";
+import type { StoredQuestion } from "@/lib/ai/schemas";
 
 interface MaterialData {
   summary: string;
@@ -20,7 +21,7 @@ interface MaterialData {
   notice?: string;
 }
 interface QuizData {
-  questions: QuestionOutput[];
+  questions: StoredQuestion[];
   verified: boolean;
   difficulty: "easy" | "normal" | "hard";
 }
@@ -211,9 +212,7 @@ function MaterialEditor({ data, onChange }: { data: MaterialData; onChange: (d: 
       {preview ? (
         <Markdown>{data.summary}</Markdown>
       ) : (
-        <Field label="정리 (마크다운, 수식은 $...$)">
-          <TextArea rows={14} value={data.summary} onChange={(e) => onChange({ ...data, summary: e.target.value })} className="font-mono text-sm" />
-        </Field>
+        <ImageTextArea label="정리 (마크다운, 수식은 $...$, 그림 가능)" rows={14} value={data.summary} onChange={(summary) => onChange({ ...data, summary })} className="font-mono text-sm" />
       )}
       <Field label="핵심 (한 줄에 하나)">
         <TextArea
@@ -251,7 +250,7 @@ function MaterialEditor({ data, onChange }: { data: MaterialData; onChange: (d: 
 const TYPE_LABELS = { multiple: "객관식", short: "단답형", essay: "서술형" } as const;
 
 function QuizEditor({ data, onChange }: { data: QuizData; onChange: (d: QuizData) => void }) {
-  const setQ = (i: number, patch: Partial<QuestionOutput>) => onChange({ ...data, questions: data.questions.map((q, j) => (j === i ? { ...q, ...patch } : q)) });
+  const setQ = (i: number, patch: Partial<StoredQuestion>) => onChange({ ...data, questions: data.questions.map((q, j) => (j === i ? { ...q, ...patch } : q)) });
   return (
     <div className="space-y-3">
       <Card className="flex flex-wrap items-center gap-3">
@@ -271,7 +270,7 @@ function QuizEditor({ data, onChange }: { data: QuizData; onChange: (d: QuizData
         <Card key={i} className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="font-display">{i + 1}번</span>
-            <Select aria-label={`${i + 1}번 유형`} value={q.type} onChange={(e) => setQ(i, { type: e.target.value as QuestionOutput["type"] })} className="w-auto">
+            <Select aria-label={`${i + 1}번 유형`} value={q.type} onChange={(e) => setQ(i, { type: e.target.value as StoredQuestion["type"] })} className="w-auto">
               {(Object.keys(TYPE_LABELS) as (keyof typeof TYPE_LABELS)[]).map((t) => (
                 <option key={t} value={t}>
                   {TYPE_LABELS[t]}
@@ -282,9 +281,7 @@ function QuizEditor({ data, onChange }: { data: QuizData; onChange: (d: QuizData
               빼기
             </button>
           </div>
-          <Field label="문제">
-            <TextArea value={q.prompt} onChange={(e) => setQ(i, { prompt: e.target.value })} />
-          </Field>
+          <ImageTextArea label="문제 (그림 가능)" value={q.prompt} onChange={(prompt) => setQ(i, { prompt })} />
           {q.type === "multiple" && (
             <Field label="보기 (한 줄에 하나)">
               <TextArea rows={5} value={q.choices.join("\n")} onChange={(e) => setQ(i, { choices: e.target.value.split("\n") })} />
@@ -293,9 +290,7 @@ function QuizEditor({ data, onChange }: { data: QuizData; onChange: (d: QuizData
           <Field label={q.type === "multiple" ? "정답 (보기 글자 그대로)" : "정답"}>
             <TextInput value={q.answer} onChange={(e) => setQ(i, { answer: e.target.value })} />
           </Field>
-          <Field label="해설">
-            <TextArea value={q.explanation} onChange={(e) => setQ(i, { explanation: e.target.value })} />
-          </Field>
+          <ImageTextArea label="해설" value={q.explanation} onChange={(explanation) => setQ(i, { explanation })} />
           <Field label="확인하는 개념">
             <TextInput value={q.concept} onChange={(e) => setQ(i, { concept: e.target.value })} />
           </Field>
