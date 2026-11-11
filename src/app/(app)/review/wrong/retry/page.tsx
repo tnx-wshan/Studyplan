@@ -79,7 +79,7 @@ export default function RetryPage() {
           <span className="ml-auto">연속 정답 {item.streak}/{MASTER_STREAK}</span>
         </div>
         {item.imageId && <StoredImage id={item.imageId} alt="문제 사진" className="max-h-96 w-full rounded-2xl object-contain" />}
-        {item.question && <p className="whitespace-pre-wrap text-lg">{item.question}</p>}
+        {item.question && <Markdown breaks className="text-lg">{item.question}</Markdown>}
       </Card>
 
       {revealed ? (

@@ -101,7 +101,7 @@ export default function WrongListPage() {
                       {w.unitId && <span className="truncate">{w.unitId}</span>}
                       <span className="ml-auto shrink-0">{w.mastered ? "🏆 정복" : w.nextRetry <= today ? "오늘 다시 풀기" : `${formatDateKey(w.nextRetry, false)} 다시 풀기`}</span>
                     </div>
-                    <p className={cn("mt-1", !open && "line-clamp-2")}>{w.question || "(사진 문제)"}</p>
+                    <Markdown breaks className={cn("mt-1", !open && "line-clamp-2")}>{w.question || "(사진 문제)"}</Markdown>
                   </button>
                   {open && (
                     <div className="mt-3 space-y-2 text-sm">
