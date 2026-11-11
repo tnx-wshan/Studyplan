@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/admin/AdminShell";
 import { askConfirm, askText } from "@/components/Dialogs";
 import { Select, TextInput } from "@/components/kit";
 import { toast } from "@/components/Toaster";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, buttonStyles } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import { adminApi } from "@/lib/admin/client";
 import { gradeShort } from "@/lib/learn/names";
@@ -92,6 +92,9 @@ export default function AdminLearn() {
         <Button size="sm" variant="ghost" onClick={addSection}>
           + 섹션
         </Button>
+        <Link href="/admin/learn/import" className={buttonStyles("accent", "sm")}>
+          ⤓ 일괄 넣기
+        </Link>
         <Button size="sm" variant="ghost" onClick={() => call("/api/admin/learn/section", "POST", { grade, subject, fromCurriculum: true })}>
           교육과정 목차로 섹션 채우기
         </Button>

@@ -93,7 +93,7 @@ export default function AdminContent() {
           </div>
           {items && items.length === 0 && <Card className="text-sm text-ink-soft">조건에 맞는 자료가 없어요.</Card>}
           {items && items.length > 0 && (
-            <div className="overflow-x-auto rounded-2xl border-2 border-line bg-surface">
+            <div className="overflow-x-auto rounded-2xl border-2 border-line bg-surface" tabIndex={0} role="region" aria-label="자료 표 (옆으로 밀어서 보기)">
               <table className="w-full min-w-[680px]">
                 <thead>
                   <tr>
