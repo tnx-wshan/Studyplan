@@ -13,6 +13,7 @@ import { toDateKey } from "@/lib/date";
 import { usePetState } from "@/lib/hooks";
 import { PRESETS, elapsed, formatClock, pause, phaseLength, remaining, resume, start, startQuick, stop, type TimerMode } from "@/lib/study/timer";
 import { getTimer, setTimer, useNow, useTimerState } from "@/lib/timerStore";
+import { askConfirm } from "@/components/Dialogs";
 
 export default function TimerPage() {
   return (
@@ -182,7 +183,7 @@ function Running() {
 
   async function onStop() {
     const ms = elapsed(timer, Date.now());
-    if (timer.phase === "focus" && ms >= 60_000 && !confirm(`지금까지 ${Math.floor(ms / 60_000)}분을 기록하고 끝낼까요?`)) return;
+    if (timer.phase === "focus" && ms >= 60_000 && !(await askConfirm(`지금까지 ${Math.floor(ms / 60_000)}분을 기록하고 끝낼까요?`, { confirmLabel: "기록하고 끝내기" }))) return;
     const r = stop(getTimer(), Date.now());
     setTimer(r.state);
     if (r.completed) await saveFocus(r.completed);

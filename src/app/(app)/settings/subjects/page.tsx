@@ -9,6 +9,7 @@ import { getDB } from "@/lib/db";
 import { addSubject, updateSubject } from "@/lib/db/study";
 import type { Subject } from "@/lib/db/types";
 import { useProfile } from "@/lib/hooks";
+import { askText } from "@/components/Dialogs";
 
 const COLORS = ["#ef6b6b", "#5b8def", "#d4881c", "#47b881", "#9b6bdf", "#e86bb5", "#3fb5c9", "#8d7b68"];
 
@@ -139,8 +140,8 @@ function SubjectEditor({ subject, grade }: { subject: Subject; grade: Parameters
               <button
                 type="button"
                 className="text-sm underline"
-                onClick={() => {
-                  const name = prompt("과목 이름", subject.name);
+                onClick={async () => {
+                  const name = await askText("과목 이름", { value: subject.name });
                   if (name?.trim()) void updateSubject(subject.id, { name: name.trim() });
                 }}
               >

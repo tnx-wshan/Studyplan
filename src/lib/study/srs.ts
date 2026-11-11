@@ -77,3 +77,21 @@ export function previewLabel(state: SrsState, rating: Rating, now = Date.now()):
   if (days < 30) return `${days}일`;
   return `${Math.round(days / 30)}달`;
 }
+
+export const DEFAULT_NEW_CARD_LIMIT = 20;
+
+/** 아직 한 번도 복습하지 않은 새 카드인가 */
+export function isNewCard(c: { srs: SrsState }): boolean {
+  return c.srs.reps === 0 && c.srs.lastReview === undefined;
+}
+
+/** 복습할 카드 중 새 카드는 오늘 남은 칸(limit - doneToday)만 남긴다. 순서는 그대로. */
+export function limitNewCards<T extends { srs: SrsState }>(cards: T[], doneToday: number, limit = DEFAULT_NEW_CARD_LIMIT): T[] {
+  let room = Math.max(0, limit - doneToday);
+  return cards.filter((c) => {
+    if (!isNewCard(c)) return true;
+    if (room <= 0) return false;
+    room--;
+    return true;
+  });
+}

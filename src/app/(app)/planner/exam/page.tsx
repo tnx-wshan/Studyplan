@@ -2,15 +2,17 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Empty, PageHeader, formatDateKey, useSubjectMap } from "@/components/kit";
 import { TaskRow } from "@/components/planner/TaskRow";
+import { EditExamSheet } from "@/components/planner/EditExam";
 import { ExamResults } from "@/components/planner/ExamResults";
 import { toast } from "@/components/Toaster";
 import { Button, Card, ProgressBar, SectionTitle } from "@/components/ui";
 import { getDB } from "@/lib/db";
 import { deleteExam, replanExam } from "@/lib/db/study";
 import { daysBetween, toDateKey } from "@/lib/date";
+import { askConfirm } from "@/components/Dialogs";
 
 export default function ExamPage() {
   return (
@@ -25,6 +27,7 @@ function ExamDetail() {
   const router = useRouter();
   const today = toDateKey();
   const subjectMap = useSubjectMap();
+  const [editing, setEditing] = useState(false);
   const exam = useLiveQuery(async () => (await getDB().exams.get(id)) ?? null, [id]);
   const tasks = useLiveQuery(() => getDB().tasks.where("examId").equals(id).toArray(), [id]);
 
@@ -49,13 +52,13 @@ function ExamDetail() {
   for (const t of upcoming) byDate.set(t.date, [...(byDate.get(t.date) ?? []), t]);
 
   async function onReplan() {
-    if (!confirm("끝낸 단원은 빼고, 남은 단원으로 오늘부터 계획을 다시 짤까요?")) return;
+    if (!(await askConfirm("끝낸 단원은 빼고, 남은 단원으로 오늘부터 계획을 다시 짤까요?"))) return;
     const plan = await replanExam(id, today);
     toast(plan.problem ? "남은 공부일이 없어요" : `할 일 ${plan.tasks.length}개로 다시 짰어요`);
   }
 
   async function onDelete() {
-    if (!confirm("시험 계획을 지울까요? 끝낸 기록은 남고, 남은 할 일은 지워져요.")) return;
+    if (!(await askConfirm("시험 계획을 지울까요? 끝낸 기록은 남고, 남은 할 일은 지워져요.", { danger: true, confirmLabel: "지우기" }))) return;
     await deleteExam(id);
     router.replace("/planner");
   }
@@ -131,13 +134,17 @@ function ExamDetail() {
       </section>
 
       <div className="grid grid-cols-2 gap-2">
+        <Button variant="ghost" onClick={() => setEditing(true)}>
+          ✏️ 시험 고치기
+        </Button>
         <Button variant="ghost" onClick={onReplan} disabled={dday <= 0}>
           🔄 계획 다시 짜기
         </Button>
-        <Button variant="ghost" className="text-danger" onClick={onDelete}>
-          🗑 시험 삭제
-        </Button>
       </div>
+      <Button variant="ghost" className="w-full text-danger" onClick={onDelete}>
+        🗑 시험 삭제
+      </Button>
+      <EditExamSheet exam={exam} open={editing} onClose={() => setEditing(false)} />
     </div>
   );
 }

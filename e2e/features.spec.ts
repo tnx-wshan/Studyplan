@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { daysAgo, noHorizontalScroll, rewindTimer, startFresh } from "./helpers";
+import { answerDialog, daysAgo, noHorizontalScroll, rewindTimer, startFresh } from "./helpers";
 
 test("동료의 기록: 레벨이 오르면 새 기록이 열리고 읽을 수 있다", async ({ page }) => {
   const errors = await startFresh(page);
@@ -15,6 +15,7 @@ test("동료의 기록: 레벨이 오르면 새 기록이 열리고 읽을 수 �
   await expect(page.getByText("집중하는 중")).toBeVisible();
   await rewindTimer(page, 120);
   await page.getByRole("button", { name: /끝내고 기록/ }).click();
+  await answerDialog(page);
   await expect(page.getByText("RANK UP")).toBeVisible();
   await page.waitForTimeout(600);
   await page.getByRole("link", { name: /새 기록이 열렸다 — 「봉인이 풀린 날」/ }).click();
@@ -177,5 +178,50 @@ test("고치기: 할 일과 오답 내용을 나중에 바꿀 수 있다", async
   await page.locator("dialog[open]").getByLabel("정답").fill("2");
   await page.locator("dialog[open]").getByRole("button", { name: "저장" }).click();
   await expect(page.locator("main b", { hasText: /^2$/ })).toBeVisible();
+
+  // 지우기 확인 창: 취소하면 남고, 확인하면 지워진다
+  await page.goto("/planner");
+  await page.getByRole("button", { name: "더보기" }).click();
+  await page.getByRole("button", { name: "삭제" }).click();
+  await answerDialog(page, false);
+  await expect(page.getByText("수학 익힘책 40~45쪽")).toBeVisible();
+  await page.getByRole("button", { name: "삭제" }).click();
+  await answerDialog(page);
+  await expect(page.getByText("수학 익힘책 40~45쪽")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("시험 고치기와 하루 새 카드 수", async ({ page }) => {
+  const errors = await startFresh(page);
+  await page.getByRole("navigation").getByRole("link", { name: /플래너/ }).click();
+  await page.getByRole("link", { name: "+ 시험 계획" }).click();
+  await page.getByRole("button", { name: "기말고사" }).click();
+  await page.getByRole("button", { name: /수학/ }).first().click();
+  await page.getByRole("button", { name: "모두 선택" }).click();
+  await page.getByRole("button", { name: "계획 만들기" }).click();
+  await expect(page.getByText("D-14").first()).toBeVisible();
+
+  await page.getByRole("button", { name: /시험 고치기/ }).click();
+  const sheet = page.locator("dialog[open]");
+  await sheet.getByLabel("시험 이름").fill("수학 기말");
+  await sheet.getByRole("button", { name: "저장" }).click();
+  await expect(page.getByRole("heading", { name: "수학 기말" })).toBeVisible();
+  await page.getByRole("button", { name: /시험 고치기/ }).click();
+  await sheet.getByRole("button", { name: "6시간" }).or(sheet.getByRole("button", { name: "4시간" })).click();
+  await sheet.getByRole("button", { name: "저장" }).click();
+  await expect(page.getByText(/다시 짰어요/)).toBeVisible();
+
+  // 새 카드 상한: 5장으로 줄이면 8장 중 5장만 복습에 나온다
+  await page.goto("/settings");
+  await page.getByLabel("하루에 새로 배우는 카드").selectOption("5");
+  await page.goto("/review/cards");
+  await page.getByRole("button", { name: "+ 새 묶음" }).click();
+  await page.locator("dialog[open] input").fill("영어 단어");
+  await page.locator("dialog[open]").getByRole("button", { name: "만들기" }).click();
+  await page.getByText("영어 단어").click();
+  await page.getByRole("button", { name: "여러 장 한 번에" }).click();
+  await page.locator("dialog[open] textarea").fill(Array.from({ length: 8 }, (_, i) => `word${i} - 뜻${i}`).join("\n"));
+  await page.locator("dialog[open]").getByRole("button", { name: "8장 추가하기" }).click();
+  await expect(page.getByRole("link", { name: /복습하기 \(5장\)/ })).toBeVisible();
   expect(errors).toEqual([]);
 });

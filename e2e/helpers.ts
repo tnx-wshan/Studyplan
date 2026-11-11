@@ -82,3 +82,11 @@ export async function seedPast(page: Page, dates: string[], profilePatch: Record
     { dates, profilePatch },
   );
 }
+
+/** 앱 안의 확인 창(askConfirm/askText)에서 확인(기본) 또는 취소를 누른다 */
+export async function answerDialog(page: Page, accept = true) {
+  const dialog = page.locator("dialog[open]:has(p[role=alert])");
+  await expect(dialog).toBeVisible();
+  await (accept ? dialog.locator("button[type=submit]") : dialog.getByRole("button", { name: "취소" })).click();
+  await expect(dialog).toBeHidden();
+}

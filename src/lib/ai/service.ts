@@ -68,19 +68,44 @@ type ProviderOptions = NonNullable<Parameters<typeof streamText>[0]["providerOpt
 /** 한 번의 요청이 끝없이 기다리지 않도록 하는 제한 */
 const REQUEST_LIMITS = { maxRetries: 1, timeout: { totalMs: 75_000 } } as const;
 
+/** 잠깐 뒤에 다시 하면 풀릴 가능성이 큰 오류인가 (요청이 너무 많음 429, 붐빔 503 등) */
+export function isRetryable(e: unknown): boolean {
+  const status = (e as { statusCode?: number } | null)?.statusCode;
+  const message = e instanceof Error ? e.message : String(e);
+  // 지출 한도는 429로 오지만 기다린다고 풀리지 않는다
+  if (/spending cap|billing|api key|permission|not found|safety|blocked/i.test(message)) return false;
+  if (status === 429 || status === 503 || status === 500 || status === 502) return true;
+  return /429|too many requests|rate.?limit|resource.?exhausted|503|unavailable|overloaded|high demand/i.test(message);
+}
+
+/** 다시 시도하기 전에 기다리는 시간(ms). 첫 재시도는 짧게, 그다음은 더 길게 */
+export const RETRY_DELAYS_MS = [1500, 4000];
+export const sleeper = { sleep: (ms: number) => new Promise<void>((r) => setTimeout(r, ms)) };
+
 /**
- * 모델을 순서대로 시도한다. AI 회사 쪽이 붐비거나(503) 모델이 없어졌을 때
+ * 모델을 순서대로 시도한다. AI 회사 쪽이 붐비거나(503) 요청이 너무 많을 때(429)는
+ * 잠깐 기다렸다가 같은 모델로 다시 해 보고, 그래도 안 되면(또는 모델이 없어졌으면)
  * 다음 모델로 넘어가서, 한 모델의 장애 때문에 기능 전체가 멈추지 않게 한다.
  */
 export async function withFallback<T>(models: Models, run: (model: LanguageModel) => Promise<T>): Promise<T> {
   const list = Array.isArray(models) ? models : [models];
   let lastError: unknown = new Error("no model");
   for (const model of list) {
-    try {
-      return await run(model);
-    } catch (e) {
-      lastError = e;
-      console.error("[ai] model failed, trying next:", typeof model === "string" ? model : model.modelId, e instanceof Error ? e.message.slice(0, 200) : e);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await run(model);
+      } catch (e) {
+        lastError = e;
+        const name = typeof model === "string" ? model : model.modelId;
+        const delay = RETRY_DELAYS_MS[attempt];
+        if (delay !== undefined && isRetryable(e)) {
+          console.error(`[ai] ${name} busy, retrying in ${delay}ms:`, e instanceof Error ? e.message.slice(0, 120) : e);
+          await sleeper.sleep(delay);
+          continue;
+        }
+        console.error("[ai] model failed, trying next:", name, e instanceof Error ? e.message.slice(0, 200) : e);
+        break;
+      }
     }
   }
   throw lastError;
@@ -145,15 +170,18 @@ export async function makeMaterial(req: MaterialRequest, models: Models, webSear
     try {
       // 검색이 막혀 있으면(요금제 한도 등) 모델을 바꿔도 마찬가지라서, 첫 모델로 한 번만 시도한다
       const primary = Array.isArray(models) ? models[0] : models;
-      const result = await generateText({
-        model: primary,
-        tools: webSearch(),
-        stopWhen: isStepCount(4),
-        prompt: webSearchPrompt(req.grade, req.query, req.subject),
-        maxOutputTokens: 6000,
-        maxRetries: 0,
-        timeout: { totalMs: 60_000 },
-      });
+      // 요청이 너무 많다는 오류(429)는 잠깐 기다렸다 다시 한다 (withFallback이 같은 모델을 재시도)
+      const result = await withFallback(primary, (model) =>
+        generateText({
+          model,
+          tools: webSearch(),
+          stopWhen: isStepCount(4),
+          prompt: webSearchPrompt(req.grade, req.query, req.subject),
+          maxOutputTokens: 6000,
+          maxRetries: 0,
+          timeout: { totalMs: 60_000 },
+        }),
+      );
       const seen = new Set<string>();
       const sources = result.sources
         .filter((s): s is Extract<typeof s, { sourceType: "url" }> => s.sourceType === "url")

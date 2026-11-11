@@ -8,7 +8,7 @@ import { DAILY_QUESTS, type DailyStats } from "@/lib/game/quests";
 import { generateExamPlan, type TaskDraft } from "@/lib/study/examPlan";
 import { nextRetryAfter, SPACED_STEPS } from "@/lib/study/retry";
 import { clampScore } from "@/lib/study/examTrend";
-import { newSrs, review, type Rating } from "@/lib/study/srs";
+import { DEFAULT_NEW_CARD_LIMIT, isNewCard, limitNewCards, newSrs, review, type Rating } from "@/lib/study/srs";
 
 const now = () => Date.now();
 
@@ -155,6 +155,30 @@ export async function replanExam(examId: string, today = toDateKey()) {
   return plan;
 }
 
+/**
+ * 시험 이름·날짜·하루 공부 시간·쉬는 요일을 고친다. 계획에 영향을 주는 값(날짜·시간·요일)이
+ * 바뀌면 끝내지 않은 할 일을 오늘부터 다시 짠다. 이름만 바뀌면 할 일은 그대로 둔다.
+ */
+export async function updateExam(
+  examId: string,
+  patch: Partial<Pick<Exam, "title" | "date" | "minutesPerDay" | "restDays">>,
+  today = toDateKey(),
+) {
+  const db = getDB();
+  const exam = await db.exams.get(examId);
+  if (!exam) throw new Error("exam not found");
+  const next = { ...patch };
+  if (next.title !== undefined) next.title = next.title.trim() || exam.title;
+  const planChanged =
+    (next.date !== undefined && next.date !== exam.date) ||
+    (next.minutesPerDay !== undefined && next.minutesPerDay !== exam.minutesPerDay) ||
+    (next.restDays !== undefined && next.restDays.slice().sort().join() !== exam.restDays.slice().sort().join());
+  await db.exams.update(examId, { ...next, updatedAt: now() });
+  const date = next.date ?? exam.date;
+  if (planChanged && date > today) return { replanned: true as const, plan: await replanExam(examId, today) };
+  return { replanned: false as const };
+}
+
 /** 시험 삭제: 끝내지 않은 할 일은 지우고, 끝낸 기록은 통계를 위해 남긴다 */
 export async function deleteExam(examId: string) {
   const db = getDB();
@@ -259,10 +283,14 @@ export async function deleteCard(id: string) {
   await getDB().cards.delete(id);
 }
 
+/** 오늘 복습할 카드. 새 카드는 하루 상한(profile.newCardLimit)까지만 보여 준다. */
 export async function dueCards(deckId?: string, at = now()) {
   const db = getDB();
-  const due = await db.cards.where("due").belowOrEqual(at).sortBy("due");
-  return deckId ? due.filter((c) => c.deckId === deckId) : due;
+  const [due, profile] = await Promise.all([db.cards.where("due").belowOrEqual(at).sortBy("due"), db.profile.get("me")]);
+  const today = toDateKey(new Date(at));
+  const done = profile?.newCardsToday?.date === today ? profile.newCardsToday.count : 0;
+  const limited = limitNewCards(due, done, profile?.newCardLimit ?? DEFAULT_NEW_CARD_LIMIT);
+  return deckId ? limited.filter((c) => c.deckId === deckId) : limited;
 }
 
 export async function reviewCard(id: string, rating: Rating, at = now()) {
@@ -272,6 +300,12 @@ export async function reviewCard(id: string, rating: Rating, at = now()) {
     if (!card) return;
     const r = review(card.srs, rating, at);
     await db.cards.update(id, { srs: r.srs, due: r.due, updatedAt: at });
+    if (isNewCard(card)) {
+      const profile = await db.profile.get("me");
+      const today = toDateKey(new Date(at));
+      const count = (profile?.newCardsToday?.date === today ? profile.newCardsToday.count : 0) + 1;
+      await db.profile.update("me", { newCardsToday: { date: today, count } });
+    }
     await addXpInTx(db, XP_REWARDS.cardReviewed, "card", at);
   });
 }

@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Empty, Field, PageHeader, Sheet, SubjectChip, SubjectPicker, TextInput, useSubjectMap, useSubjects } from "@/components/kit";
 import { Button, Card, buttonStyles } from "@/components/ui";
 import { getDB } from "@/lib/db";
-import { addDeck } from "@/lib/db/study";
+import { addDeck, dueCards } from "@/lib/db/study";
 import { useMinuteTick } from "@/lib/timerStore";
 
 export default function DecksPage() {
@@ -18,13 +18,13 @@ export default function DecksPage() {
   const tick = useMinuteTick();
   const decks = useLiveQuery(async () => {
     const db = getDB();
-    const [decks, cards] = await Promise.all([db.decks.toArray(), db.cards.toArray()]);
-    const now = Date.now();
+    const [decks, cards, dueNow] = await Promise.all([db.decks.toArray(), db.cards.toArray(), dueCards()]);
+    const dueIds = new Set(dueNow.map((c) => c.id));
     return decks
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .map((d) => {
         const mine = cards.filter((c) => c.deckId === d.id);
-        return { ...d, total: mine.length, due: mine.filter((c) => c.due <= now).length };
+        return { ...d, total: mine.length, due: mine.filter((c) => dueIds.has(c.id)).length };
       });
   }, [tick]);
 

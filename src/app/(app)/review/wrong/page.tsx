@@ -11,6 +11,7 @@ import { deleteWrongAnswer, updateWrongAnswer } from "@/lib/db/study";
 import type { WrongAnswer } from "@/lib/db/types";
 import { toDateKey } from "@/lib/date";
 import { WRONG_REASONS } from "@/lib/study/wrongReasons";
+import { askConfirm } from "@/components/Dialogs";
 
 type Filter = "due" | "active" | "mastered" | "all";
 const FILTERS: { id: Filter; label: string }[] = [
@@ -124,7 +125,7 @@ export default function WrongListPage() {
                         <button type="button" className="underline" onClick={() => setEditing(w)}>
                           고치기
                         </button>
-                        <button type="button" className="text-danger underline" onClick={() => confirm("이 오답을 지울까요?") && deleteWrongAnswer(w.id)}>
+                        <button type="button" className="text-danger underline" onClick={async () => (await askConfirm("이 오답을 지울까요?", { danger: true, confirmLabel: "지우기" })) && deleteWrongAnswer(w.id)}>
                           삭제
                         </button>
                       </div>

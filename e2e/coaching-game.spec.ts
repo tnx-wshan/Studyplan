@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { dismissRankUp, noHorizontalScroll, rewindTimer, startFresh } from "./helpers";
+import { answerDialog, dismissRankUp, noHorizontalScroll, rewindTimer, startFresh } from "./helpers";
 
 test("학습법 실습 → 습관 진단 → 리포트·회고·AI 코칭", async ({ page }) => {
   const errors = await startFresh(page, "중2");
@@ -59,6 +59,7 @@ test("게임: 레벨업 → 업적 → 주간 보상 → 상점 → 칭호 → �
   await expect(page.getByText("집중하는 중")).toBeVisible();
   await rewindTimer(page, 601);
   await page.getByRole("button", { name: /끝내고 기록/ }).click();
+  await answerDialog(page);
   await dismissRankUp(page);
   await expect(page.getByText(/업적 기록: 첫 번째 장부/)).toBeVisible();
 
@@ -72,6 +73,7 @@ test("게임: 레벨업 → 업적 → 주간 보상 → 상점 → 칭호 → �
   // 상점에서 사서 착용
   await page.goto("/companion");
   await page.getByRole("button", { name: "🪙 40" }).click();
+  await answerDialog(page);
   await expect(page.getByText("황동 후광 구매 완료!")).toBeVisible();
 
   // 칭호
@@ -103,5 +105,6 @@ test("백업: 사진까지 내보내고 다시 불러온다", async ({ page }) =
   expect(json.app).toBe("homestudy");
   expect(json.tables.profile[0].pet.name).toBe("에코");
   await page.locator("input[type=file][accept='application/json']").setInputFiles(file);
+  await answerDialog(page);
   await expect(page.getByText("백업을 불러왔어요.")).toBeVisible();
 });

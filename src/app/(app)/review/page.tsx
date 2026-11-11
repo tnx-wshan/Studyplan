@@ -7,6 +7,7 @@ import { TaskRow } from "@/components/planner/TaskRow";
 import { Card, SectionTitle, buttonStyles } from "@/components/ui";
 import { getDB } from "@/lib/db";
 import { toDateKey } from "@/lib/date";
+import { dueCards as loadDueCards } from "@/lib/db/study";
 import { reviewForecast } from "@/lib/study/memory";
 import { useMinuteTick } from "@/lib/timerStore";
 
@@ -14,7 +15,7 @@ export default function ReviewPage() {
   const today = toDateKey();
   const tick = useMinuteTick();
   const subjectMap = useSubjectMap();
-  const dueCards = useLiveQuery(() => getDB().cards.where("due").belowOrEqual(Date.now()).count(), [tick]);
+  const dueCards = useLiveQuery(async () => (await loadDueCards()).length, [tick]);
   const totalCards = useLiveQuery(() => getDB().cards.count(), []);
   const dueWrong = useLiveQuery(() => getDB().wrongAnswers.where("nextRetry").belowOrEqual(today).filter((w) => !w.mastered).count(), [today]);
   const totalWrong = useLiveQuery(() => getDB().wrongAnswers.count(), []);

@@ -35,6 +35,10 @@ export interface Profile extends Base {
   readRecords?: string[];
   /** 주간 집중 목표(분): 주 키 → 목표 */
   weeklyGoals?: Record<string, number>;
+  /** 하루에 새로 배우는 카드 수 상한 (기본 20) */
+  newCardLimit?: number;
+  /** 오늘 새로 배운 카드 수 */
+  newCardsToday?: { date: string; count: number };
   onboardedAt: number;
   /** 레벨이 올랐지만 아직 축하 화면을 보지 않았을 때, 오르기 전 레벨 */
   levelUpFrom?: number;

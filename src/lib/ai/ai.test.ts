@@ -2,9 +2,9 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { MockLanguageModelV4 } from "ai/test";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockModel } from "./mock";
-import { fixNewlines, makeMaterial, makeQuiz, normalizeQuestion, parseWebAnswer, startTutorStream, toModelMessages, tutorStream, withFallback } from "./service";
+import { fixNewlines, makeMaterial, makeQuiz, normalizeQuestion, parseWebAnswer, isRetryable, sleeper, startTutorStream, toModelMessages, tutorStream, withFallback } from "./service";
 
 const usage = {
   inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
@@ -139,6 +139,41 @@ describe("daily usage", () => {
 });
 
 describe("model fallback", () => {
+  beforeEach(() => {
+    vi.spyOn(sleeper, "sleep").mockResolvedValue(undefined);
+  });
+
+  it("retries a busy (429/503) model after a short wait before moving on", async () => {
+    let calls = 0;
+    const r = await withFallback(["a", "b"] as never, async () => {
+      if (++calls < 3) throw Object.assign(new Error("Too Many Requests"), { statusCode: 429 });
+      return "ok";
+    });
+    expect(r).toBe("ok");
+    expect(calls).toBe(3);
+    expect(sleeper.sleep).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(sleeper.sleep).mock.calls[1][0]).toBeGreaterThan(vi.mocked(sleeper.sleep).mock.calls[0][0]);
+  });
+
+  it("gives up on a model after the retries and uses the next one", async () => {
+    const tried: string[] = [];
+    const r = await withFallback(["a", "b"] as never, async (m) => {
+      tried.push(String(m));
+      if (m === ("a" as never)) throw new Error("429 Too Many Requests");
+      return "ok";
+    });
+    expect(r).toBe("ok");
+    expect(tried).toEqual(["a", "a", "a", "b"]);
+  });
+
+  it("does not wait for errors a retry cannot fix", async () => {
+    await expect(withFallback(["a"] as never, async () => Promise.reject(new Error("exceeded its monthly spending cap")))).rejects.toThrow("spending cap");
+    expect(sleeper.sleep).not.toHaveBeenCalled();
+    expect(isRetryable(Object.assign(new Error("exceeded its monthly spending cap"), { statusCode: 429 }))).toBe(false);
+    expect(isRetryable(new Error("invalid api key 401"))).toBe(false);
+    expect(isRetryable(new Error("503 UNAVAILABLE"))).toBe(true);
+  });
+
   const failing = () =>
     new MockLanguageModelV4({
       doGenerate: async () => {
@@ -181,6 +216,10 @@ describe("model fallback", () => {
 });
 
 describe("output cleanup and web fallback", () => {
+  beforeEach(() => {
+    vi.spyOn(sleeper, "sleep").mockResolvedValue(undefined);
+  });
+
   it("turns literal \\n into newlines but keeps LaTeX commands", () => {
     expect(fixNewlines("### 제목\\n내용\\n\\n* 목록")).toBe("### 제목\n내용\n\n* 목록");
     expect(fixNewlines("$a \\neq 0$, $\\nabla f$, $\\nu$")).toBe("$a \\neq 0$, $\\nabla f$, $\\nu$");
@@ -197,7 +236,8 @@ describe("output cleanup and web fallback", () => {
     });
     const tools = { search: { type: "provider" as const, id: "x.search", args: {} } } as never;
     const m = await makeMaterial({ kind: "web", grade: "중2", query: "광합성" }, model, () => tools);
-    expect(calls).toBe(2);
+    // 검색은 붐빔 오류면 잠깐 기다렸다 2번 더 시도(3번), 그다음 검색 없이 1번
+    expect(calls).toBe(4);
     expect(m.notice).toContain("웹 검색을 쓸 수 없어서");
     expect(m.sources).toEqual([]);
     expect(m.summary).toBe("## 개념\n설명");

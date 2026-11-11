@@ -15,6 +15,7 @@ import { addAssistantMessage, addUserMessage, createChat, deleteChat, updateChat
 import type { TutorChat, TutorMessage } from "@/lib/db/types";
 import { useProfile } from "@/lib/hooks";
 import { compressImage } from "@/lib/image";
+import { askConfirm } from "@/components/Dialogs";
 
 const MAX_IMAGES = 3;
 const EXAMPLES = ["x² - 5x + 6 = 0 을 어떻게 풀어요?", "광합성과 호흡의 차이가 뭐예요?", "현재완료 시제는 언제 써요?"];
@@ -163,7 +164,7 @@ function Tutor() {
               type="button"
               className="text-sm text-ink-soft underline"
               onClick={async () => {
-                if (!confirm("이 대화를 지울까요?")) return;
+                if (!(await askConfirm("이 대화를 지울까요?", { danger: true, confirmLabel: "지우기" }))) return;
                 await deleteChat(chat.id);
                 router.replace("/ai");
               }}

@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import Dexie from "dexie";
 import { beforeEach, describe, expect, it } from "vitest";
 import { HomeStudyDB, getDB, setDB } from "./index";
-import { completeOnboarding, getProfile } from "./profile";
+import { completeOnboarding, getProfile, updateProfile } from "./profile";
 import {
   addCard,
   addDeck,
@@ -16,6 +16,7 @@ import {
   dueCards,
   dueWrongAnswers,
   recordStudySession,
+  updateExam,
   replanExam,
   retryWrongAnswer,
   reviewCard,
@@ -61,6 +62,26 @@ describe("tasks", () => {
 });
 
 describe("exams", () => {
+  it("edits an exam: a rename keeps tasks, a new date replans the rest", async () => {
+    const [math] = await getDB().subjects.filter((s) => s.group === "math").toArray();
+    const { exam } = await createExam(
+      { title: "기말", date: "2026-11-20", ranges: [{ subjectId: math.id, units: ["a", "b", "c"] }], minutesPerDay: 60, restDays: [] },
+      TODAY,
+    );
+    const ids = (await getDB().tasks.where("examId").equals(exam.id).toArray()).map((t) => t.id).sort();
+    const r1 = await updateExam(exam.id, { title: " 기말고사 " }, TODAY);
+    expect(r1.replanned).toBe(false);
+    expect((await getDB().exams.get(exam.id))?.title).toBe("기말고사");
+    expect((await getDB().tasks.where("examId").equals(exam.id).toArray()).map((t) => t.id).sort()).toEqual(ids);
+
+    const r2 = await updateExam(exam.id, { date: "2026-11-25", restDays: [0] }, TODAY);
+    expect(r2.replanned).toBe(true);
+    const after = await getDB().tasks.where("examId").equals(exam.id).toArray();
+    expect(after.some((t) => t.date > "2026-11-20")).toBe(true);
+    expect(after.some((t) => new Date(`${t.date}T12:00:00`).getDay() === 0 && t.kind !== "spaced")).toBe(false);
+    expect((await getDB().exams.get(exam.id))?.date).toBe("2026-11-25");
+  });
+
   it("creates a plan, replans remaining units, and deletes undone tasks", async () => {
     const [math] = await getDB().subjects.filter((s) => s.group === "math").toArray();
     const { exam } = await createExam(
@@ -91,6 +112,19 @@ describe("sessions, cards, wrong answers, quests", () => {
     await recordStudySession({ startedAt: start, endedAt: start + 20_000, focusMinutes: 0.3, mode: "free" });
     expect((await getProfile())?.totalXp).toBe(26);
     expect((await dailyStats(TODAY)).focusMinutes).toBe(26);
+  });
+
+  it("hides new cards over the daily limit but keeps cards already started", async () => {
+    const deck = await addDeck("단어");
+    for (let i = 0; i < 5; i++) await addCard(deck.id, `q${i}`, `a${i}`);
+    await updateProfile({ newCardLimit: 2 });
+    const first = (await dueCards())[0];
+    expect(await dueCards()).toHaveLength(2);
+    await reviewCard(first.id, 3);
+    expect(await dueCards()).toHaveLength(1); // 상한 2 중 1장 사용 → 새 카드 1장 남음
+    expect((await getProfile())?.newCardsToday?.count).toBe(1);
+    await updateProfile({ newCardLimit: 1 });
+    expect(await dueCards()).toHaveLength(0);
   });
 
   it("reviews cards and moves them out of today's queue", async () => {

@@ -8,6 +8,7 @@ import { Button, cn } from "@/components/ui";
 import { addDays } from "@/lib/date";
 import { deleteTask, setTaskDone, updateTask } from "@/lib/db/study";
 import type { Subject, Task } from "@/lib/db/types";
+import { askConfirm } from "@/components/Dialogs";
 
 const KIND_BADGE: Partial<Record<Task["kind"], { label: string; className: string }>> = {
   review: { label: "범위 복습", className: "bg-accent/15 text-accent-deep" },
@@ -75,7 +76,7 @@ export function TaskRow({ task, subject }: { task: Task; subject?: Subject }) {
           <button
             type="button"
             className="font-display rounded-full border-2 border-danger px-3 py-1 text-danger"
-            onClick={() => confirm("이 할 일을 지울까요?") && deleteTask(task.id)}
+            onClick={async () => (await askConfirm("이 할 일을 지울까요?", { danger: true, confirmLabel: "지우기" })) && deleteTask(task.id)}
           >
             삭제
           </button>

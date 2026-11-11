@@ -8,10 +8,11 @@ import { Empty, Field, PageHeader, Sheet, TextArea, TextInput } from "@/componen
 import { toast } from "@/components/Toaster";
 import { Button, Card, buttonStyles } from "@/components/ui";
 import { getDB } from "@/lib/db";
-import { addCard, deleteCard, deleteDeck, renameDeck, updateCard } from "@/lib/db/study";
+import { addCard, deleteCard, dueCards, deleteDeck, renameDeck, updateCard } from "@/lib/db/study";
 import type { Card as CardT } from "@/lib/db/types";
 import { parseBulk } from "@/lib/study/bulk";
 import { useMinuteTick } from "@/lib/timerStore";
+import { askConfirm, askText } from "@/components/Dialogs";
 
 export default function DeckPage() {
   return (
@@ -28,8 +29,8 @@ function Deck() {
   const tick = useMinuteTick();
   // 지금 복습할 카드인지는 조회할 때의 시각으로 판단한다 (카드를 추가하면 바로 반영)
   const cards = useLiveQuery(async () => {
-    const now = Date.now();
-    return (await getDB().cards.where("deckId").equals(id).toArray()).map((c) => ({ ...c, isDue: c.due <= now }));
+    const dueIds = new Set((await dueCards(id)).map((c) => c.id));
+    return (await getDB().cards.where("deckId").equals(id).toArray()).map((c) => ({ ...c, isDue: dueIds.has(c.id) }));
   }, [id, tick]);
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
@@ -59,8 +60,8 @@ function Deck() {
           <button
             type="button"
             className="text-sm text-ink-soft underline"
-            onClick={() => {
-              const name = prompt("묶음 이름", deck.name);
+            onClick={async () => {
+              const name = await askText("묶음 이름", { value: deck.name });
               if (name?.trim()) void renameDeck(id, name);
             }}
           >
@@ -121,7 +122,7 @@ function Deck() {
         variant="ghost"
         className="w-full text-danger"
         onClick={async () => {
-          if (!confirm(`"${deck.name}" 묶음과 카드 ${cards.length}장을 모두 지울까요?`)) return;
+          if (!(await askConfirm(`"${deck.name}" 묶음과 카드 ${cards.length}장을 모두 지울까요?`, { danger: true, confirmLabel: "지우기" }))) return;
           await deleteDeck(id);
           router.replace("/review/cards");
         }}

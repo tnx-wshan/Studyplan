@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { daysAgo, dismissRankUp, noHorizontalScroll, rewindTimer, seedPast, startFresh } from "./helpers";
+import { answerDialog, daysAgo, dismissRankUp, noHorizontalScroll, rewindTimer, seedPast, startFresh } from "./helpers";
 
 test("5분만 시작 → 더 할지 묻기, 주간 목표 정하고 달성 보상", async ({ page }) => {
   const errors = await startFresh(page);
@@ -25,6 +25,7 @@ test("5분만 시작 → 더 할지 묻기, 주간 목표 정하고 달성 보�
   await expect(page.getByText("집중하는 중")).toBeVisible();
   await rewindTimer(page, 120);
   await page.getByRole("button", { name: /끝내고 기록/ }).click();
+  await answerDialog(page);
   await expect(page.getByText(/집중 120분 기록/)).toBeVisible();
   await dismissRankUp(page); // 125 XP → RANK 2
 

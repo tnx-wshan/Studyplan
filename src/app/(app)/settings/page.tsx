@@ -11,7 +11,9 @@ import { GRADES, SUBJECT_GROUPS, coursesFor, gradeLabel, type GradeId } from "@/
 import { exportBackup, importBackup } from "@/lib/db/backup";
 import { updateProfile } from "@/lib/db/profile";
 import { relinkSubjectsToGrade } from "@/lib/db/study";
+import { DEFAULT_NEW_CARD_LIMIT } from "@/lib/study/srs";
 import { useProfile } from "@/lib/hooks";
+import { askConfirm } from "@/components/Dialogs";
 
 const THEMES = [
   { id: "system", label: "기기 설정" },
@@ -37,7 +39,7 @@ export default function SettingsPage() {
   }
 
   async function onImport(file: File) {
-    if (!confirm("지금 기기의 데이터를 백업 파일 내용으로 바꿀까요? 되돌릴 수 없어요.")) return;
+    if (!(await askConfirm("지금 기기의 데이터를 백업 파일 내용으로 바꿀까요? 되돌릴 수 없어요.", { danger: true, confirmLabel: "바꾸기" }))) return;
     try {
       await importBackup(await file.text());
       setMessage("백업을 불러왔어요.");
@@ -68,7 +70,7 @@ export default function SettingsPage() {
               onChange={async (e) => {
                 const grade = e.target.value as GradeId;
                 await updateProfile({ grade });
-                if (confirm("과목의 교육과정 연결도 새 학년에 맞게 바꿀까요? 직접 추가한 단원은 그대로 남아요.")) {
+                if (await askConfirm("과목의 교육과정 연결도 새 학년에 맞게 바꿀까요? 직접 추가한 단원은 그대로 남아요.")) {
                   await relinkSubjectsToGrade(grade);
                   setMessage("과목을 새 학년 교육과정에 연결했어요. 선택과목은 과목·단원 관리에서 골라 주세요.");
                 }
@@ -81,6 +83,21 @@ export default function SettingsPage() {
                 </option>
               ))}
             </select>
+          </label>
+          <label className="block space-y-1">
+            <span className="text-sm text-ink-soft">하루에 새로 배우는 카드</span>
+            <select
+              value={profile.newCardLimit ?? DEFAULT_NEW_CARD_LIMIT}
+              onChange={(e) => updateProfile({ newCardLimit: Number(e.target.value) })}
+              className="w-full rounded-2xl border-2 border-line bg-surface px-3 py-2.5"
+            >
+              {[5, 10, 20, 30, 50, 100].map((n) => (
+                <option key={n} value={n}>
+                  {n}장
+                </option>
+              ))}
+            </select>
+            <span className="block text-xs text-ink-soft">새 카드가 너무 많이 쌓여도 하루에 이만큼만 보여 줘요. 복습할 카드는 제한 없이 나와요.</span>
           </label>
         </Card>
       </section>

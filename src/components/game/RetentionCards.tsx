@@ -21,6 +21,7 @@ import {
 import { toDateKey } from "@/lib/date";
 import { QUICK_MINUTES, startQuick } from "@/lib/study/timer";
 import { getTimer, setTimer, useTimerState } from "@/lib/timerStore";
+import { askConfirm } from "@/components/Dialogs";
 
 /** 오래 쉬었다 돌아온 날: 밀린 일 대신 가벼운 복귀 퀘스트 3개 */
 export function ComebackCard() {
@@ -32,7 +33,7 @@ export function ComebackCard() {
   const allClaimed = status.quests.every((q) => q.claimed);
 
   async function onTidy() {
-    if (!confirm("지난 간격 복습 할 일은 지우고, 다가오는 시험 계획은 남은 날에 맞춰 다시 짤까요? 직접 만든 할 일은 그대로 둬요.")) return;
+    if (!(await askConfirm("지난 간격 복습 할 일은 지우고, 다가오는 시험 계획은 남은 날에 맞춰 다시 짤까요? 직접 만든 할 일은 그대로 둬요."))) return;
     setBusy(true);
     const r = await tidyBacklog(today);
     toast(`정리 완료: 복습 ${r.removedReviews}개 정리${r.replannedExams ? `, 시험 계획 ${r.replannedExams}개 다시 짬` : ""}`);

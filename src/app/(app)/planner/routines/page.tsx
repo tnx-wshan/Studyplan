@@ -9,6 +9,7 @@ import { getDB } from "@/lib/db";
 import { addRoutine, deleteRoutine, routinesForReminders, updateRoutine, type RoutineInput } from "@/lib/db/routines";
 import type { Routine } from "@/lib/db/types";
 import { readPushState, syncRoutineReminders } from "@/lib/push/client";
+import { askConfirm } from "@/components/Dialogs";
 
 const PRESETS: { label: string; days: number[] }[] = [
   { label: "평일", days: [1, 2, 3, 4, 5] },
@@ -188,7 +189,7 @@ function RoutineForm({ routine, onDone }: { routine: Routine | null; onDone: () 
             variant="ghost"
             className="text-danger"
             onClick={async () => {
-              if (!confirm("이 루틴을 지울까요? 앞으로의 할 일도 함께 지워져요. 끝낸 기록은 남아요.")) return;
+              if (!(await askConfirm("이 루틴을 지울까요? 앞으로의 할 일도 함께 지워져요. 끝낸 기록은 남아요.", { danger: true, confirmLabel: "지우기" }))) return;
               await deleteRoutine(routine.id);
               await syncReminders();
               onDone();

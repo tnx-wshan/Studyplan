@@ -14,6 +14,7 @@ import { deleteQuiz, finishQuiz, flagQuestion, recordAnswer, resetQuiz, saveQues
 import type { Question, Subject } from "@/lib/db/types";
 import { usePetState } from "@/lib/hooks";
 import { gradeAnswer } from "@/lib/study/grade";
+import { askConfirm } from "@/components/Dialogs";
 
 const TYPE_LABELS = { multiple: "객관식", short: "단답형", essay: "서술형" } as const;
 
@@ -67,7 +68,7 @@ function QuizScreen() {
             type="button"
             className="text-sm text-ink-soft underline"
             onClick={async () => {
-              if (!confirm("이 퀴즈와 자료를 지울까요? 오답노트·카드에 저장한 문제는 남아요.")) return;
+              if (!(await askConfirm("이 퀴즈와 자료를 지울까요? 오답노트·카드에 저장한 문제는 남아요.", { danger: true, confirmLabel: "지우기" }))) return;
               await deleteQuiz(quiz.id);
               router.replace("/ai");
             }}

@@ -9,6 +9,7 @@ import { cn, Pill } from "./ui";
 import { LevelUp } from "./LevelUp";
 import { BadgeWatcher } from "./game/BadgeWatcher";
 import { RetentionWatcher } from "./game/RetentionWatcher";
+import { DialogHost } from "./Dialogs";
 import { OfflineWarmup } from "./ServiceWorker";
 import { TimerWatcher } from "./TimerWatcher";
 import { Toaster } from "./Toaster";
@@ -58,6 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <BottomNav />
       <TimerWatcher />
       <Toaster />
+      <DialogHost />
       <LevelUp />
       <BadgeWatcher />
       <OfflineWarmup />
