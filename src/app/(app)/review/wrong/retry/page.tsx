@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Empty, PageHeader, SubjectChip, useSubjectMap } from "@/components/kit";
+import { Markdown } from "@/components/Markdown";
 import { Pet } from "@/components/Pet";
 import { StoredImage } from "@/components/StoredImage";
 import { toast } from "@/components/Toaster";
@@ -78,20 +79,20 @@ export default function RetryPage() {
           <span className="ml-auto">연속 정답 {item.streak}/{MASTER_STREAK}</span>
         </div>
         {item.imageId && <StoredImage id={item.imageId} alt="문제 사진" className="max-h-96 w-full rounded-2xl object-contain" />}
-        {item.question && <p className="whitespace-pre-wrap text-lg">{item.question}</p>}
+        {item.question && <Markdown breaks className="text-lg">{item.question}</Markdown>}
       </Card>
 
       {revealed ? (
         <>
           <Card className="space-y-2">
-            <p>
+            <div>
               <span className="text-sm text-ink-soft">정답 </span>
-              <b className="font-display text-xl text-success-deep">{item.correctAnswer}</b>
-            </p>
-            <p className="text-sm">
+              <Markdown className="font-display inline-block align-top text-xl font-bold text-success-deep">{item.correctAnswer}</Markdown>
+            </div>
+            <div className="text-sm">
               <span className="text-ink-soft">지난번 내 답 </span>
-              <span className="text-danger line-through">{item.myAnswer || "-"}</span>
-            </p>
+              <Markdown className="inline-block align-top text-danger line-through">{item.myAnswer || "-"}</Markdown>
+            </div>
             <p className="text-sm">
               {reason.icon} {reason.label}
               {item.note && <span className="text-ink-soft"> · {item.note}</span>}

@@ -24,7 +24,7 @@
 - 서버 저장: `node:sqlite` (Node 22.13 이상, 설치할 패키지 없음, WAL 모드로 앱 서버와 관리 서버가 같은 파일을 씀)
 - AI: Vercel AI SDK v7 (`ai`, `@ai-sdk/google|anthropic|openai`), zod로 답 형식 지정
 - 알림: Web Push (`web-push`), 서버 시작 때 스케줄러 실행 (`src/instrumentation.ts`)
-- 테스트: Vitest(단위 175개), Playwright(브라우저 19개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
+- 테스트: Vitest(단위 180개), Playwright(브라우저 19개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
 
 ### 폴더
 

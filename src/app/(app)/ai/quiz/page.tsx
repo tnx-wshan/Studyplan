@@ -217,10 +217,10 @@ function Feedback({ question, subject, onNext, isLast }: { question: Question; s
         <Markdown>{question.prompt}</Markdown>
         <div className="grid gap-2 text-sm">
           {question.type !== "essay" && (
-            <p>
-              <span className="text-ink-soft">내 답 </span>
-              <span className={correct ? "" : "text-danger line-through"}>{question.userAnswer}</span>
-            </p>
+            <div className="flex gap-1">
+              <span className="shrink-0 text-ink-soft">내 답 </span>
+              <Markdown className={correct ? "" : "text-danger line-through"}>{question.userAnswer ?? ""}</Markdown>
+            </div>
           )}
           <div className="flex gap-1">
             <span className="shrink-0 text-ink-soft">정답 </span>
@@ -321,7 +321,7 @@ function Summary({ questions, subject, quizId, onRetry }: { questions: Question[
                 <span aria-hidden>{q.result === "correct" ? "⭕" : "❌"}</span>
                 <span className="min-w-0 flex-1 text-sm">
                   <span className="text-ink-soft">{i + 1}. </span>
-                  <span className={open === q.id ? "" : "line-clamp-1"}>{q.prompt.replace(/\$/g, "")}</span>
+                  <Markdown className={open === q.id ? "" : "line-clamp-1"}>{q.prompt}</Markdown>
                 </span>
                 {q.flagged && <span aria-label="이상한 문제로 표시됨">🚩</span>}
               </button>

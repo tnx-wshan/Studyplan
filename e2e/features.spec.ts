@@ -177,7 +177,8 @@ test("고치기: 할 일과 오답 내용을 나중에 바꿀 수 있다", async
   await page.getByRole("button", { name: "고치기" }).click();
   await page.locator("dialog[open]").getByLabel("정답").fill("2");
   await page.locator("dialog[open]").getByRole("button", { name: "저장" }).click();
-  await expect(page.locator("main b", { hasText: /^2$/ })).toBeVisible();
+  // 정답은 수식도 보이게 마크다운으로 그린다
+  await expect(page.locator("main .text-success-deep", { hasText: /^2$/ })).toBeVisible();
 
   // 지우기 확인 창: 취소하면 남고, 확인하면 지워진다
   await page.goto("/planner");

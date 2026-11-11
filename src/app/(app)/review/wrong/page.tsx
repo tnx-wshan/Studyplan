@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useState } from "react";
 import { Empty, Field, PageHeader, Sheet, SubjectChip, SubjectPicker, TextArea, TextInput, formatDateKey, useSubjectMap, useSubjects } from "@/components/kit";
+import { Markdown } from "@/components/Markdown";
 import { StoredImage } from "@/components/StoredImage";
 import { Button, Card, buttonStyles, cn } from "@/components/ui";
 import { getDB } from "@/lib/db";
@@ -103,17 +104,17 @@ export default function WrongListPage() {
                       {w.unitId && <span className="truncate">{w.unitId}</span>}
                       <span className="ml-auto shrink-0">{w.mastered ? "🏆 정복" : w.nextRetry <= today ? "오늘 다시 풀기" : `${formatDateKey(w.nextRetry, false)} 다시 풀기`}</span>
                     </div>
-                    <p className={cn("mt-1", !open && "line-clamp-2")}>{w.question || "(사진 문제)"}</p>
+                    <Markdown breaks className={cn("mt-1", !open && "line-clamp-2")}>{w.question || "(사진 문제)"}</Markdown>
                   </button>
                   {open && (
                     <div className="mt-3 space-y-2 text-sm">
                       {w.imageId && <StoredImage id={w.imageId} alt="문제 사진" className="max-h-80 w-full rounded-2xl object-contain" />}
-                      <p>
-                        <span className="text-ink-soft">내 답</span> <span className="text-danger line-through">{w.myAnswer || "-"}</span>
-                      </p>
-                      <p>
-                        <span className="text-ink-soft">정답</span> <b className="text-success-deep">{w.correctAnswer || "-"}</b>
-                      </p>
+                      <div>
+                        <span className="text-ink-soft">내 답</span> <Markdown className="inline-block align-top text-danger line-through">{w.myAnswer || "-"}</Markdown>
+                      </div>
+                      <div>
+                        <span className="text-ink-soft">정답</span> <Markdown className="inline-block align-top font-bold text-success-deep">{w.correctAnswer || "-"}</Markdown>
+                      </div>
                       <p>
                         {reason.icon} {reason.label}
                         {w.note && <span className="text-ink-soft"> · {w.note}</span>}
