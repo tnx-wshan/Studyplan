@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import type { QuestionOutput } from "@/lib/ai/schemas";
+import { repairDeep } from "@/lib/ai/text";
 import { newServerId, parseJson, serverDb } from "./db";
 
 /**
@@ -180,7 +181,7 @@ export function addItem(item: NewItem, now = Date.now()): BankItem {
       item.subjectName ?? "",
       item.topic.slice(0, 200),
       item.title.slice(0, 100),
-      JSON.stringify(item.data),
+      JSON.stringify(repairDeep(item.data)),
       item.parentId ?? null,
       item.createdBy ?? null,
       item.madeBy ?? "",
@@ -205,7 +206,7 @@ export function updateItem(id: string, patch: { title?: string; topic?: string; 
       patch.grade ?? cur.grade,
       patch.subject ?? cur.subject,
       patch.status ?? cur.status,
-      JSON.stringify(patch.data ?? cur.data),
+      JSON.stringify(repairDeep(patch.data ?? cur.data)),
       now,
       id,
     );

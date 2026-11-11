@@ -122,3 +122,25 @@ describe("AI unit output", () => {
     expect(problems).toHaveLength(1);
   });
 });
+
+describe("저장된 수식 명령 보정", () => {
+  it("예전에 깨진 채 저장된 자료를 마이그레이션으로 고친다", async () => {
+    const { repairJsonColumn, serverDb } = await import("./db");
+    const db = serverDb();
+    // 보정 없이 깨진 글자 그대로 넣는다 ("\t" = 탭 문자)
+    db.prepare("INSERT INTO bank_items (id, kind, lookup_key, data, created_at, updated_at) VALUES ('q1', 'quiz', 'k', ?, 0, 0)").run(
+      JSON.stringify({ questions: [{ prompt: "$12 = 2^2 \times 3$", choices: ["$\frac{1}{2}$"] }] }),
+    );
+    repairJsonColumn(db, "bank_items", "data");
+    const row = db.prepare("SELECT data FROM bank_items WHERE id = 'q1'").get() as { data: string };
+    expect(JSON.parse(row.data).questions[0]).toEqual({ prompt: String.raw`$12 = 2^2 \times 3$`, choices: [String.raw`$\frac{1}{2}$`] });
+  });
+
+  it("새로 저장하는 자료와 유닛도 고쳐서 저장한다", () => {
+    const item = addItem({ kind: "material", lookupKey: "k2", sourceKind: "web", grade: "m1", subject: "math", topic: "t", title: "t", data: { summary: "$2 \times 3$", keyPoints: [], sources: [] } });
+    expect((item.data as { summary: string }).summary).toBe(String.raw`$2 \times 3$`);
+    const s = createSection("m1", "math", "새 섹션");
+    const r = createUnit(s.id, { title: "u", steps: [{ type: "short", prompt: "$\frac{6}{3}$은?", answers: ["2"] }] });
+    expect((r.unit!.steps[0] as { prompt: string }).prompt).toBe(String.raw`$\frac{6}{3}$은?`);
+  });
+});

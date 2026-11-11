@@ -65,3 +65,11 @@ export function repairLatexEscapes(text: string): string {
 
 /** \n으로 시작하는 수식 명령에서 n 뒤의 글자 */
 const N_COMMAND = /^(eq|e|abla|u|otin|ot|i|mid|geq|leq|eg|exists|ewline|subseteq|parallel)(?![a-zA-Z])/;
+
+/** 객체·배열 안의 모든 글자에 repairLatexEscapes를 적용한다 (저장된 자료 고치기용) */
+export function repairDeep<T>(value: T): T {
+  if (typeof value === "string") return repairLatexEscapes(value) as T;
+  if (Array.isArray(value)) return value.map(repairDeep) as T;
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, repairDeep(v)])) as T;
+  return value;
+}

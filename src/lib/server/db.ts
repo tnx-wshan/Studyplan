@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { seedLearn } from "./seed";
+import { repairDeep } from "@/lib/ai/text";
 
 /**
  * 서버 DB (Node 내장 SQLite). 학생 개인 데이터는 여전히 기기(IndexedDB)에 있고,
@@ -87,6 +88,11 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX learn_units_section ON learn_units(section_id, ord);
     `);
   },
+  // 2: 백슬래시 하나로 와서 탭 같은 제어 문자가 된 수식 명령(\times → 탭+imes)을 저장된 자료에서 되돌린다
+  (db) => {
+    repairJsonColumn(db, "bank_items", "data");
+    repairJsonColumn(db, "learn_units", "steps");
+  },
 ];
 
 function migrate(db: DatabaseSync) {
@@ -104,6 +110,22 @@ function migrate(db: DatabaseSync) {
   } catch (e) {
     db.exec("ROLLBACK");
     throw e;
+  }
+}
+
+/** JSON 칸 안의 모든 글자에 수식 명령 보정을 적용한다 (바뀐 줄만 다시 쓴다) */
+export function repairJsonColumn(db: DatabaseSync, table: "bank_items" | "learn_units", column: "data" | "steps") {
+  const rows = db.prepare(`SELECT id, ${column} AS value FROM ${table}`).all() as { id: string; value: string }[];
+  const update = db.prepare(`UPDATE ${table} SET ${column} = ? WHERE id = ?`);
+  for (const r of rows) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(r.value);
+    } catch {
+      continue;
+    }
+    const fixed = JSON.stringify(repairDeep(parsed));
+    if (fixed !== r.value) update.run(fixed, r.id);
   }
 }
 
