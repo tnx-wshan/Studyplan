@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { adminLogin, imagesLoaded, startFresh } from "./helpers";
+import { ADMIN_URL, adminLogin, imagesLoaded, startFresh } from "./helpers";
 
 const SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60"><rect width="200" height="60" fill="#fff"/><line x1="10" y1="30" x2="190" y2="30" stroke="#222"/><text x="95" y="52" font-size="14">0</text></svg>';
 
@@ -79,6 +80,35 @@ test("관리 도구 일괄 넣기: 지시문 만들기 → 검사 → 넣기(초
   await page.getByRole("button", { name: "중1 수학 유닛 3개" }).click();
   await expect(page.getByRole("heading", { name: "정수와 유리수" })).toBeVisible();
   await expect(page.getByText("수직선과 정수")).toHaveCount(0);
+
+  expect(errors).toEqual([]);
+});
+
+test("관리 도구 일괄 넣기: 다른 AI가 자주 내는 실수(그림 속 큰따옴표, \\( \\) 수식)를 고쳐 읽고, 깨진 그림 유닛은 이유와 함께 건너뛴다", async ({ page }) => {
+  const errors = await startFresh(page);
+  await adminLogin(page);
+  await page.goto(`${ADMIN_URL}/admin/learn/import`);
+  const input = page.getByLabel(/JSON 붙여 넣기/);
+
+  // 고칠 수 없는 JSON: 깨진 위치를 알려준다
+  await input.fill('{\n "grade": "m1",\n "units": [ { "title": "a" "steps": [] } ]\n}');
+  await page.getByRole("button", { name: "검사하기" }).click();
+  const jsonError = page.getByRole("alert").filter({ hasText: "JSON 형식" });
+  await expect(jsonError).toContainText("3번째 줄");
+  await expect(jsonError).toContainText("⟪여기⟫");
+
+  await input.fill(readFileSync("src/test/fixtures/import-agent-sample.txt", "utf8"));
+  await page.getByRole("button", { name: "검사하기" }).click();
+  await expect(page.getByText("넣을 수 있음 1개 · 이미 있음 0개 · 문제 있음 1개")).toBeVisible();
+  await expect(page.getByText(/그림\(SVG\)을 쓸 수 없어요: <\/svg> 로 끝나지 않아요/)).toBeVisible();
+  await page.getByRole("button", { name: "유닛 1개 넣기" }).click();
+  await page.getByRole("link", { name: "거듭제곱 알아보기" }).click();
+
+  // \( \) 수식이 $ 수식으로 바뀌어 학생 화면에서 수식으로 보인다
+  await page.getByRole("button", { name: "▶ 학생 화면으로 풀어 보기" }).click();
+  const preview = page.getByRole("dialog", { name: "학생 화면 미리 풀기" });
+  await expect(preview.locator(".katex").first()).toBeVisible();
+  await expect(preview.getByText(String.raw`\(`)).toHaveCount(0);
 
   expect(errors).toEqual([]);
 });

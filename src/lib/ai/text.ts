@@ -5,7 +5,7 @@
  */
 export function cleanAiText(text: string): string {
   // "\n" 뒤에 영문자가 오면 \neq·\nabla 같은 수식 명령이므로 그대로 둔다
-  let out = repairLatexEscapes(text).replace(/\\n(?![a-zA-Z])/g, "\n");
+  let out = normalizeMathDelimiters(repairLatexEscapes(text)).replace(/\\n(?![a-zA-Z])/g, "\n");
   if (!out.includes("$")) out = out.split("\n").map(wrapBareMath).join("\n");
   return out;
 }
@@ -77,4 +77,15 @@ export function repairDeep<T>(value: T): T {
 /** 마크다운 그림 ![설명](주소)을 "[그림: 설명]"으로 바꾼다 (그림을 그릴 수 없는 곳: 암기 카드 등) */
 export function stripImages(text: string): string {
   return text.replace(/!\[([^\]]*)\]\([^)]*\)/g, (_, alt: string) => `[그림${alt.trim() ? `: ${alt.trim()}` : ""}]`);
+}
+
+/**
+ * 이 앱은 수식을 $...$(문장 안)와 $$...$$(따로 한 줄)로만 그린다.
+ * 다른 AI가 쓰는 \( ... \), \[ ... \] 표기를 바꿔 준다.
+ */
+export function normalizeMathDelimiters(text: string): string {
+  if (!text.includes("\\(") && !text.includes("\\[")) return text;
+  return text
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, m: string) => `$$${m.trim()}$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, m: string) => `$${m.trim()}$`);
 }

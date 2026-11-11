@@ -5,7 +5,7 @@ import type { UnitStatus } from "@/lib/learn/types";
 import { transaction } from "./db";
 import { courseOutline, createSection, createUnit } from "./learn";
 import { figureMarkdown } from "./media";
-import { sanitizeSvg } from "./svg";
+import { sanitizeSvg, svgProblem } from "./svg";
 
 /** 일괄 넣기 결과 한 줄 (유닛 하나) */
 export interface ImportRow {
@@ -47,7 +47,9 @@ function attachFigures(steps: unknown[], save: boolean): { steps: unknown[]; fig
     delete s.figure;
     if (!svg) return s;
     if (!sanitizeSvg(svg)) {
-      problems.push(`${i + 1}번째 단계의 그림(SVG)을 쓸 수 없어 뺐어요.`);
+      // 그림을 빼고 넣으면 "그림에서 …" 문제가 그림 없이 들어가므로 유닛 전체를 건너뛴다
+      const why = svgProblem(svg.replace(/^```(?:svg|xml)?\s*|```$/g, "").trim()) ?? "너무 크거나 쓸 수 없는 내용이 있어요.";
+      problems.push(`${i + 1}번째 단계의 그림(SVG)을 쓸 수 없어요: ${why}`);
       return s;
     }
     figures++;
@@ -99,7 +101,7 @@ export function importUnits(data: unknown, opts: { apply: boolean; status?: Unit
       row.questions = questionCount(check.steps);
       row.problems.push(...check.problems, ...fig.problems);
       // 단계 하나라도 잘못되면 유닛 전체를 건너뛴다 (반쪽짜리 유닛이 들어가지 않게)
-      if (check.problems.length || check.steps.length === 0) {
+      if (check.problems.length || fig.problems.length || check.steps.length === 0) {
         row.status = "error";
         if (check.steps.length === 0 && !check.problems.length) row.problems.push("쓸 수 있는 단계가 없어요.");
         continue;

@@ -48,11 +48,53 @@ export function readImportText(input: string): { data: unknown; error?: string }
   const start = s.search(/[[{]/);
   const end = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]"));
   if (start < 0 || end < start) return { data: null, error: "JSON을 찾지 못했어요. { 로 시작하는 내용을 붙여 넣어 주세요." };
+  const body = s.slice(start, end + 1);
   try {
-    return { data: JSON.parse(s.slice(start, end + 1)) };
-  } catch (e) {
-    return { data: null, error: `JSON 형식이 올바르지 않아요: ${e instanceof Error ? e.message : String(e)}` };
+    return { data: JSON.parse(body) };
+  } catch (first) {
+    // 다른 AI가 자주 내는 실수를 고쳐서 한 번 더 읽는다
+    const repaired = repairJsonText(body);
+    try {
+      return { data: JSON.parse(repaired) };
+    } catch (e) {
+      return { data: null, error: describeJsonError(repaired, e instanceof Error ? e : first instanceof Error ? first : new Error(String(e))) };
+    }
   }
+}
+
+/** 그림(SVG) 값 뒤에 올 수 있는 다음 항목 이름들 */
+const NEXT_KEY = "(?:type|title|prompt|body|points|choices|answer|answers|explanation|text|distractors|decoys|math|figure|section|steps|units)";
+
+/**
+ * 자주 나오는 JSON 실수 고치기:
+ * 1) "figure": "<svg viewBox="0 0 10 10">…" 처럼 그림 속 큰따옴표를 그대로 쓴 경우 → 따옴표를 이스케이프
+ * 2) \( \) \[ \] \dots 처럼 JSON에서 허용하지 않는 백슬래시 표기 → 백슬래시를 두 번으로
+ */
+export function repairJsonText(text: string): string {
+  const figure = new RegExp(`("figure"\\s*:\\s*)"(<svg[\\s\\S]*?)"(?=\\s*(?:,\\s*"${NEXT_KEY}"\\s*:|\\}))`, "g");
+  let out = text.replace(figure, (_, head: string, raw: string) => {
+    // 이미 이스케이프된 부분은 풀었다가 다시 한 번에 이스케이프한다
+    const svg = raw.replace(/\\"/g, '"').replace(/\\\\/g, "\\").replace(/\r?\n/g, " ");
+    return head + JSON.stringify(svg);
+  });
+  out = out.replace(/\\(?:(["\\/bfnrt])|u([0-9a-fA-F]{4})|([\s\S]))/g, (whole, ok?: string, hex?: string, bad?: string) => (bad !== undefined ? `\\\\${bad}` : whole));
+  return out;
+}
+
+/** JSON이 깨진 곳의 줄·칸과 근처 글, 그리고 흔한 원인을 알려준다 */
+function describeJsonError(text: string, e: Error): string {
+  const pos = Number(e.message.match(/position (\d+)/)?.[1] ?? NaN);
+  if (!Number.isFinite(pos)) return `JSON 형식이 올바르지 않아요: ${e.message}`;
+  const before = text.slice(0, pos);
+  const line = before.split("\n").length;
+  const col = pos - before.lastIndexOf("\n");
+  const near = text.slice(Math.max(0, pos - 60), pos).replace(/\s+/g, " ") + " ⟪여기⟫ " + text.slice(pos, pos + 40).replace(/\s+/g, " ");
+  const hints: string[] = [];
+  const around = text.slice(Math.max(0, pos - 300), pos + 50);
+  if (/<svg|<text|<line|<rect/i.test(around)) hints.push("그림(SVG) 안에서 깨졌어요. SVG 속성은 작은따옴표(')로 쓰고, 값 끝에 </svg>가 있는지 확인하세요.");
+  if (/"\s*\n\s*"/.test(around)) hints.push("항목 사이에 쉼표(,)가 빠졌을 수 있어요.");
+  if (/,\s*[}\]]/.test(text.slice(Math.max(0, pos - 5), pos + 5))) hints.push("마지막 항목 뒤의 쉼표(,)를 지우세요.");
+  return [`JSON 형식이 올바르지 않아요 (${line}번째 줄, ${col}번째 칸).`, `근처: …${near.trim()}…`, ...hints].join("\n");
 }
 
 /** 코스(들)를 유닛 목록으로 펼친다. 형식이 틀린 곳은 유닛마다 문제로 남긴다 */

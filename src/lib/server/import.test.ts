@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it } from "vitest";
 import { openMemoryDb, serverDb } from "./db";
 import { importUnits } from "./learn-import";
@@ -108,5 +109,53 @@ describe("AI 에이전트용 지시문", () => {
     expect(p).toContain(String.raw`$2^2 \\times 3$`);
     expect(p).toContain('"math": true');
     expect(agentPrompt({ grade: "h1", subject: "korean", section: "문학", count: 5, existing: [] })).not.toContain('"math": true');
+  });
+});
+
+describe("다른 AI가 자주 내는 실수", () => {
+  const raw = readFileSync(new URL("../../test/fixtures/import-agent-sample.txt", import.meta.url), "utf8");
+
+  it("그림 속 큰따옴표와 \\( \\) 표기가 있어도 읽는다", () => {
+    expect(() => JSON.parse(raw)).toThrow();
+    const r = readImportText(raw);
+    expect(r.error).toBeUndefined();
+    expect((r.data as { units: unknown[] }).units).toHaveLength(2);
+  });
+
+  it("깨진 그림이 있는 유닛은 이유와 함께 건너뛰고, 나머지는 $ 수식으로 바꿔 넣는다", () => {
+    const { data } = readImportText(raw);
+    const r = importUnits(data, { apply: true });
+    expect(r.rows.map((x) => [x.title, x.status])).toEqual([
+      ["소수와 합성수", "error"],
+      ["거듭제곱 알아보기", "ok"],
+    ]);
+    expect(r.rows[0].problems.join(" ")).toMatch(/2번째 단계의 그림\(SVG\)을 쓸 수 없어요: <\/svg> 로 끝나지 않아요/);
+    const unit = getUnit(r.rows[1].unitId!, true)!;
+    const [summary, choice, figureChoice] = unit.steps as unknown as Record<string, unknown>[];
+    expect(summary.body).toContain(String.raw`예를 들어 $2 \times 2 \times 2$는 $2^3$으로`);
+    expect(summary.points).toEqual(["$a^1$의 지수 1은 보통 생략해요."]);
+    expect(choice.choices).toEqual([String.raw`$3 \times 4$`, "$3^4$", "$4^3$", "$12$"]);
+    expect(choice.answer).toBe("$3^4$");
+    expect(figureChoice.explanation).toBe(String.raw`$\frac{12}{2} = 6$이에요. 약수의 나열은 $1, a, a^2, \dots, a^m$이에요.`);
+    expect(figureChoice.prompt).toMatch(/\n\n!\[문제 그림\]\(\/api\/media\?id=/);
+  });
+
+  it("고칠 수 없는 JSON은 줄·칸과 근처 글을 알려준다", () => {
+    const r = readImportText('{\n  "grade": "m1",\n  "units": [ { "title": "a" "steps": [] } ]\n}');
+    expect(r.error).toMatch(/3번째 줄, \d+번째 칸/);
+    expect(r.error).toContain("⟪여기⟫");
+  });
+});
+
+describe("SVG 모양 검사", () => {
+  it("닫히지 않은 태그와 짝이 엇갈린 태그를 찾는다", async () => {
+    const { sanitizeSvg, svgProblem } = await import("./svg");
+    expect(svgProblem("<svg><text>1<line/></svg>")).toBe("<text> 태그가 닫히지 않았어요.");
+    expect(svgProblem("<svg><g><text>1</text></svg>")).toBe("<g> 태그가 닫히지 않았어요.");
+    expect(svgProblem("<svg><text>1</text>")).toBe("</svg> 로 끝나지 않아요.");
+    expect(svgProblem("<svg viewBox='0 0 1 1'><text x='1'>a</text><line x1='0'/></svg>")).toBeNull();
+    expect(sanitizeSvg("<svg><text>1<line/></svg>")).toBeNull();
+    // 글자 속 & 는 &amp; 로 고친다
+    expect(sanitizeSvg("<svg><text>A & B</text></svg>")).toContain("A &amp; B");
   });
 });

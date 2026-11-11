@@ -1,0 +1,69 @@
+{
+"grade": "m1",
+"subject": "math",
+"section": "소인수분해",
+"units": [
+{
+"title": "소수와 합성수",
+"steps": [
+{
+"type": "summary",
+"title": "소수와 합성수 알아보기",
+"body": "1보다 큰 자연수 중에서 1과 자기 자신만을 약수로 가지는 수를 소수라고 해요.\n1은 소수도 아니고 합성수도 아니에요.",
+"points": [
+"소수의 약수는 딱 2개예요."
+]
+},
+{
+"type": "choice",
+"prompt": "수직선에서 점 A가 나타내는 수의 약수의 개수를 구하세요.",
+"figure": "<svg viewBox="0 0 360 80" width="360" height="80" xmlns="http://www.w3.org/2000/svg"><rect width="360" height="80" fill="#ffffff"/><line x1="30" y1="45" x2="330" y2="45" stroke="#222" stroke-width="2"/><text x="56" y="68" font-size="14" fill="#222">1<line x1="120" y1="40" x2="120" y2="50" stroke="#222" stroke-width="2"/><text x="234" y="28" font-size="16" font-weight="bold" fill="#222">A",
+"choices": [
+"1개",
+"2개",
+"3개",
+"4개"
+],
+"answer": "3개",
+"explanation": "점 A가 나타내는 수는 4예요. 4의 약수는 1, 2, 4로 모두 3개예요."
+}
+]
+},
+{
+"title": "거듭제곱 알아보기",
+"steps": [
+{
+"type": "summary",
+"title": "거듭제곱과 지수",
+"body": "곱하는 수를 밑, 곱한 횟수를 지수라고 불러요.\n예를 들어 \(2 \times 2 \times 2\)는 \(2^3\)으로 쓰고, '2의 세제곱'이라고 읽어요.",
+"points": [
+"\(a^1\)의 지수 1은 보통 생략해요."
+]
+},
+{
+"type": "choice",
+"prompt": "\(3 \times 3 \times 3 \times 3\)을 거듭제곱으로 바르게 나타낸 것은 무엇일까요?",
+"choices": [
+"\(3 \times 4\)",
+"\(3^4\)",
+"\(4^3\)",
+"\(12\)"
+],
+"answer": "\(3^4\)",
+"explanation": "3을 4번 곱했으므로 밑은 3이고 지수는 4예요. 따라서 \(3^4\)으로 나타내요."
+},
+{
+"type": "choice",
+"prompt": "다음 나눗셈 그림에서 빈칸 A에 들어갈 알맞은 소수는 무엇일까요?",
+"figure": "<svg viewBox="0 0 280 120" xmlns="http://www.w3.org/2000/svg"><rect width="280" height="120" fill="#ffffff"/><text x="40" y="45" font-size="18" fill="#222">2</text><text x="75" y="45" font-size="18" fill="#222">A &amp; B \(\times\)</text></svg>",
+"choices": [
+"2",
+"3"
+],
+"answer": "2",
+"explanation": "\(\frac{12}{2} = 6\)이에요. 약수의 나열은 \(1, a, a^2, \dots, a^m\)이에요."
+}
+]
+}
+]
+}
