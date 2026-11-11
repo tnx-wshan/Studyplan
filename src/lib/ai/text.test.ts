@@ -15,6 +15,11 @@ describe("cleanAiText", () => {
     expect(cleanAiText("2^3 \\times 3^3 \\times 5 입니다")).toBe("$2^3 \\times 3^3 \\times 5$ 입니다");
   });
 
+  it("$ 없는 거듭제곱도 감싼다", () => {
+    expect(cleanAiText("거듭제곱 5^4에서 밑의 값을 구하시오.")).toBe("거듭제곱 $5^4$에서 밑의 값을 구하시오.");
+    expect(cleanAiText("자연수 180을 소인수분해하면 2^2 \\times 3^2 \\times 5이다.")).toBe("자연수 180을 소인수분해하면 $2^2 \\times 3^2 \\times 5$이다.");
+  });
+
   it("이미 $가 있거나 수식 명령이 없으면 그대로 둔다", () => {
     expect(cleanAiText("값은 $2 \\times 3$ 이다")).toBe("값은 $2 \\times 3$ 이다");
     expect(cleanAiText("평범한 문장")).toBe("평범한 문장");

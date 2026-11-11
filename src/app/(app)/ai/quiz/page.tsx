@@ -320,7 +320,7 @@ function Summary({ questions, subject, quizId, onRetry }: { questions: Question[
                 <span aria-hidden>{q.result === "correct" ? "⭕" : "❌"}</span>
                 <span className="min-w-0 flex-1 text-sm">
                   <span className="text-ink-soft">{i + 1}. </span>
-                  <span className={open === q.id ? "" : "line-clamp-1"}>{q.prompt.replace(/\$/g, "")}</span>
+                  <Markdown className={open === q.id ? "" : "line-clamp-1"}>{q.prompt}</Markdown>
                 </span>
                 {q.flagged && <span aria-label="이상한 문제로 표시됨">🚩</span>}
               </button>
