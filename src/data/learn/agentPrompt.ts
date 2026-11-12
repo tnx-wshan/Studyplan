@@ -7,7 +7,12 @@ import { GRADES, SUBJECT_GROUPS, type GradeId, type SubjectGroup } from "@/data/
  */
 export interface AgentPromptInput {
   grade: GradeId;
-  subject: SubjectGroup;
+  /** 과목 열쇠 (기본 과목 id 또는 추가한 과목) */
+  subject: string;
+  /** 과목 이름 (추가한 과목이면 그 이름) */
+  subjectName?: string;
+  /** 비슷한 기본 과목 (수학이면 수식 답 규칙) */
+  group?: SubjectGroup | null;
   section: string;
   count: number;
   /** 이미 있는 유닛 이름 (겹치지 않게) */
@@ -16,22 +21,29 @@ export interface AgentPromptInput {
 
 export function agentPrompt(input: AgentPromptInput): string {
   const grade = GRADES.find((g) => g.id === input.grade);
-  const subject = SUBJECT_GROUPS.find((g) => g.id === input.subject)?.label ?? input.subject;
-  const math = input.subject === "math" || input.subject === "science";
+  const subject = input.subjectName ?? SUBJECT_GROUPS.find((g) => g.id === input.subject)?.label ?? input.subject;
+  const group = input.group ?? (SUBJECT_GROUPS.some((g) => g.id === input.subject) ? (input.subject as SubjectGroup) : null);
+  const math = group === "math" || group === "science";
   return `너는 한국 중·고등학생용 학습 앱 '홈스터디'의 학습 콘텐츠 작성자야.
 ${grade?.label ?? input.grade} ${subject} 과목의 '${input.section}' 섹션에 들어갈 학습 유닛을 ${input.count}개 만들어 줘.
 유닛 하나는 학생이 휴대폰으로 2~3분 동안 핵심 정리를 짧게 읽고 바로 문제를 푸는 분량이야.
 ${input.existing.length ? `이미 있는 유닛과 겹치지 않게 해: ${input.existing.join(", ")}\n` : ""}
+[유닛 나누기: 여러 교과서의 목차를 모아 통합]
+- 먼저 이 섹션에 해당하는 여러 출판사 교과서의 중단원·소단원·학습 주제를 떠올려 모아. 출판사는 구분하지 말고 하나의 통합 목차로 합쳐.
+- 같은 내용을 다른 이름으로 부른 주제는 하나로 합치고, 한 교과서에만 있는 주제도 교육과정 범위 안이면 넣어.
+- 통합 목차를 쉬운 것에서 어려운 순서로 늘어놓고, 작은 주제 하나(개념 하나, 공식 하나, 문제 유형 하나)마다 유닛 하나로 잘게 나눠. 큰 주제는 '뜻 → 성질 → 계산 → 활용'처럼 여러 유닛으로 이어서 만들어.
+- 유닛 이름은 그 작은 주제가 바로 보이게 써.
+
 [내용 규칙]
-- 한국 교육과정(${grade?.curriculum ?? "2022"} 개정) 범위와 학년 수준에 맞게, 쉬운 해요체로 써.
-- 유닛마다 핵심 정리 1~2개(각 5줄 이내) + 문제 5~7개. 유닛끼리는 쉬운 것에서 어려운 순서로.
+- 한국 교육과정(${grade?.curriculum ?? "2022"} 개정) 범위와 학년 수준에 맞게, 쉬운 해요체로 써. 교과서 문장이나 문제를 그대로 옮기지 마.
+- 유닛마다 핵심 정리 1~2개(각 5줄 이내) + 문제 5~7개.
 - 문제 종류(choice, short, blank, puzzle)를 유닛마다 골고루 섞어.
 - 확실하지 않은 내용은 넣지 마. 정답은 반드시 직접 다시 풀어서 확인해.
 
 [출력 형식] 아래 JSON만 출력해. 설명 글을 붙이지 마.
 {
   "grade": "${input.grade}",
-  "subject": "${input.subject}",
+  "subject": "${SUBJECT_GROUPS.some((g) => g.id === input.subject) ? input.subject : subject}",
   "section": "${input.section}",
   "units": [
     {

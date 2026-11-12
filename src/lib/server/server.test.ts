@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { openMemoryDb } from "./db";
 import { addItem, duplicateGroups, findByKey, gradeId, listItems, materialLookupKey, quizLookupKey, similarity, subjectId, topicKey, updateItem } from "./bank";
-import { courseOutline, createSection, createUnit, getUnit, listCourses, moveUnit, updateUnit } from "./learn";
+import { courseOutline, createSection, createSubject, createUnit, deleteSubject, findSubject, getUnit, isSubjectFor, listCourses, moveUnit, subjectsFor, updateSubject, updateUnit } from "./learn";
 import { addCommand, cancelCommand, getUser, isSuspended, syncUser, updateUser } from "./users";
 import { unitSteps } from "@/lib/ai/service";
 
@@ -185,30 +185,68 @@ describe("그림 저장", () => {
   });
 });
 
-describe("교과서 분류 (학년 · 과목 · 출판사 · 연도 · 단원)", () => {
-  it("출판사·연도·단원을 저장하고 출판사로 거른다", async () => {
-    const { listPublishers } = await import("./bank");
+describe("교과서 분류 (학년 · 과목 · 단원, 출판사 구분 없음)", () => {
+  it("교과서 단원을 저장하고 단원으로 찾는다", () => {
     const data = { summary: "s", keyPoints: [], sources: [] };
-    addItem({ kind: "material", lookupKey: "a", sourceKind: "curriculum", grade: "m1", subject: "math", topic: "수학 소수", title: "소수", publisher: "천재교육", year: 2026, unit: "Ⅰ. 소인수분해 - 1. 소수와 합성수", data });
-    addItem({ kind: "material", lookupKey: "b", sourceKind: "curriculum", grade: "m1", subject: "math", topic: "수학 소수", title: "소수", publisher: "비상교육", year: 2025, unit: "1. 소인수분해", data });
-    expect(listItems({ publisher: "천재교육" }).map((x) => [x.publisher, x.year, x.unit])).toEqual([["천재교육", 2026, "Ⅰ. 소인수분해 - 1. 소수와 합성수"]]);
-    expect(listItems({ q: "소수와 합성수" })).toHaveLength(1);
-    expect(listPublishers()).toEqual(["비상교육", "천재교육"]);
-    const id = listItems({ publisher: "비상교육" })[0].id;
-    expect(updateItem(id, { publisher: "미래엔", year: null, unit: "2. 거듭제곱" })).toMatchObject({ publisher: "미래엔", year: null, unit: "2. 거듭제곱" });
+    addItem({ kind: "material", lookupKey: "a", sourceKind: "curriculum", grade: "m1", subject: "math", topic: "수학 소수와 합성수", title: "소수", unit: "Ⅰ. 소인수분해 - 1. 소수와 합성수", data });
+    expect(listItems({ q: "소수와 합성수" }).map((x) => x.unit)).toEqual(["Ⅰ. 소인수분해 - 1. 소수와 합성수"]);
+    const id = listItems()[0].id;
+    expect(updateItem(id, { unit: "2. 거듭제곱" })).toMatchObject({ unit: "2. 거듭제곱" });
   });
 
-  it("출판사가 다르면 다른 자료로 본다", () => {
-    const k1 = materialLookupKey({ kind: "curriculum", grade: "m1", subject: "math", topic: "수학 천재교육 2026 소수와 합성수" });
-    const k2 = materialLookupKey({ kind: "curriculum", grade: "m1", subject: "math", topic: "수학 비상교육 2026 소수와 합성수" });
-    expect(k1).not.toBe(k2);
+  it("같은 단원이면 어느 교과서로 공부해도 같은 자료로 본다", () => {
+    const k1 = materialLookupKey({ kind: "curriculum", grade: "m1", subject: "math", topic: "수학 소수와 합성수" });
+    const k2 = materialLookupKey({ kind: "curriculum", grade: "m1", subject: "math", topic: "수학  소수와 합성수" });
+    expect(k1).toBe(k2);
   });
 
-  it("지시문에 출판사·연도 교과서를 적는다", async () => {
+  it("지시문은 여러 교과서를 모은 통합 내용으로 만든다", async () => {
     const { materialFromCurriculumPrompt } = await import("@/lib/ai/prompts");
-    const p = materialFromCurriculumPrompt("중학교 1학년", "수학", "Ⅰ. 소인수분해", "천재교육", 2026);
-    expect(p).toContain("'수학' 과목(천재교육 2026년 교과서)의 'Ⅰ. 소인수분해' 단원");
+    const p = materialFromCurriculumPrompt("중학교 1학년", "수학", "Ⅰ. 소인수분해");
+    expect(p).toContain("'수학' 과목의 'Ⅰ. 소인수분해' 단원");
+    expect(p).toContain("여러 출판사 교과서");
     expect(p).toContain("그대로 옮기지는 마");
-    expect(materialFromCurriculumPrompt("중학교 1학년", "수학", "소수")).not.toContain("교과서)의");
+  });
+});
+
+describe("과목 추가 (학년마다)", () => {
+  it("기본 5과목에 수학2·역사를 더하고, 이름으로 찾고, 지우면 섹션도 지운다", () => {
+    expect(subjectsFor("h1", true).map((s) => s.name)).toEqual(["국어", "영어", "수학", "사회", "과학"]);
+    const m2 = createSubject("h1", { name: "수학2", short: "수2", group: "math" }).subject!;
+    const hist = createSubject("h1", { name: "역사", short: "", group: null }).subject!;
+    expect(m2).toMatchObject({ name: "수학2", short: "수2", group: "math", builtIn: false });
+    expect(hist.short).toBe("역사");
+    expect(createSubject("h1", { name: "수학2", short: "", group: "math" }).problem).toMatch(/이미 있어요/);
+    // 다른 학년에는 없다
+    expect(findSubject("h2", "수학2")).toBeUndefined();
+    expect(findSubject("h1", "수학2")?.key).toBe(m2.key);
+    expect(findSubject("h1", "수학")?.key).toBe("math");
+    expect(isSubjectFor("h1", hist.key)).toBe(true);
+
+    const sec = createSection("h1", m2.key, "다항함수의 미분");
+    createUnit(sec.id, { title: "미분계수", steps: [{ type: "summary", title: "뜻", body: "순간변화율" }], status: "published" });
+    expect(subjectsFor("h1").find((s) => s.key === m2.key)?.units).toBe(1);
+    expect(courseOutline("h1", m2.key).sections.map((s) => s.title)).toEqual(["다항함수의 미분"]);
+    expect(getUnit(courseOutline("h1", m2.key).sections[0].units[0].id)?.section).toMatchObject({ subject: m2.key, group: "math" });
+
+    expect(updateSubject("h1", hist.key, { name: "한국사", short: "한국사", group: "social" })).toMatchObject({ subject: { name: "한국사", group: "social" } });
+    deleteSubject("h1", m2.key);
+    expect(findSubject("h1", "수학2")).toBeUndefined();
+    expect(courseOutline("h1", m2.key, true).sections).toEqual([]);
+  });
+
+  it("일괄 넣기는 추가한 과목을 이름으로 찾고, 없는 과목은 알려 준다", async () => {
+    const { importUnits } = await import("./learn-import");
+    const steps = [
+      { type: "summary", title: "뜻", body: "순간변화율" },
+      { type: "choice", prompt: "q", choices: ["a", "b"], answer: "a" },
+    ];
+    const missing = importUnits({ grade: "h1", subject: "수학2", section: "미분", units: [{ title: "미분계수", steps }] }, { apply: false });
+    expect(missing.rows[0].status).toBe("error");
+    expect(missing.rows[0].problems.join()).toMatch(/'\+ 과목'/);
+    const m2 = createSubject("h1", { name: "수학2", short: "수2", group: "math" }).subject!;
+    const ok = importUnits({ grade: "h1", subject: "수학2", section: "미분", units: [{ title: "미분계수", steps }] }, { apply: true });
+    expect(ok.rows[0]).toMatchObject({ status: "ok", subject: m2.key });
+    expect(courseOutline("h1", m2.key, true).sections[0].units.map((u) => u.title)).toEqual(["미분계수"]);
   });
 });

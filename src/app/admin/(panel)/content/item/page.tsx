@@ -11,7 +11,6 @@ import { Markdown } from "@/components/Markdown";
 import { toast } from "@/components/Toaster";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
-import { PUBLISHERS } from "@/data/publishers";
 import { adminApi, formatTime } from "@/lib/admin/client";
 import type { StoredQuestion } from "@/lib/ai/schemas";
 
@@ -33,8 +32,6 @@ interface Item {
   grade: string;
   subject: string;
   subjectName: string;
-  publisher: string;
-  year: number | null;
   unit: string;
   topic: string;
   title: string;
@@ -85,7 +82,7 @@ function ItemEditor() {
     if (!item) return;
     setSaving(true);
     try {
-      await adminApi("/api/admin/bank/item", { method: "PUT", body: { id: item.id, title: item.title, topic: item.topic, grade: item.grade, subject: item.subject, publisher: item.publisher, year: item.year, unit: item.unit, status: item.status, data: item.data } });
+      await adminApi("/api/admin/bank/item", { method: "PUT", body: { id: item.id, title: item.title, topic: item.topic, grade: item.grade, subject: item.subject, unit: item.unit, status: item.status, data: item.data } });
       toast("저장했어요. 다음 요청부터 고친 내용이 나가요.");
       await load();
     } catch (e) {
@@ -147,17 +144,6 @@ function ItemEditor() {
               </option>
             ))}
           </Select>
-        </Field>
-        <Field label="교과서 출판사">
-          <TextInput value={item.publisher} maxLength={40} list="publisher-list" onChange={(e) => set({ publisher: e.target.value })} placeholder="모르면 비워 두세요" />
-          <datalist id="publisher-list">
-            {PUBLISHERS.map((p) => (
-              <option key={p} value={p} />
-            ))}
-          </datalist>
-        </Field>
-        <Field label="교과서 연도">
-          <TextInput type="number" min={2000} max={2100} value={item.year ?? ""} onChange={(e) => set({ year: e.target.value ? Number(e.target.value) : null })} />
         </Field>
         <Field label="교과서 단원">
           <TextInput value={item.unit} maxLength={120} onChange={(e) => set({ unit: e.target.value })} />

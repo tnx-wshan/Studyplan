@@ -6,12 +6,12 @@ import { StatusBadge, Td, Th } from "@/components/admin/AdminShell";
 import { Field, Select, TextArea, TextInput } from "@/components/kit";
 import { toast } from "@/components/Toaster";
 import { Button, Card, SectionTitle, cn } from "@/components/ui";
-import { GRADES, SUBJECT_GROUPS, coursesFor, type GradeId, type SubjectGroup } from "@/data/curriculum";
+import { GRADES, SUBJECT_GROUPS, coursesFor, type GradeId } from "@/data/curriculum";
 import { agentPrompt } from "@/data/learn/agentPrompt";
 import { adminApi } from "@/lib/admin/client";
 import { readImportText } from "@/lib/learn/import";
-import { courseName } from "@/lib/learn/names";
-import type { CourseOutline } from "@/lib/learn/types";
+import { courseName, gradeShort } from "@/lib/learn/names";
+import type { CourseOutline, LearnSubject } from "@/lib/learn/types";
 
 interface Row {
   where: string;
@@ -238,23 +238,32 @@ function ResultView({ result }: { result: Result }) {
 /** 학년·과목·섹션을 고르면 AI 에이전트에게 줄 지시문을 만든다 (이미 있는 유닛과 겹치지 않게) */
 function PromptMaker() {
   const [grade, setGrade] = useState<GradeId>("m1");
-  const [subject, setSubject] = useState<SubjectGroup>("math");
+  const [subject, setSubject] = useState("math");
   const [section, setSection] = useState("");
-  const [count, setCount] = useState("10");
+  // 섹션마다 유닛을 많이: 여러 교과서의 소단원을 모아 잘게 나눈다
+  const [count, setCount] = useState("15");
   const [outline, setOutline] = useState<CourseOutline | null>(null);
+  const [subjects, setSubjects] = useState<LearnSubject[]>([]);
 
   useEffect(() => {
-    adminApi<{ outline: CourseOutline }>(`/api/admin/learn?grade=${grade}&subject=${subject}`).then(
-      (r) => setOutline(r.outline),
+    adminApi<{ outline: CourseOutline; subjects: LearnSubject[] }>(`/api/admin/learn?grade=${grade}&subject=${subject}`).then(
+      (r) => {
+        setOutline(r.outline);
+        setSubjects(r.subjects);
+      },
       () => setOutline(null),
     );
   }, [grade, subject]);
 
-  // 섹션 후보: 이미 있는 섹션 + 교육과정 대표 단원
-  const sections = useMemo(() => [...new Set([...(outline?.sections.map((s) => s.title) ?? []), ...coursesFor(grade, subject).flatMap((c) => c.units)])], [outline, grade, subject]);
+  const meta = subjects.find((s) => s.key === subject);
+  // 섹션 후보: 이미 있는 섹션 + (비슷한 기본 과목의) 교육과정 대표 단원
+  const sections = useMemo(
+    () => [...new Set([...(outline?.sections.map((s) => s.title) ?? []), ...(meta?.group ? coursesFor(grade, meta.group).flatMap((c) => c.units) : [])])],
+    [outline, grade, meta],
+  );
   const chosen = section && sections.includes(section) ? section : (sections[0] ?? "");
   const existing = outline?.sections.find((s) => s.title === chosen)?.units.map((u) => u.title) ?? [];
-  const prompt = chosen ? agentPrompt({ grade, subject, section: chosen, count: Math.max(1, Math.min(50, Number(count) || 10)), existing }) : "";
+  const prompt = chosen ? agentPrompt({ grade, subject, subjectName: meta?.name, group: meta?.group, section: chosen, count: Math.max(1, Math.min(50, Number(count) || 15)), existing }) : "";
 
   return (
     <section className="space-y-3">
@@ -262,7 +271,13 @@ function PromptMaker() {
       <Card className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-4">
           <Field label="학년">
-            <Select value={grade} onChange={(e) => setGrade(e.target.value as GradeId)}>
+            <Select
+              value={grade}
+              onChange={(e) => {
+                setGrade(e.target.value as GradeId);
+                if (!SUBJECT_GROUPS.some((g) => g.id === subject)) setSubject("math");
+              }}
+            >
               {GRADES.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.label}
@@ -271,10 +286,10 @@ function PromptMaker() {
             </Select>
           </Field>
           <Field label="과목">
-            <Select value={subject} onChange={(e) => setSubject(e.target.value as SubjectGroup)}>
-              {SUBJECT_GROUPS.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
+            <Select value={subject} onChange={(e) => setSubject(e.target.value)}>
+              {(subjects.length ? subjects : SUBJECT_GROUPS.map((g) => ({ key: g.id, name: g.label }))).map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.name}
                 </option>
               ))}
             </Select>
@@ -313,7 +328,7 @@ function PromptMaker() {
                 📋 지시문 복사
               </Button>
               <span className="text-xs text-ink-soft">
-                {courseName(grade, subject)} · {chosen}
+                {gradeShort(grade)} {meta?.name ?? subject} · {chosen}
                 {existing.length ? ` · 이미 있는 유닛 ${existing.length}개는 겹치지 않게 넣었어요` : ""}
               </span>
             </div>

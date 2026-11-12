@@ -36,7 +36,7 @@ export interface BankItem<D = MaterialData | QuizData> {
   grade: string;
   subject: string;
   subjectName: string;
-  /** 교과서 출판사 (교과 단원으로 만든 자료) */
+  /** 예전 버전의 교과서 출판사 (이제 쓰지 않는다: 출판사 구분 없이 통합 과정) */
   publisher: string;
   year: number | null;
   /** 교과서 단원 */
@@ -248,7 +248,6 @@ export interface ListFilter {
   kind?: BankKind;
   grade?: string;
   subject?: string;
-  publisher?: string;
   q?: string;
   includeHidden?: boolean;
   limit?: number;
@@ -264,7 +263,6 @@ export function listItems(filter: ListFilter = {}): (BankItem & { children: numb
   if (filter.kind) add("b.kind = ?", filter.kind);
   if (filter.grade) add("b.grade = ?", filter.grade);
   if (filter.subject) add("b.subject = ?", filter.subject);
-  if (filter.publisher) add("b.publisher = ?", filter.publisher);
   if (!filter.includeHidden) where.push("b.status = 'active'");
   if (filter.q?.trim()) {
     where.push("(b.title LIKE ? OR b.topic LIKE ? OR b.unit LIKE ?)");
@@ -343,10 +341,4 @@ export function duplicateGroups(threshold = 0.6): BankItem[][] {
     }
   }
   return groups;
-}
-
-/** 자료 모음에 들어 있는 출판사 목록 (거르기용) */
-export function listPublishers(): string[] {
-  const rows = serverDb().prepare("SELECT DISTINCT publisher FROM bank_items WHERE publisher != '' ORDER BY publisher").all() as { publisher: string }[];
-  return rows.map((r) => r.publisher);
 }

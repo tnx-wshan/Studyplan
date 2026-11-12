@@ -1,28 +1,45 @@
 "use client";
 
 import { useState } from "react";
-import { GRADES, SUBJECT_GROUPS, type GradeId, type SubjectGroup } from "@/data/curriculum";
+import { GRADES, SUBJECT_GROUPS, type GradeId } from "@/data/curriculum";
 import { gradeShort } from "@/lib/learn/names";
-import type { CourseInfo } from "@/lib/learn/types";
+import type { CourseInfo, LearnSubject } from "@/lib/learn/types";
 import { cn } from "../ui";
+
+/** 서버가 과목 목록을 아직 주지 않았을 때(오프라인 등) 쓰는 기본 5과목 */
+function fallbackSubjects(grade: GradeId, courses: CourseInfo[] | null): LearnSubject[] {
+  return SUBJECT_GROUPS.map((g) => ({
+    key: g.id,
+    grade,
+    name: g.label,
+    short: g.short,
+    color: g.color,
+    group: g.id,
+    builtIn: true,
+    units: (courses ?? []).find((c) => c.grade === grade && c.subject === g.id)?.units ?? 0,
+  }));
+}
 
 /**
  * 듀오링고에서 배울 언어를 고르듯 학년과 과목을 고른다.
- * 유닛이 있는 코스에는 유닛 수를, 없는 코스에는 '준비 중'을 보여준다.
+ * 과목은 기본 5과목과 관리자가 학년마다 추가한 과목(수학2, 역사 …). 유닛이 없으면 '준비 중'.
  */
 export function CoursePicker({
   courses,
+  subjects,
   defaultGrade,
   current,
   onPick,
 }: {
   courses: CourseInfo[] | null;
+  subjects: Partial<Record<GradeId, LearnSubject[]>> | null;
   defaultGrade: GradeId;
-  current?: { grade: GradeId; subject: SubjectGroup };
-  onPick: (grade: GradeId, subject: SubjectGroup) => void;
+  current?: { grade: GradeId; subject: string };
+  onPick: (grade: GradeId, subject: string) => void;
 }) {
   const [grade, setGrade] = useState<GradeId>(current?.grade ?? defaultGrade);
-  const count = (g: GradeId, s?: SubjectGroup) => (courses ?? []).filter((c) => c.grade === g && (!s || c.subject === s)).reduce((n, c) => n + c.units, 0);
+  const listFor = (g: GradeId) => subjects?.[g] ?? fallbackSubjects(g, courses);
+  const count = (g: GradeId) => listFor(g).reduce((n, s) => n + s.units, 0);
 
   return (
     <div className="space-y-4">
@@ -50,29 +67,25 @@ export function CoursePicker({
       <div>
         <p className="mb-1.5 text-sm text-ink-soft">과목</p>
         <ul className="space-y-2">
-          {SUBJECT_GROUPS.map((s) => {
-            const n = count(grade, s.id);
-            const active = current?.grade === grade && current.subject === s.id;
+          {listFor(grade).map((s) => {
+            const active = current?.grade === grade && current.subject === s.key;
             return (
-              <li key={s.id}>
+              <li key={s.key}>
                 <button
                   type="button"
-                  disabled={n === 0}
-                  onClick={() => onPick(grade, s.id)}
-                  aria-label={`${gradeShort(grade)} ${s.label} ${n ? `유닛 ${n}개` : "준비 중"}`}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-2xl border-2 bg-surface p-3 text-left disabled:opacity-50",
-                    active ? "border-accent" : "border-line",
-                  )}
+                  disabled={s.units === 0}
+                  onClick={() => onPick(grade, s.key)}
+                  aria-label={`${gradeShort(grade)} ${s.name} ${s.units ? `유닛 ${s.units}개` : "준비 중"}`}
+                  className={cn("flex w-full items-center gap-3 rounded-2xl border-2 bg-surface p-3 text-left disabled:opacity-50", active ? "border-accent" : "border-line")}
                 >
                   <span aria-hidden className="flex size-10 items-center justify-center rounded-xl font-display text-white" style={{ background: s.color }}>
                     {s.short}
                   </span>
                   <span className="flex-1">
                     <span className="font-display block">
-                      {gradeShort(grade)} {s.label}
+                      {gradeShort(grade)} {s.name}
                     </span>
-                    <span className="block text-xs text-ink-soft">{n ? `유닛 ${n}개` : "준비 중이에요"}</span>
+                    <span className="block text-xs text-ink-soft">{s.units ? `유닛 ${s.units}개` : "준비 중이에요"}</span>
                   </span>
                   {active && <span className="text-xs text-accent-deep">지금 코스</span>}
                 </button>

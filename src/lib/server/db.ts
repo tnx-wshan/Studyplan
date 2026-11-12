@@ -117,6 +117,22 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX bank_class ON bank_items(kind, grade, subject, publisher);
     `);
   },
+  // 5: 학습 코스에 과목 추가 (기본 5과목 외에 학년마다 수학2·역사·체육 등)
+  (db) => {
+    db.exec(`
+      CREATE TABLE learn_subjects (
+        key TEXT PRIMARY KEY,
+        grade TEXT NOT NULL,
+        name TEXT NOT NULL,
+        short TEXT NOT NULL DEFAULT '',
+        color TEXT NOT NULL DEFAULT '',
+        grp TEXT,
+        ord INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+      );
+      CREATE UNIQUE INDEX learn_subjects_name ON learn_subjects(grade, name);
+    `);
+  },
 ];
 
 function migrate(db: DatabaseSync) {

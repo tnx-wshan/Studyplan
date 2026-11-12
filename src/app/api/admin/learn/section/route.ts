@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { coursesFor, curriculumSourceLabel } from "@/data/curriculum";
 import { admin, adminError, ok, readBody } from "@/lib/server/admin-api";
-import { courseOutline, createSection, deleteSection, isGrade, isSubject, moveSection, updateSection } from "@/lib/server/learn";
+import { courseOutline, createSection, deleteSection, isGrade, isSubjectFor, moveSection, subjectFor, updateSection } from "@/lib/server/learn";
 
 const Create = z.object({
   grade: z.string(),
@@ -19,9 +19,10 @@ export async function POST(request: Request) {
     const body = await readBody(request, Create);
     if (body instanceof Response) return body;
     const { grade, subject } = body;
-    if (!isGrade(grade) || !isSubject(subject)) return adminError(400, "학년과 과목을 골라 주세요.");
+    if (!isGrade(grade) || !isSubjectFor(grade, subject)) return adminError(400, "학년과 과목을 골라 주세요.");
     if (body.fromCurriculum) {
-      const list = coursesFor(grade, subject);
+      const group = subjectFor(grade, subject)?.group;
+      const list = group ? coursesFor(grade, group) : [];
       const course = body.courseId ? list.find((c) => c.id === body.courseId) : list.length === 1 ? list[0] : undefined;
       if (!course) return adminError(400, "대표 단원을 가져올 교육과정 과목을 골라 주세요.");
       if (course.units.length === 0) return adminError(400, `${course.name}은(는) 대표 단원 자료가 없어요. '+ 섹션'으로 직접 만들어 주세요.`);

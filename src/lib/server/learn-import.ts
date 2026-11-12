@@ -3,7 +3,7 @@ import { flattenImport } from "@/lib/learn/import";
 import { questionCount, sanitizeSteps } from "@/lib/learn/check";
 import type { UnitStatus } from "@/lib/learn/types";
 import { transaction } from "./db";
-import { courseOutline, createSection, createUnit } from "./learn";
+import { courseOutline, createSection, createUnit, findSubject } from "./learn";
 import { figureMarkdown } from "./media";
 import { sanitizeSvg, svgProblem } from "./svg";
 
@@ -75,7 +75,7 @@ export function importUnits(data: unknown, opts: { apply: boolean; status?: Unit
     // 코스별 섹션 이름 → id, 섹션별 유닛 이름 (이번에 넣는 것 포함)
     const sectionIds = new Map<string, Map<string, string>>();
     const titles = new Map<string, Set<string>>();
-    const sectionsFor = (grade: NonNullable<(typeof units)[number]["grade"]>, subject: NonNullable<(typeof units)[number]["subject"]>) => {
+    const sectionsFor = (grade: NonNullable<(typeof units)[number]["grade"]>, subject: string) => {
       const key = `${grade}:${subject}`;
       if (!sectionIds.has(key)) {
         const outline = courseOutline(grade, subject, true);
@@ -90,10 +90,14 @@ export function importUnits(data: unknown, opts: { apply: boolean; status?: Unit
     for (const u of units) {
       const row: ImportRow = { where: u.where, grade: u.grade ?? "", subject: u.subject ?? "", section: u.section, title: u.title, status: "ok", problems: [...u.problems], steps: 0, questions: 0, figures: 0, newSection: false };
       rows.push(row);
-      if (row.problems.length || !u.grade || !u.subject) {
+      // 과목: 기본 5과목이나 관리 도구에서 추가한 과목 (이름으로도 찾는다)
+      const subjectKey = u.grade && u.subject ? findSubject(u.grade, u.subject)?.key : undefined;
+      if (u.grade && u.subject && !subjectKey) row.problems.push(`과목 "${u.subject}"이(가) 이 학년에 없어요. 학습 과정에서 '+ 과목'으로 먼저 추가해 주세요.`);
+      if (row.problems.length || !u.grade || !subjectKey) {
         row.status = "error";
         continue;
       }
+      row.subject = subjectKey;
       const fig = attachFigures(u.steps as unknown[], opts.apply);
       const check = sanitizeSteps(fig.steps);
       row.figures = fig.figures;
@@ -106,7 +110,7 @@ export function importUnits(data: unknown, opts: { apply: boolean; status?: Unit
         if (check.steps.length === 0 && !check.problems.length) row.problems.push("쓸 수 있는 단계가 없어요.");
         continue;
       }
-      const sections = sectionsFor(u.grade, u.subject);
+      const sections = sectionsFor(u.grade, subjectKey);
       let sectionId = sections.get(u.section);
       row.newSection = !sectionId || sectionId.startsWith("new:");
       const known = sectionId ? titles.get(sectionId) : undefined;
@@ -117,14 +121,14 @@ export function importUnits(data: unknown, opts: { apply: boolean; status?: Unit
       }
       if (!opts.apply) {
         // 검사만: 같은 묶음 안의 중복도 알아볼 수 있게 이름을 기억해 둔다
-        const fakeId = sectionId ?? `new:${u.grade}:${u.subject}:${u.section}`;
+        const fakeId = sectionId ?? `new:${u.grade}:${subjectKey}:${u.section}`;
         if (!sectionId) sections.set(u.section, fakeId);
         if (!titles.has(fakeId)) titles.set(fakeId, new Set());
         titles.get(fakeId)!.add(u.title);
         continue;
       }
       if (!sectionId) {
-        sectionId = createSection(u.grade, u.subject, u.section).id;
+        sectionId = createSection(u.grade, subjectKey, u.section).id;
         sections.set(u.section, sectionId);
         titles.set(sectionId, new Set());
         sectionsAdded++;

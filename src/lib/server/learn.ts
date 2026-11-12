@@ -1,13 +1,108 @@
 import "server-only";
 import { GRADES, SUBJECT_GROUPS, type GradeId, type SubjectGroup } from "@/data/curriculum";
 import { estimateMinutes, questionCount, sanitizeSteps } from "@/lib/learn/check";
-import type { CourseInfo, CourseOutline, LearnSection, LearnUnit, Step, UnitStatus } from "@/lib/learn/types";
+import type { CourseInfo, CourseOutline, LearnSection, LearnSubject, LearnUnit, Step, UnitStatus } from "@/lib/learn/types";
 import { newServerId, parseJson, serverDb, transaction } from "./db";
 
 /** 학습 탭 코스 내용 (섹션·유닛) 읽고 쓰기 */
 
 export const isGrade = (g: unknown): g is GradeId => GRADES.some((x) => x.id === g);
 export const isSubject = (s: unknown): s is SubjectGroup => SUBJECT_GROUPS.some((x) => x.id === s);
+
+// ───────── 과목 (기본 5과목 + 학년마다 추가한 과목) ─────────
+
+interface SubjectRow {
+  key: string;
+  grade: string;
+  name: string;
+  short: string;
+  color: string;
+  grp: string | null;
+  ord: number;
+}
+
+/** 추가한 과목의 색: 비슷한 기본 과목의 색, 없으면 차례로 */
+const EXTRA_COLORS = ["#8d6e63", "#26a69a", "#ec407a", "#7e57c2", "#5c6bc0", "#ffa726"];
+
+/** 학년의 과목 목록: 기본 5과목 다음에 추가한 과목 (유닛 수 포함) */
+export function subjectsFor(grade: GradeId, includeDrafts = false): LearnSubject[] {
+  const counts = new Map(listCourses(includeDrafts).filter((c) => c.grade === grade).map((c) => [c.subject, c.units]));
+  const builtIn: LearnSubject[] = SUBJECT_GROUPS.map((g) => ({ key: g.id, grade, name: g.label, short: g.short, color: g.color, group: g.id, builtIn: true, units: counts.get(g.id) ?? 0 }));
+  const rows = serverDb().prepare("SELECT * FROM learn_subjects WHERE grade = ? ORDER BY ord, created_at").all(grade) as unknown as SubjectRow[];
+  const extra = rows.map((r) => ({
+    key: r.key,
+    grade,
+    name: r.name,
+    short: r.short || r.name.slice(0, 1),
+    color: r.color,
+    group: isSubject(r.grp) ? r.grp : null,
+    builtIn: false,
+    units: counts.get(r.key) ?? 0,
+  }));
+  return [...builtIn, ...extra];
+}
+
+export function subjectFor(grade: GradeId, key: string): LearnSubject | undefined {
+  return subjectsFor(grade, true).find((s) => s.key === key);
+}
+
+/** 이 학년에 있는 과목인지 */
+export function isSubjectFor(grade: GradeId, key: unknown): key is string {
+  return typeof key === "string" && (isSubject(key) || !!serverDb().prepare("SELECT 1 FROM learn_subjects WHERE grade = ? AND key = ?").get(grade, key));
+}
+
+/** 이름이나 열쇠로 과목 찾기 (일괄 넣기: "수학", "math", "수학2" …) */
+export function findSubject(grade: GradeId, nameOrKey: string): LearnSubject | undefined {
+  const v = nameOrKey.trim();
+  return subjectsFor(grade, true).find((s) => s.key === v || s.name === v);
+}
+
+export function createSubject(grade: GradeId, input: { name: string; short?: string; group?: string | null }, now = Date.now()): { subject?: LearnSubject; problem?: string } {
+  const name = input.name.trim().slice(0, 20);
+  if (!name) return { problem: "과목 이름을 써 주세요." };
+  if (findSubject(grade, name)) return { problem: `이 학년에 '${name}' 과목이 이미 있어요.` };
+  const group = isSubject(input.group) ? input.group : null;
+  const db = serverDb();
+  const count = (db.prepare("SELECT COUNT(*) AS n FROM learn_subjects WHERE grade = ?").get(grade) as { n: number }).n;
+  const color = group ? SUBJECT_GROUPS.find((g) => g.id === group)!.color : EXTRA_COLORS[Number(count) % EXTRA_COLORS.length];
+  const key = `s-${newServerId().slice(0, 8)}`;
+  db.prepare("INSERT INTO learn_subjects (key, grade, name, short, color, grp, ord, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+    key,
+    grade,
+    name,
+    (input.short?.trim() || name.slice(0, 2)).slice(0, 2),
+    color,
+    group,
+    Number(count),
+    now,
+  );
+  return { subject: subjectFor(grade, key) };
+}
+
+export function updateSubject(grade: GradeId, key: string, patch: { name?: string; short?: string; group?: string | null }): { subject?: LearnSubject; problem?: string } {
+  const cur = subjectFor(grade, key);
+  if (!cur || cur.builtIn) return { problem: "기본 과목은 고칠 수 없어요." };
+  const name = (patch.name ?? cur.name).trim().slice(0, 20);
+  if (!name) return { problem: "과목 이름을 써 주세요." };
+  const same = findSubject(grade, name);
+  if (same && same.key !== key) return { problem: `이 학년에 '${name}' 과목이 이미 있어요.` };
+  const group = patch.group === undefined ? cur.group : isSubject(patch.group) ? patch.group : null;
+  serverDb()
+    .prepare("UPDATE learn_subjects SET name = ?, short = ?, grp = ? WHERE key = ?")
+    .run(name, (patch.short?.trim() || cur.short).slice(0, 2), group, key);
+  return { subject: subjectFor(grade, key) };
+}
+
+/** 추가한 과목 지우기: 그 과목의 섹션과 유닛도 함께 지운다 */
+export function deleteSubject(grade: GradeId, key: string): boolean {
+  const cur = subjectFor(grade, key);
+  if (!cur || cur.builtIn) return false;
+  transaction(() => {
+    serverDb().prepare("DELETE FROM learn_sections WHERE grade = ? AND subject = ?").run(grade, key);
+    serverDb().prepare("DELETE FROM learn_subjects WHERE key = ?").run(key);
+  });
+  return true;
+}
 
 interface SectionRow {
   id: string;
@@ -33,7 +128,7 @@ interface UnitRow {
 const toSection = (r: SectionRow): LearnSection => ({
   id: r.id,
   grade: r.grade as GradeId,
-  subject: r.subject as SubjectGroup,
+  subject: r.subject,
   order: r.ord,
   title: r.title,
   description: r.description,
@@ -60,10 +155,10 @@ export function listCourses(includeDrafts = false): CourseInfo[] {
        GROUP BY s.grade, s.subject`,
     )
     .all() as { grade: string; subject: string; units: number }[];
-  return rows.map((r) => ({ grade: r.grade as GradeId, subject: r.subject as SubjectGroup, units: Number(r.units) }));
+  return rows.map((r) => ({ grade: r.grade as GradeId, subject: r.subject, units: Number(r.units) }));
 }
 
-export function courseOutline(grade: GradeId, subject: SubjectGroup, includeDrafts = false): CourseOutline {
+export function courseOutline(grade: GradeId, subject: string, includeDrafts = false): CourseOutline {
   const db = serverDb();
   const sections = (db.prepare("SELECT * FROM learn_sections WHERE grade = ? AND subject = ? ORDER BY ord, title").all(grade, subject) as unknown as SectionRow[]).map(toSection);
   const units = db
@@ -85,13 +180,14 @@ export function courseOutline(grade: GradeId, subject: SubjectGroup, includeDraf
   };
 }
 
-export function getUnit(id: string, includeDrafts = false): (LearnUnit & { section: LearnSection }) | null {
+export function getUnit(id: string, includeDrafts = false): (LearnUnit & { section: LearnSection & { group: SubjectGroup | null } }) | null {
   const db = serverDb();
   const row = db.prepare("SELECT * FROM learn_units WHERE id = ?").get(id) as UnitRow | undefined;
   if (!row || (!includeDrafts && row.status !== "published")) return null;
   const section = db.prepare("SELECT * FROM learn_sections WHERE id = ?").get(row.section_id) as SectionRow | undefined;
   if (!section) return null;
-  return { ...toUnit(row), section: toSection(section) };
+  const s = toSection(section);
+  return { ...toUnit(row), section: { ...s, group: subjectFor(s.grade, s.subject)?.group ?? null } };
 }
 
 export function getSection(id: string): LearnSection | null {
@@ -109,7 +205,7 @@ export function unitCourseMap(): Map<string, { grade: string; subject: string; t
 
 // ───────── 관리 도구: 섹션 ─────────
 
-export function createSection(grade: GradeId, subject: SubjectGroup, title: string, description = ""): LearnSection {
+export function createSection(grade: GradeId, subject: string, title: string, description = ""): LearnSection {
   const db = serverDb();
   const max = db.prepare("SELECT COALESCE(MAX(ord), -1) AS m FROM learn_sections WHERE grade = ? AND subject = ?").get(grade, subject) as { m: number };
   const id = newServerId();

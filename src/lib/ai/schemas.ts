@@ -75,10 +75,6 @@ export const MaterialRequestSchema = z.discriminatedUnion("kind", [
     course: z.string().min(1).max(40),
     /** 교과서의 실제 단원 이름 (학생이 직접 쓰거나 대표 단원에서 고른다) */
     unit: z.string().trim().min(1).max(120),
-    /** 교과서 출판사 (모르면 비움) */
-    publisher: z.string().trim().max(40).optional(),
-    /** 교과서 연도 */
-    year: z.number().int().min(2000).max(2100).optional(),
   }),
 ]);
 export type MaterialRequest = z.infer<typeof MaterialRequestSchema>;

@@ -9,7 +9,7 @@ import { Sheet } from "@/components/kit";
 import { CharacterArt } from "@/components/game/CharacterArt";
 import { useUiStyle } from "@/components/ThemeSync";
 import { Card, ProgressBar, buttonStyles, cn } from "@/components/ui";
-import { SUBJECT_GROUPS, type GradeId, type SubjectGroup } from "@/data/curriculum";
+import { SUBJECT_GROUPS, type GradeId } from "@/data/curriculum";
 import { getDB } from "@/lib/db";
 import { dailyLearn } from "@/lib/db/learn";
 import { updateProfile } from "@/lib/db/profile";
@@ -17,8 +17,8 @@ import { toDateKey } from "@/lib/date";
 import { usePetState, useProfile } from "@/lib/hooks";
 import { fetchCourses, fetchOutline } from "@/lib/learn/client";
 import { nextUnitId, unitStates } from "@/lib/learn/engine";
-import { courseName } from "@/lib/learn/names";
-import { courseKey, type CourseInfo, type CourseOutline } from "@/lib/learn/types";
+import { gradeShort } from "@/lib/learn/names";
+import { courseKey, type CourseInfo, type CourseOutline, type LearnSubject } from "@/lib/learn/types";
 import { levelFromXp } from "@/lib/game/level";
 import { mapSkinUnlocked } from "@/lib/game/rewards";
 
@@ -30,6 +30,7 @@ export default function LearnHomePage() {
   const profile = useProfile();
   const noir = useUiStyle() === "noir";
   const [courses, setCourses] = useState<CourseInfo[] | null>(null);
+  const [subjects, setSubjects] = useState<Partial<Record<GradeId, LearnSubject[]>> | null>(null);
   // 어떤 코스의 학습 지도인지 함께 기억한다 (코스를 바꾸면 저절로 '불러오는 중'이 된다)
   const [loaded, setLoaded] = useState<{ key: string; outline?: CourseOutline; offline?: boolean; error?: string } | null>(null);
   const [picking, setPicking] = useState(false);
@@ -43,7 +44,10 @@ export default function LearnHomePage() {
 
   useEffect(() => {
     fetchCourses()
-      .then((r) => setCourses(r.data.courses))
+      .then((r) => {
+        setCourses(r.data.courses);
+        setSubjects(r.data.subjects ?? null);
+      })
       .catch(() => setCourses([]));
   }, []);
 
@@ -62,7 +66,7 @@ export default function LearnHomePage() {
   const outline = current?.outline ?? null;
   const error = current?.error ?? null;
 
-  const choose = useCallback(async (grade: GradeId, subject: SubjectGroup) => {
+  const choose = useCallback(async (grade: GradeId, subject: string) => {
     await updateProfile({ learnCourse: { grade, subject } });
     setPicking(false);
   }, []);
@@ -77,7 +81,7 @@ export default function LearnHomePage() {
           <p className="font-display text-lg">{noir ? "과정을 고른다." : "무엇을 배울까요?"}</p>
           <p className="text-sm text-ink-soft">학년과 과목을 고르면 짧은 유닛을 하나씩 이어서 배워요. 하루 5분이면 충분해요.</p>
         </Card>
-        <CoursePicker courses={courses} defaultGrade={profile.grade} onPick={choose} />
+        <CoursePicker courses={courses} subjects={subjects} defaultGrade={profile.grade} onPick={choose} />
       </div>
     );
   }
@@ -88,7 +92,11 @@ export default function LearnHomePage() {
   const doneCount = outline && done ? outline.sections.reduce((s, x) => s + x.units.filter((u) => done.has(u.id)).length, 0) : 0;
   const nextId = outline && done ? nextUnitId(outline, done) : undefined;
   const next = nextId ? outline?.sections.flatMap((s) => s.units.map((u) => ({ unit: u, section: s.title }))).find((x) => x.unit.id === nextId) : undefined;
-  const group = SUBJECT_GROUPS.find((g) => g.id === course.subject);
+  // 과목 이름·색: 서버의 과목 목록(추가한 과목 포함), 없으면 기본 5과목
+  const builtIn = SUBJECT_GROUPS.find((g) => g.id === course.subject);
+  const meta = subjects?.[course.grade]?.find((s) => s.key === course.subject);
+  const group = meta ? { color: meta.color, short: meta.short } : builtIn ? { color: builtIn.color, short: builtIn.short } : { color: "var(--ink-soft)", short: "?" };
+  const name = `${gradeShort(course.grade)} ${meta?.name ?? builtIn?.label ?? "과목"}`;
   // 학습 지도 꾸미기 (레벨 5·15 보상). 열리지 않은 것을 골라 두었으면 기본
   const level = levelFromXp(profile.totalXp).level;
   const skin = profile.mapSkin && mapSkinUnlocked(profile.mapSkin, level) ? profile.mapSkin : "basic";
@@ -101,12 +109,12 @@ export default function LearnHomePage() {
           type="button"
           onClick={() => setPicking(true)}
           className={cn("font-display flex items-center gap-2 border-2 border-line bg-surface py-1 pl-1 pr-3 text-sm", noir ? "rounded-sm" : "rounded-full")}
-          aria-label={`코스 바꾸기 (지금: ${courseName(course.grade, course.subject)})`}
+          aria-label={`코스 바꾸기 (지금: ${name})`}
         >
           <span aria-hidden className={cn("flex size-7 items-center justify-center text-xs text-white", noir ? "rounded-sm" : "rounded-full")} style={{ background: group?.color }}>
             {group?.short}
           </span>
-          {courseName(course.grade, course.subject)} ▾
+          {name} ▾
         </button>
         <div className="ml-auto">
           <GoalRing />
@@ -125,7 +133,7 @@ export default function LearnHomePage() {
       {outline && total > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-ink-soft">
-            <span>{courseName(course.grade, course.subject)} 진도</span>
+            <span>{name} 진도</span>
             <span className="font-display">
               {doneCount}/{total} 유닛
             </span>
@@ -154,7 +162,7 @@ export default function LearnHomePage() {
       {!outline && !error && <p className="text-center text-sm text-ink-soft">학습 지도를 불러오는 중…</p>}
 
       <Sheet open={picking} onClose={() => setPicking(false)} title="코스 고르기">
-        <CoursePicker courses={courses} defaultGrade={course.grade} current={course} onPick={choose} />
+        <CoursePicker courses={courses} subjects={subjects} defaultGrade={course.grade} current={course} onPick={choose} />
       </Sheet>
     </div>
   );

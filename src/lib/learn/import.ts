@@ -15,7 +15,8 @@ export interface ImportUnitInput {
   /** 몇 번째 코스의 몇 번째 유닛인지 (보고용) */
   where: string;
   grade: GradeId | null;
-  subject: SubjectGroup | null;
+  /** 적힌 과목 그대로 (기본 과목 id·이름, 추가한 과목 이름). 서버가 학년의 과목에서 찾는다 */
+  subject: string | null;
   section: string;
   title: string;
   steps: unknown;
@@ -110,12 +111,12 @@ export function flattenImport(data: unknown): { units: ImportUnitInput[]; proble
       return;
     }
     const grade = toGrade(c.grade);
-    const subject = toSubject(c.subject);
+    const subject = typeof c.subject === "string" && c.subject.trim() ? (toSubject(c.subject) ?? c.subject.trim()) : null;
     c.units.forEach((rawUnit, ui) => {
       const u = (rawUnit ?? {}) as Record<string, unknown>;
       const p: string[] = [];
       if (!grade) p.push(`학년 "${String(c.grade ?? "")}"을(를) 알 수 없어요 (m1~m3, h1~h3).`);
-      if (!subject) p.push(`과목 "${String(c.subject ?? "")}"을(를) 알 수 없어요 (korean, english, math, social, science).`);
+      if (!subject) p.push("과목(subject)이 없어요.");
       const section = text(u.section) || text(c.section);
       if (!section) p.push("섹션 이름이 없어요.");
       const title = text(u.title);

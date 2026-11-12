@@ -11,8 +11,8 @@ import { Button, Card, SectionTitle } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import { adminApi, ago, formatTime } from "@/lib/admin/client";
 import { MAX_LEVEL, levelFromXp, xpForLevel } from "@/lib/game/level";
-import { courseName, gradeShort } from "@/lib/learn/names";
-import { courseKey, type CourseInfo, type CourseOutline } from "@/lib/learn/types";
+import { gradeShort, subjectLabel } from "@/lib/learn/names";
+import { courseKey, type CourseOutline, type LearnSubject } from "@/lib/learn/types";
 import { COMMAND_LABELS, type StoredCommand, type UserCommand, type UserSnapshot } from "@/lib/sync/types";
 
 interface UserDetail {
@@ -283,12 +283,12 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
   const [grade, setGrade] = useState(current?.[0] || user.grade || "m1");
   const [subject, setSubject] = useState(current?.[1] || "math");
   const [outline, setOutline] = useState<CourseOutline | null>(null);
-  const [courses, setCourses] = useState<CourseInfo[]>([]);
+  const [subjects, setSubjects] = useState<LearnSubject[]>([]);
   useEffect(() => {
-    adminApi<{ courses: CourseInfo[]; outline: CourseOutline }>(`/api/admin/learn?grade=${grade}&subject=${subject}`).then(
+    adminApi<{ outline: CourseOutline; subjects: LearnSubject[] }>(`/api/admin/learn?grade=${grade}&subject=${subject}`).then(
       (r) => {
         setOutline(r.outline);
-        setCourses(r.courses);
+        setSubjects(r.subjects);
       },
       () => setOutline(null),
     );
@@ -301,10 +301,18 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
   return (
     <Card className="space-y-3">
       <p className="text-sm text-ink-soft">
-        지금 고른 코스: {user.snapshot.learnCourse ? courseName(...(user.snapshot.learnCourse.split(":") as [string, string])) : "없음"} · 끝낸 유닛 {done.size}개
+        지금 고른 코스: {user.snapshot.learnCourse ? `${gradeShort(current?.[0] ?? "")} ${subjects.find((s) => s.key === current?.[1])?.name ?? subjectLabel(current?.[1] ?? "")}` : "없음"} · 끝낸 유닛 {done.size}개
       </p>
       <div className="flex flex-wrap gap-2">
-        <Select aria-label="학년" value={grade} onChange={(e) => setGrade(e.target.value)} className="w-auto">
+        <Select
+          aria-label="학년"
+          value={grade}
+          onChange={(e) => {
+            setGrade(e.target.value);
+            if (!SUBJECT_GROUPS.some((g) => g.id === subject)) setSubject("math");
+          }}
+          className="w-auto"
+        >
           {GRADES.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
@@ -312,9 +320,9 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
           ))}
         </Select>
         <Select aria-label="과목" value={subject} onChange={(e) => setSubject(e.target.value)} className="w-auto">
-          {SUBJECT_GROUPS.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.label} ({courses.find((c) => c.grade === grade && c.subject === g.id)?.units ?? 0})
+          {subjects.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.name} ({s.units})
             </option>
           ))}
         </Select>
@@ -360,7 +368,7 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
         size="sm"
         variant="ghost"
         onClick={async () => {
-          if (await askConfirm(`${courseName(grade, subject)} 코스의 진도를 모두 지울까요?`, { confirmLabel: "모두 지우기", danger: true })) await onSend({ type: "learnResetCourse", payload: { courseKey: key } });
+          if (await askConfirm(`${gradeShort(grade)} ${subjects.find((s) => s.key === subject)?.name ?? subjectLabel(subject)} 코스의 진도를 모두 지울까요?`, { confirmLabel: "모두 지우기", danger: true })) await onSend({ type: "learnResetCourse", payload: { courseKey: key } });
         }}
       >
         이 코스 진도 모두 지우기

@@ -60,7 +60,7 @@ export async function deleteMessage(id: string) {
 
 // ───────── 자료와 퀴즈 ─────────
 
-export type MaterialInput = Pick<Material, "kind" | "title" | "summary" | "keyPoints" | "sources" | "subjectId" | "query" | "publisher" | "year">;
+export type MaterialInput = Pick<Material, "kind" | "title" | "summary" | "keyPoints" | "sources" | "subjectId" | "query">;
 
 export interface QuestionInput {
   type: Question["type"];

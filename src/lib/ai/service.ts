@@ -223,7 +223,7 @@ export async function makeMaterial(req: MaterialRequest, models: Models, webSear
       ? materialFromImagesPrompt(req.grade, req.subject)
       : req.kind === "pdf"
         ? materialFromPdfPrompt(req.grade, req.subject)
-        : materialFromCurriculumPrompt(req.grade, req.course, req.unit, req.publisher, req.year);
+        : materialFromCurriculumPrompt(req.grade, req.course, req.unit);
   const { output } = await withFallback(models, (model) =>
     generateText({ model, system, messages, output: Output.object({ schema: MaterialSchema }), maxOutputTokens: 8000, ...REQUEST_LIMITS }),
   );

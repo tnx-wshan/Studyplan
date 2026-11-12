@@ -16,7 +16,7 @@ import { advance, cappedSeconds, currentStep, isFinished, lessonProgress, lesson
 import { courseKey, type LearnSection, type LearnUnit, type QuestionStep } from "@/lib/learn/types";
 import { requestSync } from "@/lib/syncStore";
 
-export type PlayerUnit = Pick<LearnUnit, "id" | "title" | "steps"> & { section: Pick<LearnSection, "grade" | "subject"> };
+export type PlayerUnit = Pick<LearnUnit, "id" | "title" | "steps"> & { section: Pick<LearnSection, "grade" | "subject"> & { group?: string | null } };
 /** 화면에서 고르는 중인 답: 글자, 빈칸별 낱말(아직 빈 칸은 null), 퍼즐 조각 번호 */
 type Draft = string | (string | null)[] | number[] | null;
 
@@ -66,7 +66,8 @@ function Player({ unit, mode, onExit, onRestart, style }: { unit: PlayerUnit; mo
   const [result, setResult] = useState<{ xp: number; first: boolean; seconds: number; correct: number; total: number; next?: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const feedbackRef = useRef<HTMLDivElement>(null);
-  const isMath = unit.section.subject === "math";
+  // 수학 또는 수학 비슷한 과목(수학2 등)이면 수식 도구를 펼친다
+  const isMath = (unit.section.group ?? unit.section.subject) === "math";
 
   useEffect(() => {
     startedAt.current = Date.now();

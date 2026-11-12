@@ -1,6 +1,24 @@
 import type { GradeId, SubjectGroup } from "@/data/curriculum";
 
 /**
+ * 학습 코스의 과목. 기본 5과목(korean·english·math·social·science)은 모든 학년에 있고,
+ * 관리자가 학년마다 과목을 더 만들 수 있다(수학2, 역사, 체육 …). 열쇠(key)는 기본 과목이면 그 id, 추가한 과목이면 's-…'.
+ */
+export interface LearnSubject {
+  key: string;
+  grade: GradeId;
+  name: string;
+  /** 아이콘에 쓰는 한두 글자 */
+  short: string;
+  color: string;
+  /** 비슷한 기본 과목: 수식 도구, 자료 모음 재료 추천, 교육과정 대표 단원에 쓴다 (없으면 null) */
+  group: SubjectGroup | null;
+  builtIn: boolean;
+  /** 공개된 유닛 수 (관리 도구는 초안 포함) */
+  units: number;
+}
+
+/**
  * '학습' 탭(듀오링고식 코스)의 데이터 구조.
  * 서버(관리 도구, 학습 과정 DB)와 화면이 함께 쓰므로 "use client"가 없는 일반 모듈에 둔다.
  *
@@ -91,7 +109,7 @@ export interface LearnUnit {
 export interface LearnSection {
   id: string;
   grade: GradeId;
-  subject: SubjectGroup;
+  subject: string;
   order: number;
   title: string;
   description: string;
@@ -108,13 +126,13 @@ export interface UnitBrief {
 
 export interface CourseOutline {
   grade: GradeId;
-  subject: SubjectGroup;
+  subject: string;
   sections: (LearnSection & { units: UnitBrief[] })[];
 }
 
 export interface CourseInfo {
   grade: GradeId;
-  subject: SubjectGroup;
+  subject: string;
   units: number;
 }
 
