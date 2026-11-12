@@ -278,3 +278,12 @@ export function unitsForSubject(subject: { courseIds: string[]; customUnits: str
   const units = subject.courseIds.flatMap((id) => courseById(id)?.units ?? []);
   return [...new Set([...units, ...subject.customUnits])];
 }
+
+/**
+ * 학습 과정 '교육과정 대표 단원으로 섹션 채우기'의 기준 설명.
+ * 출판사 교과서의 목차가 아니라, 이 파일에 담은 교육과정 대표 단원이다.
+ */
+export function curriculumSourceLabel(course: Course): string {
+  const version = GRADES.find((g) => g.id === course.grade)?.curriculum ?? "";
+  return `${version} 개정 교육과정 · ${course.name} 대표 단원`;
+}

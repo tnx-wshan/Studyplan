@@ -7,8 +7,8 @@ import { StatusBadge } from "@/components/admin/AdminShell";
 import { askConfirm, askText } from "@/components/Dialogs";
 import { Select, TextInput } from "@/components/kit";
 import { toast } from "@/components/Toaster";
-import { Button, Card, buttonStyles } from "@/components/ui";
-import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
+import { Button, Card, buttonStyles, cn } from "@/components/ui";
+import { GRADES, SUBJECT_GROUPS, coursesFor, curriculumSourceLabel, type GradeId, type SubjectGroup } from "@/data/curriculum";
 import { adminApi } from "@/lib/admin/client";
 import { gradeShort } from "@/lib/learn/names";
 import type { CourseInfo, CourseOutline } from "@/lib/learn/types";
@@ -23,6 +23,7 @@ export default function AdminLearn() {
   const [outline, setOutline] = useState<CourseOutline | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [aiFor, setAiFor] = useState<string | null>(null);
+  const [filling, setFilling] = useState(false);
 
   const load = useCallback(
     () =>
@@ -95,12 +96,28 @@ export default function AdminLearn() {
         <Link href="/admin/learn/import" className={buttonStyles("accent", "sm")}>
           ⤓ 일괄 넣기
         </Link>
-        <Button size="sm" variant="ghost" onClick={() => call("/api/admin/learn/section", "POST", { grade, subject, fromCurriculum: true })}>
-          교육과정 목차로 섹션 채우기
+        <Button size="sm" variant="ghost" aria-expanded={filling} onClick={() => setFilling(!filling)}>
+          교육과정 대표 단원으로 섹션 채우기…
         </Button>
       </div>
+      <p className="text-xs text-ink-soft">
+        코스 기준: {GRADES.find((g) => g.id === grade)?.label} · {GRADES.find((g) => g.id === grade)?.curriculum} 개정 교육과정. 섹션은 모든 학생이 함께 보는 목차예요(출판사별로 나뉘지 않아요).
+      </p>
+      {filling && (
+        <CurriculumFill
+          key={`${grade}:${subject}`}
+          grade={grade}
+          subject={subject}
+          existing={new Set(outline?.sections.map((s) => s.title) ?? [])}
+          onDone={async (added, source) => {
+            setFilling(false);
+            toast(`섹션 ${added}개를 만들었어요 (${source}).`);
+            await load();
+          }}
+        />
+      )}
       {error && <p role="alert" className="text-danger">{error}</p>}
-      {outline && outline.sections.length === 0 && <Card className="text-sm text-ink-soft">{gradeShort(grade)} 코스에 아직 섹션이 없어요. 섹션을 만들거나 교육과정 목차로 채우세요.</Card>}
+      {outline && outline.sections.length === 0 && <Card className="text-sm text-ink-soft">{gradeShort(grade)} 코스에 아직 섹션이 없어요. 섹션을 만들거나 교육과정 대표 단원으로 채우세요.</Card>}
 
       <ol className="space-y-3">
         {outline?.sections.map((s, i) => (
@@ -108,7 +125,10 @@ export default function AdminLearn() {
             <Card className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-ink-soft">섹션 {i + 1}</span>
-                <h2 className="font-display flex-1 text-lg">{s.title}</h2>
+                <h2 className="font-display flex-1 text-lg">
+                  {s.title}
+                  {s.description && <span className="block text-xs font-normal text-ink-soft">{s.description}</span>}
+                </h2>
                 <IconBtn label={`${s.title} 위로`} onClick={() => call("/api/admin/learn/section", "PUT", { id: s.id, move: -1 })}>
                   ↑
                 </IconBtn>
@@ -251,5 +271,78 @@ function AiUnitMaker({ section, onMade }: { section: Section; onMade: (unitId: s
         {busy ? "AI가 만드는 중… (10~40초)" : `자료 ${picked.length}개로 유닛 초안 만들기`}
       </Button>
     </div>
+  );
+}
+
+/**
+ * 교육과정 대표 단원으로 섹션 채우기: 기준과 만들어질 섹션을 먼저 보여준다.
+ * 과목에 교육과정 과목이 여럿(고등학교 선택과목 등)이면 하나를 고른다.
+ */
+function CurriculumFill({ grade, subject, existing, onDone }: { grade: string; subject: string; existing: Set<string>; onDone: (added: number, source: string) => void }) {
+  const list = coursesFor(grade as GradeId, subject as SubjectGroup);
+  const [courseId, setCourseId] = useState(list.length === 1 ? list[0].id : "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const course = list.find((c) => c.id === courseId);
+  const fresh = course ? course.units.filter((u) => !existing.has(u)) : [];
+
+  async function fill() {
+    if (!course) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await adminApi<{ added: number; source: string }>("/api/admin/learn/section", { method: "POST", body: { grade, subject, fromCurriculum: true, courseId: course.id } });
+      onDone(r.added, r.source);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "만들지 못했어요.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3" role="region" aria-label="교육과정 대표 단원으로 섹션 채우기">
+      <p className="text-sm">
+        <b>출판사 교과서의 목차가 아니라 교육과정의 대표 단원</b>으로 섹션을 만들어요. 교과서마다 단원 이름과 순서가 조금 달라서, 필요하면 만든 뒤 이름을 고치세요.
+      </p>
+      {list.length === 0 && <p className="text-sm text-ink-soft">이 학년·과목에는 교육과정 과목 자료가 없어요.</p>}
+      {list.length > 1 && (
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="교육과정 과목">
+          {list.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="radio"
+              aria-checked={courseId === c.id}
+              onClick={() => setCourseId(c.id)}
+              className={cn("rounded-full border-2 px-3 py-1 text-sm", courseId === c.id ? "border-accent bg-accent text-white" : "border-line")}
+            >
+              {c.name}
+              {c.units.length === 0 && " (단원 자료 없음)"}
+            </button>
+          ))}
+        </div>
+      )}
+      {course && (
+        <>
+          <p className="font-display text-sm">기준: {curriculumSourceLabel(course)}</p>
+          {course.units.length === 0 ? (
+            <p className="text-sm text-ink-soft">{course.name}은(는) 대표 단원 자료가 없어요. &lsquo;+ 섹션&rsquo;으로 교과서 목차를 직접 만들어 주세요.</p>
+          ) : (
+            <ol className="list-decimal space-y-0.5 pl-6 text-sm" aria-label="만들어질 섹션">
+              {course.units.map((u) => (
+                <li key={u} className={existing.has(u) ? "text-ink-soft" : undefined}>
+                  {u}
+                  {existing.has(u) && " (이미 있음)"}
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <Button size="sm" disabled={!course || fresh.length === 0 || busy} onClick={fill}>
+        {course ? `섹션 ${fresh.length}개 만들기` : "교육과정 과목을 골라 주세요"}
+      </Button>
+    </Card>
   );
 }

@@ -112,3 +112,28 @@ test("관리 도구 일괄 넣기: 다른 AI가 자주 내는 실수(그림 속 
 
   expect(errors).toEqual([]);
 });
+
+test("관리 도구 학습 과정: 교육과정 대표 단원으로 섹션 채우기 전에 기준과 목록을 보고, 교육과정 과목을 하나 고른다", async ({ page }) => {
+  const errors = await startFresh(page);
+  await adminLogin(page);
+  await page.goto(`${ADMIN_URL}/admin/learn`);
+  await expect(page.getByRole("heading", { name: /소인수분해/ })).toBeVisible();
+  await page.getByLabel("학년").selectOption("h1");
+  await page.getByLabel("과목").selectOption("math");
+  await expect(page.getByText(/코스 기준: 고등학교 1학년 · 2022 개정 교육과정/)).toBeVisible();
+
+  await page.getByRole("button", { name: "교육과정 대표 단원으로 섹션 채우기…" }).click();
+  const panel = page.getByRole("region", { name: "교육과정 대표 단원으로 섹션 채우기" });
+  await expect(panel).toContainText("출판사 교과서의 목차가 아니라 교육과정의 대표 단원");
+  // 고1 수학은 교육과정 과목이 둘이라 하나를 고른다 (예전에는 둘을 섞어서 넣었다)
+  await expect(panel.getByRole("button", { name: "교육과정 과목을 골라 주세요" })).toBeDisabled();
+  await panel.getByRole("radio", { name: "공통수학1" }).click();
+  await expect(panel.getByText("기준: 2022 개정 교육과정 · 공통수학1 대표 단원")).toBeVisible();
+  await expect(panel.getByRole("list", { name: "만들어질 섹션" })).toContainText("다항식의 연산");
+  await panel.getByRole("button", { name: /섹션 \d+개 만들기/ }).click();
+  await expect(page.getByText(/섹션 \d+개를 만들었어요 \(2022 개정 교육과정 · 공통수학1 대표 단원\)/)).toBeVisible();
+  // 만든 섹션에 기준이 남는다
+  await expect(page.getByRole("heading", { name: /다항식의 연산/ })).toContainText("공통수학1 대표 단원");
+
+  expect(errors).toEqual([]);
+});
