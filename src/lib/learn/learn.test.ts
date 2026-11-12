@@ -104,8 +104,8 @@ describe("lesson flow", () => {
   });
 
   it("gives xp for first completion and less for replays", () => {
-    expect(lessonXp({ correct: 4, total: 5 }, true)).toBe(18);
-    expect(lessonXp({ correct: 5, total: 5 }, false)).toBe(5);
+    expect(lessonXp({ correct: 4, total: 5 }, true)).toBe(180);
+    expect(lessonXp({ correct: 5, total: 5 }, false)).toBe(50);
     expect(cappedSeconds(0, 3_600_000, 4)).toBe(360);
     expect(cappedSeconds(0, 100_000, 4)).toBe(100);
   });

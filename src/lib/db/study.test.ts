@@ -41,7 +41,7 @@ describe("tasks", () => {
     await setTaskDone(t.id, true, at(TODAY));
     await setTaskDone(t.id, false, at(TODAY));
     await setTaskDone(t.id, true, at(TODAY));
-    expect((await getProfile())?.totalXp).toBe(10);
+    expect((await getProfile())?.totalXp).toBe(100);
     const spaced = await getDB().tasks.filter((x) => x.kind === "spaced").toArray();
     expect(spaced.map((s) => s.date).sort()).toEqual(["2026-11-10", "2026-11-12", "2026-11-16", "2026-11-23"]);
   });
@@ -110,7 +110,7 @@ describe("sessions, cards, wrong answers, quests", () => {
     const start = at(TODAY, 9);
     await recordStudySession({ startedAt: start, endedAt: start + 26 * 60_000, focusMinutes: 26.7, mode: "pomodoro" });
     await recordStudySession({ startedAt: start, endedAt: start + 20_000, focusMinutes: 0.3, mode: "free" });
-    expect((await getProfile())?.totalXp).toBe(26);
+    expect((await getProfile())?.totalXp).toBe(260);
     expect((await dailyStats(TODAY)).focusMinutes).toBe(26);
   });
 
@@ -133,7 +133,7 @@ describe("sessions, cards, wrong answers, quests", () => {
     expect(await dueCards()).toHaveLength(1);
     await reviewCard(card.id, 3);
     expect(await dueCards()).toHaveLength(0);
-    expect((await getProfile())?.totalXp).toBe(2);
+    expect((await getProfile())?.totalXp).toBe(20);
   });
 
   it("retries wrong answers on schedule", async () => {
@@ -153,7 +153,7 @@ describe("sessions, cards, wrong answers, quests", () => {
     await retryWrongAnswer(w.id, false);
     expect(await claimQuest("wrong1", key)).toBe(true);
     expect(await claimQuest("wrong1", key)).toBe(false);
-    expect((await getProfile())?.totalXp).toBe(5 + 15);
+    expect((await getProfile())?.totalXp).toBe(50 + 150);
   });
 });
 
@@ -183,7 +183,7 @@ describe("timer records", () => {
     expect(await recordStudySession(input, "timer-1")).not.toBeNull();
     expect(await recordStudySession(input, "timer-1")).toBeNull();
     expect(await getDB().studySessions.count()).toBe(1);
-    expect((await getProfile())?.totalXp).toBe(25);
+    expect((await getProfile())?.totalXp).toBe(250);
   });
 });
 
@@ -244,8 +244,8 @@ describe("exam goals and results", () => {
     expect((await getDB().exams.get(fin.id))?.goals).toEqual({ [math.id]: 85 });
     expect((await examsAwaitingResult("2026-11-09")).map((e) => e.title)).toEqual(["기말"]);
 
-    expect(await saveExamResult(mid.id, { [math.id]: 70, [eng.id]: 80 }, { worked: "", change: "" })).toBe(30);
-    expect(await saveExamResult(fin.id, { [math.id]: 88.4, [eng.id]: 140 }, { worked: " 백지 복습 ", change: "" })).toBe(30);
+    expect(await saveExamResult(mid.id, { [math.id]: 70, [eng.id]: 80 }, { worked: "", change: "" })).toBe(300);
+    expect(await saveExamResult(fin.id, { [math.id]: 88.4, [eng.id]: 140 }, { worked: " 백지 복습 ", change: "" })).toBe(300);
     expect(await saveExamResult(fin.id, { [math.id]: 90 }, { worked: "", change: "" })).toBe(0); // 고쳐도 한 번만
     expect(await saveExamResult(fin.id, {}, { worked: "", change: "" })).toBe(0);
     expect(await examsAwaitingResult("2026-11-09")).toEqual([]);

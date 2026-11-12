@@ -23,10 +23,10 @@ describe("profile", () => {
 
   it("grantXp adds xp, coins and an event", async () => {
     await completeOnboarding({ ...input });
-    await grantXp(120, "other");
+    await grantXp(1_250, "other");
     const p = await getProfile();
-    expect(p?.totalXp).toBe(120);
-    expect(p?.coins).toBe(12);
+    expect(p?.totalXp).toBe(1_250);
+    expect(p?.coins).toBe(12); // 경험치 100마다 1코인
   });
 
   it("backup round-trips", async () => {
@@ -48,12 +48,12 @@ describe("level up", () => {
   it("records the level before a level-up until dismissed", async () => {
     const { dismissLevelUp } = await import("./profile");
     await completeOnboarding({ ...input });
-    await grantXp(50, "other");
+    await grantXp(5_000, "other");
     expect((await getProfile())?.levelUpFrom).toBeUndefined();
-    await grantXp(60, "other"); // 110 XP → Lv.2
-    expect((await getProfile())?.levelUpFrom).toBe(1);
-    await grantXp(200, "other"); // 아직 확인 안 함: 처음 레벨 유지
-    expect((await getProfile())?.levelUpFrom).toBe(1);
+    await grantXp(6_000, "other"); // 11,000 XP → Lv.1
+    expect((await getProfile())?.levelUpFrom).toBe(0);
+    await grantXp(20_000, "other"); // 아직 확인 안 함: 처음 레벨 유지
+    expect((await getProfile())?.levelUpFrom).toBe(0);
     await dismissLevelUp();
     expect((await getProfile())?.levelUpFrom).toBeUndefined();
   });

@@ -1,5 +1,6 @@
 "use client";
 
+import { XP_REWARDS } from "@/lib/game/level";
 import Link from "next/link";
 import { useState } from "react";
 import { Field, Sheet, SubjectChip, TextInput } from "@/components/kit";
@@ -24,7 +25,7 @@ export function TaskRow({ task, subject }: { task: Task; subject?: Subject }) {
   async function toggle() {
     const first = !task.done && !task.xpGranted;
     await setTaskDone(task.id, !task.done);
-    if (first) toast(task.unit && (task.kind === "learn" || task.kind === "custom") ? "+10 XP · 복습 일정도 만들었어요!" : "+10 XP");
+    if (first) toast(task.unit && (task.kind === "learn" || task.kind === "custom") ? `+${XP_REWARDS.taskDone} XP · 복습 일정도 만들었어요!` : "+10 XP");
   }
 
   return (

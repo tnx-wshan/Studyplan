@@ -1,5 +1,6 @@
 "use client";
 
+import { XP_REWARDS } from "@/lib/game/level";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useEffect, useState } from "react";
 import { useAiStatus } from "@/components/ai/useAiStatus";
@@ -260,7 +261,7 @@ function ReflectionEditor({ week, saved }: { week: string; saved: Reflection | n
             <TextArea value={nextGoal} onChange={(e) => setNextGoal(e.target.value)} maxLength={500} rows={2} />
           </Field>
           <Button className="w-full" disabled={!good.trim() && !bad.trim() && !nextGoal.trim()} onClick={onSave}>
-            {saved ? "저장" : "회고 저장 (+20 XP)"}
+            {saved ? "저장" : `회고 저장 (+${XP_REWARDS.reflectionWritten} XP)`}
           </Button>
         </Card>
       ) : (

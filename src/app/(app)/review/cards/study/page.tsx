@@ -1,5 +1,6 @@
 "use client";
 
+import { XP_REWARDS } from "@/lib/game/level";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -81,7 +82,7 @@ function Study() {
             <>
               <p className="font-display text-2xl">오늘 복습 끝!</p>
               <p className="text-ink-soft">
-                카드 {reviewed}번 넘기고 <b className="text-xp-deep">+{reviewed * 2} XP</b>를 얻었어요.
+                카드 {reviewed}번 넘기고 <b className="text-xp-deep">+{reviewed * XP_REWARDS.cardReviewed} XP</b>를 얻었어요.
               </p>
             </>
           ) : (

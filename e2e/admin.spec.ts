@@ -93,7 +93,7 @@ test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용
   await adminNav.getByRole("link", { name: "사용자" }).click();
   await page.getByRole("link", { name: "공부왕" }).first().click();
   await expect(page.getByRole("heading", { name: /공부왕/ })).toBeVisible();
-  await page.getByLabel("총 경험치").fill("500");
+  await page.getByLabel("총 경험치").fill("70000"); // 레벨 4가 시작되는 경험치
   await page.getByRole("button", { name: /경험치 적용/ }).click();
   await expect(page.getByText("적용 대기", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "🔒 이용 정지" }).click();

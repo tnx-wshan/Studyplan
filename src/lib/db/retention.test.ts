@@ -92,7 +92,7 @@ describe("comeback", () => {
     const before = (await getProfile())!.totalXp;
     expect(await claimComebackQuest("c-focus", key(0))).toBe(true);
     expect(await claimComebackQuest("c-focus", key(0))).toBe(false);
-    expect((await getProfile())!.totalXp).toBe(before + 30);
+    expect((await getProfile())!.totalXp).toBe(before + 300);
     const s = await comebackStatus(key(0));
     expect(s?.quests.find((q) => q.quest.id === "c-focus")?.claimed).toBe(true);
   });
@@ -131,6 +131,6 @@ describe("weekly goal", () => {
     const before = (await getProfile())!.totalXp;
     expect(await claimWeeklyGoal("2026-11-11")).toBe(true);
     expect(await claimWeeklyGoal("2026-11-11")).toBe(false);
-    expect((await getProfile())!.totalXp).toBe(before + 50);
+    expect((await getProfile())!.totalXp).toBe(before + 500);
   });
 });

@@ -4,8 +4,8 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import type { UnitState } from "@/lib/learn/engine";
 import type { CourseOutline } from "@/lib/learn/types";
-import { Pet } from "../Pet";
-import { usePetState } from "@/lib/hooks";
+import type { MapSkin } from "@/lib/game/rewards";
+import { CharacterArt } from "../game/CharacterArt";
 import { cn } from "../ui";
 
 type Section = CourseOutline["sections"][number];
@@ -33,12 +33,14 @@ export function SectionPath({
   states,
   best,
   noir,
+  skin = "basic",
 }: {
   section: Section;
   index: number;
   states: Map<string, UnitState>;
   best: Map<string, { bestCorrect: number; total: number }>;
   noir: boolean;
+  skin?: MapSkin;
 }) {
   const doneCount = section.units.filter((u) => states.get(u.id) === "done").length;
   const complete = section.units.length > 0 && doneCount === section.units.length;
@@ -60,7 +62,7 @@ export function SectionPath({
       {section.units.length === 0 ? (
         <p className="text-center text-sm text-ink-soft">유닛을 준비하고 있어요.</p>
       ) : (
-        <div className="relative">
+        <div className={cn("relative", skin !== "basic" && `map-skin map-skin-${skin}`)}>
           {hasCurrent && <Mascot noir={noir} />}
           <ul className="flex flex-col items-center gap-5 pb-1 pt-8">
             {section.units.map((u, i) => (
@@ -129,11 +131,9 @@ function UnitNode({ unit, state, stars, x, noir }: { unit: Unit; state: UnitStat
 
 /** 지금 할 유닛 옆에서 응원하는 동료 */
 function Mascot({ noir }: { noir: boolean }) {
-  const pet = usePetState();
-  if (!pet) return null;
   return (
     <div aria-hidden className="pointer-events-none absolute -right-1 top-6 flex flex-col items-end">
-      <Pet species={pet.profile.pet.species} stage={pet.stage.stage} mood="excited" size={76} accessory={pet.profile.equipped?.accessory} />
+      <CharacterArt mood="excited" size={76} />
       <span className={cn("font-display -mt-1 bg-surface px-2 py-0.5 text-[11px] shadow-[var(--shadow)] border-2 border-line", noir ? "rounded-sm" : "rounded-xl")}>{noir ? "곁에 있다." : "같이 가요!"}</span>
     </div>
   );

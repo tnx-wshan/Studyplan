@@ -43,7 +43,7 @@ describe("weekly quests", () => {
     expect(await claimWeeklyQuest("wfocus", TODAY)).toBe(true);
     expect(await claimWeeklyQuest("wfocus", TODAY)).toBe(false);
     expect(await claimWeeklyQuest("wdays", TODAY)).toBe(false);
-    expect((await getProfile())!.totalXp).toBe(before + 100);
+    expect((await getProfile())!.totalXp).toBe(before + 1000);
   });
 });
 
@@ -82,7 +82,7 @@ describe("badge sync and titles", () => {
 describe("shop", () => {
   it("buys with coins, equips, and refuses duplicates or poverty", async () => {
     expect(await buyItem("halo")).toBe("coins");
-    await grantXp(500, "other"); // +50 코인
+    await grantXp(5000, "other"); // +50 코인 (경험치 100마다 1코인)
     expect(await buyItem("halo")).toBe("ok");
     const p = (await getProfile())!;
     expect(p.coins).toBe(10);

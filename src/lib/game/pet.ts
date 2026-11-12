@@ -11,12 +11,13 @@ export const PET_SPECIES: Record<
 
 export type PetStage = "egg" | "baby" | "child" | "teen" | "adult";
 
+/** 동료 그림(SVG)의 성장 단계: 레벨 0·4·8·12·16 (20은 캐릭터 그림의 최종 외형) */
 export const PET_STAGES: { stage: PetStage; label: string; minLevel: number }[] = [
-  { stage: "egg", label: "알", minLevel: 1 },
-  { stage: "baby", label: "아기", minLevel: 2 },
-  { stage: "child", label: "어린이", minLevel: 5 },
-  { stage: "teen", label: "청소년", minLevel: 10 },
-  { stage: "adult", label: "어른", minLevel: 20 },
+  { stage: "egg", label: "알", minLevel: 0 },
+  { stage: "baby", label: "아기", minLevel: 4 },
+  { stage: "child", label: "어린이", minLevel: 8 },
+  { stage: "teen", label: "청소년", minLevel: 12 },
+  { stage: "adult", label: "어른", minLevel: 16 },
 ];
 
 export function stageForLevel(level: number) {

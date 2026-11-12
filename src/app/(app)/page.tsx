@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CoursePicker } from "@/components/learn/CoursePicker";
 import { SectionPath } from "@/components/learn/LearnPath";
 import { Sheet } from "@/components/kit";
-import { Pet } from "@/components/Pet";
+import { CharacterArt } from "@/components/game/CharacterArt";
 import { useUiStyle } from "@/components/ThemeSync";
 import { Card, ProgressBar, buttonStyles, cn } from "@/components/ui";
 import { SUBJECT_GROUPS, type GradeId, type SubjectGroup } from "@/data/curriculum";
@@ -19,6 +19,8 @@ import { fetchCourses, fetchOutline } from "@/lib/learn/client";
 import { nextUnitId, unitStates } from "@/lib/learn/engine";
 import { courseName } from "@/lib/learn/names";
 import { courseKey, type CourseInfo, type CourseOutline } from "@/lib/learn/types";
+import { levelFromXp } from "@/lib/game/level";
+import { mapSkinUnlocked } from "@/lib/game/rewards";
 
 /**
  * 첫 화면: 학습. 듀오링고·토도수학처럼 코스의 길을 따라 유닛을 하나씩 깬다.
@@ -87,6 +89,9 @@ export default function LearnHomePage() {
   const nextId = outline && done ? nextUnitId(outline, done) : undefined;
   const next = nextId ? outline?.sections.flatMap((s) => s.units.map((u) => ({ unit: u, section: s.title }))).find((x) => x.unit.id === nextId) : undefined;
   const group = SUBJECT_GROUPS.find((g) => g.id === course.subject);
+  // 학습 지도 꾸미기 (레벨 5·15 보상). 열리지 않은 것을 골라 두었으면 기본
+  const level = levelFromXp(profile.totalXp).level;
+  const skin = profile.mapSkin && mapSkinUnlocked(profile.mapSkin, level) ? profile.mapSkin : "basic";
 
   return (
     <div className="space-y-5">
@@ -141,7 +146,7 @@ export default function LearnHomePage() {
       {outline && states && progress && (
         <ol className="space-y-8 pb-4">
           {outline.sections.map((section, si) => (
-            <SectionPath key={section.id} section={section} index={si} states={states} best={progress} noir={noir} />
+            <SectionPath key={section.id} section={section} index={si} states={states} best={progress} noir={noir} skin={skin} />
           ))}
         </ol>
       )}
@@ -174,7 +179,7 @@ function MissionCard({ next, noir, finished }: { next?: { unit: CourseOutline["s
         : "오늘도 한 걸음, 같이 가요!";
   return (
     <Card className="flex items-center gap-3">
-      {pet && <Pet species={pet.profile.pet.species} stage={pet.stage.stage} mood={met ? "excited" : "happy"} size={84} accessory={pet.profile.equipped?.accessory} className="shrink-0" />}
+      {pet && <CharacterArt mood={met ? "excited" : "happy"} size={84} className="shrink-0" />}
       <div className="min-w-0 flex-1 space-y-2">
         <p className={cn("relative bg-surface-2 px-3 py-2 text-sm", noir ? "rounded-sm" : "rounded-2xl")}>{line}</p>
         {next && (

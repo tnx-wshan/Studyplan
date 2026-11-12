@@ -1,5 +1,6 @@
 "use client";
 
+import { XP_REWARDS } from "@/lib/game/level";
 import { useState } from "react";
 import { Field, TextArea } from "../kit";
 import { toast } from "../Toaster";
@@ -139,7 +140,7 @@ function ResultEditor({ exam, subjectMap }: { exam: Exam; subjectMap: Map<string
             setEditing(false);
           }}
         >
-          {exam.results ? "저장" : "결과 저장 (+30 XP)"}
+          {exam.results ? "저장" : `결과 저장 (+${XP_REWARDS.examResult} XP)`}
         </Button>
       </Card>
     </section>

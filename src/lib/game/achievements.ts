@@ -19,20 +19,20 @@ export interface WeeklyQuest {
 }
 
 export const WEEKLY_QUESTS: WeeklyQuest[] = [
-  { id: "wfocus", icon: "⏱️", title: "이번 주 300분 집중하기", noirTitle: "300분의 침묵", target: 300, reward: 100, value: (w) => w.stats.totalMinutes },
-  { id: "wdays", icon: "📅", title: "이번 주 5일 공부하기", noirTitle: "닷새의 기록", target: 5, reward: 100, value: (w) => w.stats.studyDays },
-  { id: "wwrong", icon: "📝", title: "오답 10번 다시 풀기", noirTitle: "약점 재심문 10회", target: 10, reward: 60, value: (w) => w.stats.wrongRetried },
-  { id: "wmethod", icon: "💡", title: "학습법 3번 실습하기", noirTitle: "방법론 실습 3회", target: 3, reward: 60, value: (w) => w.stats.methodPractices.reduce((s, m) => s + m.count, 0) },
-  { id: "wreflect", icon: "✍️", title: "주간 회고 쓰기", noirTitle: "주간 보고서 제출", target: 1, reward: 40, value: (w) => (w.reflectionWritten ? 1 : 0) },
+  { id: "wfocus", icon: "⏱️", title: "이번 주 300분 집중하기", noirTitle: "300분의 침묵", target: 300, reward: 1000, value: (w) => w.stats.totalMinutes },
+  { id: "wdays", icon: "📅", title: "이번 주 5일 공부하기", noirTitle: "닷새의 기록", target: 5, reward: 1000, value: (w) => w.stats.studyDays },
+  { id: "wwrong", icon: "📝", title: "오답 10번 다시 풀기", noirTitle: "약점 재심문 10회", target: 10, reward: 600, value: (w) => w.stats.wrongRetried },
+  { id: "wmethod", icon: "💡", title: "학습법 3번 실습하기", noirTitle: "방법론 실습 3회", target: 3, reward: 600, value: (w) => w.stats.methodPractices.reduce((s, m) => s + m.count, 0) },
+  { id: "wreflect", icon: "✍️", title: "주간 회고 쓰기", noirTitle: "주간 보고서 제출", target: 1, reward: 400, value: (w) => (w.reflectionWritten ? 1 : 0) },
 ];
 
 // ───────── 시험 대비 퀘스트 ─────────
 
 export const EXAM_MILESTONES = [
-  { pct: 25, reward: 40, title: "준비의 시작", noirTitle: "1막: 착수" },
-  { pct: 50, reward: 60, title: "반환점 돌파", noirTitle: "2막: 반환점" },
-  { pct: 75, reward: 80, title: "마무리 단계", noirTitle: "3막: 결전 전야" },
-  { pct: 100, reward: 120, title: "모든 계획 완료", noirTitle: "종막: 완수" },
+  { pct: 25, reward: 400, title: "준비의 시작", noirTitle: "1막: 착수" },
+  { pct: 50, reward: 600, title: "반환점 돌파", noirTitle: "2막: 반환점" },
+  { pct: 75, reward: 800, title: "마무리 단계", noirTitle: "3막: 결전 전야" },
+  { pct: 100, reward: 1200, title: "모든 계획 완료", noirTitle: "종막: 완수" },
 ];
 
 export function examProgress(exam: Exam, tasks: Task[]) {

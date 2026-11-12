@@ -66,7 +66,7 @@ export default function AdminUsers() {
                     <StatusBadge status={u.status} />
                   </Td>
                   <Td className="tabular-nums">
-                    Lv.{u.snapshot.level ?? 1} · {u.snapshot.totalXp ?? 0}
+                    Lv.{u.snapshot.level ?? 0} · {u.snapshot.totalXp ?? 0}
                   </Td>
                   <Td className="tabular-nums">{u.snapshot.streak ?? 0}일</Td>
                   <Td>

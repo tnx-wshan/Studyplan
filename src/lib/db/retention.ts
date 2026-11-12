@@ -2,7 +2,9 @@ import { getDB } from "./index";
 import { addXpInTx } from "./profile";
 import { dailyStats, replanExam } from "./study";
 import { addDays, daysBetween, toDateKey } from "@/lib/date";
-import { MAX_FREEZES, daysToFreeze } from "@/lib/game/streak";
+import { daysToFreeze } from "@/lib/game/streak";
+import { maxFreezes } from "@/lib/game/rewards";
+import { levelFromXp } from "@/lib/game/level";
 import { weekKey, weekPeriod } from "@/lib/study/period";
 
 const now = () => Date.now();
@@ -43,7 +45,7 @@ export async function maybeAwardFreeze(week: string, at = now()): Promise<boolea
     if (await db.userQuests.get(id)) return false;
     const claimed = (await db.userQuests.where("period").equals(week).toArray()).filter((q) => q.questId.startsWith("w")).length;
     const p = await db.profile.get("me");
-    if (!p || claimed < FREEZE_QUESTS_NEEDED || (p.freezes ?? 0) >= MAX_FREEZES) return false;
+    if (!p || claimed < FREEZE_QUESTS_NEEDED || (p.freezes ?? 0) >= maxFreezes(levelFromXp(p.totalXp).level)) return false;
     await db.userQuests.add({ id, questId: "freeze", period: `freeze:${week}`, progress: 1, completedAt: at, createdAt: at, updatedAt: at });
     await db.profile.update("me", { freezes: (p.freezes ?? 0) + 1, updatedAt: at });
     return true;
@@ -55,9 +57,9 @@ export async function maybeAwardFreeze(week: string, at = now()): Promise<boolea
 export const COMEBACK_AFTER_DAYS = 3;
 
 export const COMEBACK_QUESTS = [
-  { id: "c-focus", icon: "⏱️", title: "5분만 집중하기", noirTitle: "5분의 재개", target: 5, reward: 30, href: "/timer" },
-  { id: "c-review", icon: "🃏", title: "카드 5장 넘기거나 오답 1개 풀기", noirTitle: "기억 한 조각 되찾기", target: 1, reward: 30, href: "/review" },
-  { id: "c-task", icon: "✅", title: "오늘 할 일 1개 끝내기", noirTitle: "의뢰 하나 완수", target: 1, reward: 30, href: "/planner" },
+  { id: "c-focus", icon: "⏱️", title: "5분만 집중하기", noirTitle: "5분의 재개", target: 5, reward: 300, href: "/timer" },
+  { id: "c-review", icon: "🃏", title: "카드 5장 넘기거나 오답 1개 풀기", noirTitle: "기억 한 조각 되찾기", target: 1, reward: 300, href: "/review" },
+  { id: "c-task", icon: "✅", title: "오늘 할 일 1개 끝내기", noirTitle: "의뢰 하나 완수", target: 1, reward: 300, href: "/planner" },
 ] as const;
 
 /**
@@ -136,7 +138,7 @@ export async function tidyBacklog(today = toDateKey()) {
 
 // ───────── 4. 주간 목표 약속 ─────────
 
-export const GOAL_REWARD = 50;
+export const GOAL_REWARD = 500;
 export const GOAL_CHOICES = [120, 180, 300, 420, 600];
 
 export async function weekFocusMinutes(week: string): Promise<number> {

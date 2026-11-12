@@ -73,9 +73,9 @@ test("학습 탭: 코스 고르기 → 핵심 정리와 다섯 가지 문제 →
   await expect(page.getByText("정확하다.")).toBeVisible();
   await page.getByRole("button", { name: "계속" }).click();
 
-  // 완료: 처음에 맞힌 4문제 → 10 + 4×2 = 18 경험치
+  // 완료: 처음에 맞힌 4문제 → 100 + 4×20 = 180 경험치
   await expect(page.getByRole("heading", { name: "유닛 완료." })).toBeVisible();
-  await expect(page.getByText("+18")).toBeVisible();
+  await expect(page.getByText("+180", { exact: true })).toBeVisible();
   await expect(page.getByText("80%")).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "오늘 학습 목표" })).toBeVisible();
   await noHorizontalScroll(page);

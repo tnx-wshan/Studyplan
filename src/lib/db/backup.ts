@@ -1,4 +1,5 @@
 import { getDB } from "./index";
+import { XP_SCALE } from "@/lib/game/level";
 import { defaultCourseIds, type GradeId, type SubjectGroup } from "@/data/curriculum";
 
 const BACKUP_VERSION = 2;
@@ -79,7 +80,7 @@ export function normalizeRow(table: string, row: Row, grade?: GradeId): Row | nu
 }
 
 export async function importBackup(json: string) {
-  let data: { app?: string; tables?: Record<string, Row[]> };
+  let data: { app?: string; schema?: number; tables?: Record<string, Row[]> };
   try {
     data = JSON.parse(json);
   } catch {
@@ -89,6 +90,14 @@ export async function importBackup(json: string) {
     throw new Error("홈스터디 백업 파일이 아니에요.");
   }
   const tables = data.tables;
+  // 레벨 개편(DB 6번째 버전) 전에 만든 백업은 경험치를 10배로 바꿔서 불러온다
+  if ((data.schema ?? 0) < 6) {
+    for (const p of tables.profile ?? []) {
+      p.totalXp = Math.round(Number(p.totalXp ?? 0) * XP_SCALE);
+      delete p.levelUpFrom;
+    }
+    for (const e of tables.xpEvents ?? []) e.amount = Math.round(Number(e.amount ?? 0) * XP_SCALE);
+  }
   const grade = (tables.profile?.[0]?.grade as GradeId | undefined) ?? undefined;
   const db = getDB();
   // 사진 변환 등은 트랜잭션 밖에서 먼저 끝낸다

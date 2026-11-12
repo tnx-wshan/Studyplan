@@ -20,11 +20,11 @@
 ## 2. 기술 구성
 
 - Next.js 16.4.5 (App Router, Turbopack), React 19, TypeScript, Tailwind v4
-- 기기 저장: Dexie 4 (IndexedDB, 현재 5번째 버전) + `useLiveQuery`
+- 기기 저장: Dexie 4 (IndexedDB, 현재 6번째 버전) + `useLiveQuery`
 - 서버 저장: `node:sqlite` (Node 22.13 이상, 설치할 패키지 없음, WAL 모드로 앱 서버와 관리 서버가 같은 파일을 씀)
 - AI: Vercel AI SDK v7 (`ai`, `@ai-sdk/google|anthropic|openai`), zod로 답 형식 지정
 - 알림: Web Push (`web-push`), 서버 시작 때 스케줄러 실행 (`src/instrumentation.ts`)
-- 테스트: Vitest(단위 205개), Playwright(브라우저 21개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
+- 테스트: Vitest(단위 211개), Playwright(브라우저 22개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
 
 ### 폴더
 
@@ -82,7 +82,11 @@ e2e/                        브라우저 테스트
 | 설정 | `/settings` | 이름·학년·하루 새 카드 수·테마, 과목 관리, 알림, 백업/복원(사진 포함) |
 
 ### 게임 요소
-경험치와 레벨, 코인, 연속 학습일(보호권으로 하루 메움), 일간·주간·시험 퀘스트, 업적과 칭호, 상점, 오래 쉬었다 돌아오면 가벼운 복귀 퀘스트, 레벨이 오르면 열리는 이야기(본편 12편 + 외전 3편, 테마별 문체).
+**레벨(2026-11 개편)**: 0~20레벨. 0→1에 10,000 XP, 그 뒤로 레벨마다 5,000 XP씩 더 (누적 1레벨 10,000 · 5레벨 100,000 · 10레벨 325,000 · 20레벨 1,150,000, `src/lib/game/level.ts`). 경험치는 예전의 10배(유닛 처음 100 + 맞힌 문제당 20, 집중 1분 10, 할 일 100 등), 코인은 경험치 100마다 1개. 예전 기록은 기기 DB 6번째 버전과 백업 불러오기에서 10배로 바꾼다.
+**레벨업 보상** (`src/lib/game/rewards.ts`, 지급은 `addXpInTx` → `applyLevelRewards`, `rewardedLevel`까지 받음): 매 레벨 이야기 한 편 + 코인(레벨×50) · 2·6·10·14·18 보호권 +1(보관 한도 레벨 10부터 3개) · 3·7·11·15·19 꾸미기(안경·밤하늘·목도리·도서관·후광, 이미 있으면 그 값만큼 코인) · 4·8·12·16·20 캐릭터 외형 성장 + 칭호 · 5·15 학습 지도 꾸미기(등불·별빛 길 / 황동·무지개 길) · 10 두 번째 캐릭터 + 은빛 프로필 테두리 · 20 최종 외형 + 외전 + 금빛 테두리 + 기념 장면.
+**대표 캐릭터** (`src/data/characters.ts`): 누아르 「렌」(견습 기록관 → 기억의 수호자), 귀여운 「모아」(별빛 견습생 → 별의 대사서). 테마의 대표로 시작하고 레벨 10부터 다른 캐릭터도 고른다(동료 장비 화면). 그림은 `public/characters/<id>/stage-0·4·8·12·16·20.png`에 넣으면 `/api/characters`가 알아채 저절로 쓰고(`CharacterArt`), 없으면 지금의 동료 그림. 프롬프트는 `docs/캐릭터와-성장-제안.md`.
+**이야기**: 본편 20편(레벨 1~20에 한 편씩) + 외전 4편(업적 3편, 레벨 20 한 편).
+그 밖에: 경험치와 레벨, 코인, 연속 학습일(보호권으로 하루 메움), 일간·주간·시험 퀘스트, 업적과 칭호, 상점, 오래 쉬었다 돌아오면 가벼운 복귀 퀘스트, 레벨이 오르면 열리는 이야기(본편 12편 + 외전 3편, 테마별 문체).
 
 ### 학습 탭 (듀오링고식)
 - 코스 = 학년 × 과목, 섹션 = 교육과정 대표 단원(목차), 유닛 = 2~3분. 내용은 서버 DB(`learn_sections`, `learn_units`)에 있고, 받은 것은 기기(localStorage)에 저장해 오프라인에서도 이어서 한다.
@@ -123,7 +127,7 @@ e2e/                        브라우저 테스트
 
 ## 4. 데이터 (기기 안 Dexie)
 
-표: `profile`(한 줄, id `me`), `subjects`, `tasks`, `exams`, `studySessions`, `decks`, `cards`, `wrongNotes`, `images`, `xpEvents`, `quizzes`, `materials`, `methodLogs`, `coachReports`, `routines`, `learnProgress`(유닛 진도), `learnLogs`(학습 기록).
+표 (6번째 버전: 경험치 10배 변환): `profile`(한 줄, id `me`), `subjects`, `tasks`, `exams`, `studySessions`, `decks`, `cards`, `wrongNotes`, `images`, `xpEvents`, `quizzes`, `materials`, `methodLogs`, `coachReports`, `routines`, `learnProgress`(유닛 진도), `learnLogs`(학습 기록).
 
 서버 DB(`src/lib/server/db.ts`, `PRAGMA user_version`으로 버전 관리, 지금 3번째 버전): `users`, `user_commands`, `bank_items`, `learn_sections`, `learn_units`, `media`(그림). 구조를 바꿀 때는 `MIGRATIONS`에 새 항목을 덧붙인다(기존 항목은 고치지 않는다).
 정확한 필드는 `src/lib/db/types.ts`, 버전 이력은 `src/lib/db/index.ts`.

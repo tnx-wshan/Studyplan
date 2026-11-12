@@ -50,6 +50,12 @@ export interface Profile extends Base {
   learnCourse?: { grade: GradeId; subject: SubjectGroup };
   /** 학습 탭 하루 목표(분) */
   learnGoal?: number;
+  /** 고른 대표 캐릭터 (없으면 테마의 대표) */
+  character?: string;
+  /** 학습 지도 꾸미기 */
+  mapSkin?: "basic" | "lantern" | "gilded";
+  /** 레벨업 보상을 여기까지 받았다 */
+  rewardedLevel?: number;
   /** 학습 습관 진단 결과 */
   diagnosis?: { answers: Record<string, number>; scores: Record<string, number>; at: number };
 }
