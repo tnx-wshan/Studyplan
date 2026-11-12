@@ -184,3 +184,31 @@ describe("그림 저장", () => {
     expect(steps[1]).toMatchObject({ prompt: "q\n\n![문제 그림](/api/media?id=1)" });
   });
 });
+
+describe("교과서 분류 (학년 · 과목 · 출판사 · 연도 · 단원)", () => {
+  it("출판사·연도·단원을 저장하고 출판사로 거른다", async () => {
+    const { listPublishers } = await import("./bank");
+    const data = { summary: "s", keyPoints: [], sources: [] };
+    addItem({ kind: "material", lookupKey: "a", sourceKind: "curriculum", grade: "m1", subject: "math", topic: "수학 소수", title: "소수", publisher: "천재교육", year: 2026, unit: "Ⅰ. 소인수분해 - 1. 소수와 합성수", data });
+    addItem({ kind: "material", lookupKey: "b", sourceKind: "curriculum", grade: "m1", subject: "math", topic: "수학 소수", title: "소수", publisher: "비상교육", year: 2025, unit: "1. 소인수분해", data });
+    expect(listItems({ publisher: "천재교육" }).map((x) => [x.publisher, x.year, x.unit])).toEqual([["천재교육", 2026, "Ⅰ. 소인수분해 - 1. 소수와 합성수"]]);
+    expect(listItems({ q: "소수와 합성수" })).toHaveLength(1);
+    expect(listPublishers()).toEqual(["비상교육", "천재교육"]);
+    const id = listItems({ publisher: "비상교육" })[0].id;
+    expect(updateItem(id, { publisher: "미래엔", year: null, unit: "2. 거듭제곱" })).toMatchObject({ publisher: "미래엔", year: null, unit: "2. 거듭제곱" });
+  });
+
+  it("출판사가 다르면 다른 자료로 본다", () => {
+    const k1 = materialLookupKey({ kind: "curriculum", grade: "m1", subject: "math", topic: "수학 천재교육 2026 소수와 합성수" });
+    const k2 = materialLookupKey({ kind: "curriculum", grade: "m1", subject: "math", topic: "수학 비상교육 2026 소수와 합성수" });
+    expect(k1).not.toBe(k2);
+  });
+
+  it("지시문에 출판사·연도 교과서를 적는다", async () => {
+    const { materialFromCurriculumPrompt } = await import("@/lib/ai/prompts");
+    const p = materialFromCurriculumPrompt("중학교 1학년", "수학", "Ⅰ. 소인수분해", "천재교육", 2026);
+    expect(p).toContain("'수학' 과목(천재교육 2026년 교과서)의 'Ⅰ. 소인수분해' 단원");
+    expect(p).toContain("그대로 옮기지는 마");
+    expect(materialFromCurriculumPrompt("중학교 1학년", "수학", "소수")).not.toContain("교과서)의");
+  });
+});

@@ -8,6 +8,7 @@ import { Card, cn } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import { adminApi, ago } from "@/lib/admin/client";
 import { courseName, gradeShort, subjectLabel } from "@/lib/learn/names";
+import { classificationLabel } from "@/data/publishers";
 
 interface Item {
   id: string;
@@ -16,6 +17,9 @@ interface Item {
   grade: string;
   subject: string;
   subjectName: string;
+  publisher: string;
+  year: number | null;
+  unit: string;
   topic: string;
   title: string;
   parentId: string | null;
@@ -33,6 +37,8 @@ export default function AdminContent() {
   const [kind, setKind] = useState("material");
   const [grade, setGrade] = useState("");
   const [subject, setSubject] = useState("");
+  const [publisher, setPublisher] = useState("");
+  const [publishers, setPublishers] = useState<string[]>([]);
   const [q, setQ] = useState("");
   const [items, setItems] = useState<Item[] | null>(null);
   const [groups, setGroups] = useState<Item[][] | null>(null);
@@ -40,12 +46,18 @@ export default function AdminContent() {
   const [tab, setTab] = useState<"list" | "dup">("list");
 
   useEffect(() => {
-    const p = new URLSearchParams({ kind, grade, subject, q: q.trim() });
+    const p = new URLSearchParams({ kind, grade, subject, publisher, q: q.trim() });
     const t = setTimeout(() => {
-      adminApi<{ items: Item[] }>(`/api/admin/bank?${p}`).then((r) => setItems(r.items), (e) => setError(e.message));
+      adminApi<{ items: Item[]; publishers: string[] }>(`/api/admin/bank?${p}`).then(
+        (r) => {
+          setItems(r.items);
+          setPublishers(r.publishers);
+        },
+        (e) => setError(e.message),
+      );
     }, 200);
     return () => clearTimeout(t);
-  }, [kind, grade, subject, q]);
+  }, [kind, grade, subject, publisher, q]);
 
   useEffect(() => {
     if (tab !== "dup" || groups) return;
@@ -89,7 +101,15 @@ export default function AdminContent() {
                 </option>
               ))}
             </Select>
-            <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·주제 찾기" aria-label="자료 찾기" className="w-auto flex-1" />
+            <Select aria-label="출판사" value={publisher} onChange={(e) => setPublisher(e.target.value)} className="w-auto">
+              <option value="">모든 출판사</option>
+              {publishers.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </Select>
+            <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·주제·단원 찾기" aria-label="자료 찾기" className="w-auto flex-1" />
           </div>
           {items && items.length === 0 && <Card className="text-sm text-ink-soft">조건에 맞는 자료가 없어요.</Card>}
           {items && items.length > 0 && (
@@ -98,7 +118,7 @@ export default function AdminContent() {
                 <thead>
                   <tr>
                     <Th>제목</Th>
-                    <Th>코스</Th>
+                    <Th>분류 (학년 · 과목 · 출판사 · 연도 · 단원)</Th>
                     <Th>출처</Th>
                     <Th>쓰임</Th>
                     <Th>상태</Th>
@@ -114,7 +134,7 @@ export default function AdminContent() {
                         </Link>
                         <p className="text-xs text-ink-soft">{it.topic}</p>
                       </Td>
-                      <Td className="whitespace-nowrap">{it.grade || it.subject ? `${it.grade ? gradeShort(it.grade) : "?"} ${it.subject ? subjectLabel(it.subject) : it.subjectName || "?"}` : it.subjectName || "-"}</Td>
+                      <Td>{classificationLabel({ grade: it.grade ? gradeShort(it.grade) : "", subject: it.subject ? subjectLabel(it.subject) : it.subjectName, publisher: it.publisher, year: it.year, unit: it.unit }) || "-"}</Td>
                       <Td className="whitespace-nowrap">
                         {SOURCE[it.sourceKind] ?? it.sourceKind}
                         {it.kind === "material" && <span className="block text-xs text-ink-soft">문제 {it.children ?? 0}세트</span>}

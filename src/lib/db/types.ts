@@ -196,6 +196,9 @@ export interface Material extends Base {
   sources: { title: string; url: string }[];
   /** 웹 검색어, 단원 이름 등 */
   query?: string;
+  /** 교과 단원으로 만든 자료: 교과서 출판사와 연도 */
+  publisher?: string;
+  year?: number;
 }
 
 export interface Quiz extends Base {

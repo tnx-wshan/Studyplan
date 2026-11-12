@@ -15,6 +15,6 @@ export async function GET(request: Request) {
     limit: 60,
   });
   return NextResponse.json({
-    items: items.map((it) => ({ id: it.id, title: it.title, topic: it.topic, grade: it.grade, subject: it.subject, subjectName: it.subjectName, quizzes: it.children, uses: it.uses, sourceKind: it.sourceKind, updatedAt: it.updatedAt })),
+    items: items.map((it) => ({ id: it.id, title: it.title, topic: it.topic, grade: it.grade, subject: it.subject, subjectName: it.subjectName, publisher: it.publisher, year: it.year, unit: it.unit, quizzes: it.children, uses: it.uses, sourceKind: it.sourceKind, updatedAt: it.updatedAt })),
   });
 }

@@ -27,6 +27,9 @@ const Body = z.object({
   topic: z.string().max(200).optional(),
   grade: z.string().max(4).optional(),
   subject: z.string().max(10).optional(),
+  publisher: z.string().trim().max(40).optional(),
+  year: z.number().int().min(2000).max(2100).nullable().optional(),
+  unit: z.string().trim().max(120).optional(),
   status: z.enum(["active", "hidden"]).optional(),
   data: z.union([MaterialData, QuizData]).optional(),
 });

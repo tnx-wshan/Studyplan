@@ -36,6 +36,11 @@ export interface BankItem<D = MaterialData | QuizData> {
   grade: string;
   subject: string;
   subjectName: string;
+  /** 교과서 출판사 (교과 단원으로 만든 자료) */
+  publisher: string;
+  year: number | null;
+  /** 교과서 단원 */
+  unit: string;
   topic: string;
   title: string;
   data: D;
@@ -57,6 +62,9 @@ interface Row {
   grade: string;
   subject: string;
   subject_name: string;
+  publisher: string;
+  year: number | null;
+  unit: string;
   topic: string;
   title: string;
   data: string;
@@ -79,6 +87,9 @@ function toItem(r: Row): BankItem {
     grade: r.grade,
     subject: r.subject,
     subjectName: r.subject_name,
+    publisher: r.publisher ?? "",
+    year: r.year ?? null,
+    unit: r.unit ?? "",
     topic: r.topic,
     title: r.title,
     data: parseJson(r.data, {} as MaterialData),
@@ -156,6 +167,9 @@ export interface NewItem {
   grade: string;
   subject: string;
   subjectName?: string;
+  publisher?: string;
+  year?: number | null;
+  unit?: string;
   topic: string;
   title: string;
   data: MaterialData | QuizData;
@@ -168,8 +182,8 @@ export function addItem(item: NewItem, now = Date.now()): BankItem {
   const id = newServerId();
   serverDb()
     .prepare(
-      `INSERT INTO bank_items (id, kind, lookup_key, source_kind, grade, subject, subject_name, topic, title, data, parent_id, created_by, made_by, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO bank_items (id, kind, lookup_key, source_kind, grade, subject, subject_name, publisher, year, unit, topic, title, data, parent_id, created_by, made_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -179,6 +193,9 @@ export function addItem(item: NewItem, now = Date.now()): BankItem {
       item.grade,
       item.subject,
       item.subjectName ?? "",
+      (item.publisher ?? "").slice(0, 40),
+      item.year ?? null,
+      (item.unit ?? "").slice(0, 120),
       item.topic.slice(0, 200),
       item.title.slice(0, 100),
       JSON.stringify(repairDeep(item.data)),
@@ -195,16 +212,23 @@ export function markUsed(id: string) {
   serverDb().prepare("UPDATE bank_items SET uses = uses + 1 WHERE id = ?").run(id);
 }
 
-export function updateItem(id: string, patch: { title?: string; topic?: string; grade?: string; subject?: string; status?: BankStatus; data?: MaterialData | QuizData }, now = Date.now()) {
+export function updateItem(
+  id: string,
+  patch: { title?: string; topic?: string; grade?: string; subject?: string; publisher?: string; year?: number | null; unit?: string; status?: BankStatus; data?: MaterialData | QuizData },
+  now = Date.now(),
+) {
   const cur = getItem(id);
   if (!cur) return null;
   serverDb()
-    .prepare("UPDATE bank_items SET title = ?, topic = ?, grade = ?, subject = ?, status = ?, data = ?, edited = 1, updated_at = ? WHERE id = ?")
+    .prepare("UPDATE bank_items SET title = ?, topic = ?, grade = ?, subject = ?, publisher = ?, year = ?, unit = ?, status = ?, data = ?, edited = 1, updated_at = ? WHERE id = ?")
     .run(
       (patch.title ?? cur.title).slice(0, 100),
       (patch.topic ?? cur.topic).slice(0, 200),
       patch.grade ?? cur.grade,
       patch.subject ?? cur.subject,
+      (patch.publisher ?? cur.publisher).slice(0, 40),
+      patch.year === undefined ? cur.year : patch.year,
+      (patch.unit ?? cur.unit).slice(0, 120),
       patch.status ?? cur.status,
       JSON.stringify(repairDeep(patch.data ?? cur.data)),
       now,
@@ -224,6 +248,7 @@ export interface ListFilter {
   kind?: BankKind;
   grade?: string;
   subject?: string;
+  publisher?: string;
   q?: string;
   includeHidden?: boolean;
   limit?: number;
@@ -239,11 +264,12 @@ export function listItems(filter: ListFilter = {}): (BankItem & { children: numb
   if (filter.kind) add("b.kind = ?", filter.kind);
   if (filter.grade) add("b.grade = ?", filter.grade);
   if (filter.subject) add("b.subject = ?", filter.subject);
+  if (filter.publisher) add("b.publisher = ?", filter.publisher);
   if (!filter.includeHidden) where.push("b.status = 'active'");
   if (filter.q?.trim()) {
-    where.push("(b.title LIKE ? OR b.topic LIKE ?)");
+    where.push("(b.title LIKE ? OR b.topic LIKE ? OR b.unit LIKE ?)");
     const like = `%${filter.q.trim().replace(/[%_]/g, "")}%`;
-    args.push(like, like);
+    args.push(like, like, like);
   }
   const rows = serverDb()
     .prepare(
@@ -291,7 +317,7 @@ export function similarity(a: string, b: string): number {
 export function suggestForSection(section: { grade: string; subject: string; title: string }, limit = 30) {
   const items = listItems({ kind: "material", subject: section.subject, limit: 500 });
   return items
-    .map((it) => ({ item: it, score: Math.max(similarity(section.title, it.topic), similarity(section.title, it.title)) + (it.grade === section.grade ? 0.15 : 0) }))
+    .map((it) => ({ item: it, score: Math.max(similarity(section.title, it.topic), similarity(section.title, it.title), it.unit ? similarity(section.title, it.unit) : 0) + (it.grade === section.grade ? 0.15 : 0) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
 }
@@ -317,4 +343,10 @@ export function duplicateGroups(threshold = 0.6): BankItem[][] {
     }
   }
   return groups;
+}
+
+/** 자료 모음에 들어 있는 출판사 목록 (거르기용) */
+export function listPublishers(): string[] {
+  const rows = serverDb().prepare("SELECT DISTINCT publisher FROM bank_items WHERE publisher != '' ORDER BY publisher").all() as { publisher: string }[];
+  return rows.map((r) => r.publisher);
 }

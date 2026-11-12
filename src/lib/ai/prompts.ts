@@ -56,11 +56,13 @@ ${
 소제목과 목록을 쓴 마크다운으로 답하고, 마지막에 '## 핵심' 아래 꼭 기억할 점 3~7개를 '- '로 적어줘.`;
 }
 
-export function materialFromCurriculumPrompt(grade: string, course: string, unit: string) {
+export function materialFromCurriculumPrompt(grade: string, course: string, unit: string, publisher?: string, year?: number) {
+  const book = publisher ? `${publisher}${year ? ` ${year}년` : ""} 교과서` : year ? `${year}년 교과서` : "";
   return `${COMMON}
-${grade} 학생이 '${course}' 과목의 '${unit}' 단원을 공부하려고 해.
+${grade} 학생이 '${course}' 과목${book ? `(${book})` : ""}의 '${unit}' 단원을 공부하려고 해.
 한국 교육과정 기준으로 이 단원의 핵심 개념, 공식, 자주 나오는 문제 유형, 헷갈리기 쉬운 점을 정리해 줘.
-교과서 출판사마다 내용이 조금 다를 수 있다는 점을 summary 마지막에 한 줄로 알려줘.${MATERIAL_FORMAT}`;
+${book ? `${book}의 단원 구성과 용어에 맞추되, 그 교과서의 실제 문장이나 문제를 그대로 옮기지는 마. 교과서 내용을 정확히 모르면 교육과정 기준으로 정리해.
+` : ""}교과서 출판사마다 내용이 조금 다를 수 있다는 점을 summary 마지막에 한 줄로 알려줘.${MATERIAL_FORMAT}`;
 }
 
 const DIFFICULTY = { easy: "기본 개념 확인 수준", normal: "학교 시험 평균 수준", hard: "응용·심화 수준" };

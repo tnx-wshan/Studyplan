@@ -10,6 +10,8 @@ import { Markdown } from "@/components/Markdown";
 import { Pet } from "@/components/Pet";
 import { Button, Card, SectionTitle, cn } from "@/components/ui";
 import { courseById, gradeLabel } from "@/data/curriculum";
+import { PUBLISHERS, PUBLISHER_UNKNOWN, classificationLabel, textbookYears } from "@/data/publishers";
+import { gradeShort as gradeShortName } from "@/lib/learn/names";
 import { blobToDataUrl, requestMaterial, requestQuiz, type MaterialResponse } from "@/lib/ai/client";
 import type { MaterialRequest } from "@/lib/ai/schemas";
 import { saveMaterialAndQuiz } from "@/lib/db/ai";
@@ -43,6 +45,10 @@ export default function CreateQuizPage() {
   const [query, setQuery] = useState("");
   const [courseId, setCourseId] = useState("");
   const [unit, setUnit] = useState("");
+  // 교과서: 출판사(목록에서 고르거나 직접 입력)와 연도
+  const [publisherChoice, setPublisherChoice] = useState<string>("");
+  const [publisherCustom, setPublisherCustom] = useState("");
+  const [year, setYear] = useState<number>(() => textbookYears()[0]);
   const [material, setMaterial] = useState<MaterialResponse | null>(null);
   const [showSummary, setShowSummary] = useState(true);
 
@@ -59,11 +65,14 @@ export default function CreateQuizPage() {
   const subject = subjects.find((s) => s.id === subjectId);
   const grade = profile ? gradeLabel(profile.grade) : "중·고등학생";
   const courses = useMemo(() => (subject ? subject.courseIds.map(courseById).filter((c) => !!c) : []), [subject]);
+  // 교육과정 과목이 하나뿐이면(대부분의 중학교 과목) 다시 고르지 않는다. 선택과목처럼 여럿이면 고른다
+  const course = courses.length === 1 ? courses[0] : courseById(courseId);
   const unitOptions = useMemo(() => {
     if (!subject) return [];
-    const c = courseById(courseId);
-    return c ? c.units : subject.customUnits;
-  }, [subject, courseId]);
+    return [...new Set([...(course?.units ?? []), ...subject.customUnits])];
+  }, [subject, course]);
+  const publisher = publisherChoice === "__custom" ? publisherCustom.trim() : publisherChoice === PUBLISHER_UNKNOWN ? "" : publisherChoice;
+  const courseName = course?.name ?? subject?.name ?? "";
   const previews = useMemo(() => photos.map((p) => URL.createObjectURL(p)), [photos]);
   useEffect(() => () => previews.forEach((u) => URL.revokeObjectURL(u)), [previews]);
   // 계산이 있는 과목은 정답 검산을 기본으로 켠다
@@ -73,7 +82,7 @@ export default function CreateQuizPage() {
     (source === "photo" && photos.length > 0) ||
     (source === "pdf" && !!pdf) ||
     (source === "web" && query.trim().length > 0) ||
-    (source === "curriculum" && !!subject && !!unit);
+    (source === "curriculum" && !!subject && !!unit.trim() && (courses.length <= 1 || !!course) && (publisherChoice !== "__custom" || !!publisherCustom.trim()));
 
   async function onMakeMaterial() {
     if (!ready) return;
@@ -85,7 +94,7 @@ export default function CreateQuizPage() {
       if (source === "photo") body = { kind: "photo", grade, subject: subject?.name, subjectGroup, images: await Promise.all(photos.map(blobToDataUrl)) };
       else if (source === "pdf") body = { kind: "pdf", grade, subject: subject?.name, subjectGroup, pdf: await blobToDataUrl(pdf!) };
       else if (source === "web") body = { kind: "web", grade, subject: subject?.name, subjectGroup, query: query.trim() };
-      else body = { kind: "curriculum", grade, subjectGroup, course: courseById(courseId)?.name ?? subject!.name, unit };
+      else body = { kind: "curriculum", grade, subjectGroup, course: courseName, unit: unit.trim(), publisher: publisher || undefined, year };
       setMaterial(await requestMaterial(body));
       setShowSummary(true);
     } catch (e) {
@@ -111,7 +120,8 @@ export default function CreateQuizPage() {
           keyPoints: material.keyPoints,
           sources: material.sources,
           subjectId,
-          query: source === "web" ? query.trim() : source === "curriculum" ? unit : undefined,
+          query: source === "web" ? query.trim() : source === "curriculum" ? unit.trim() : undefined,
+          ...(source === "curriculum" ? { publisher: publisher || undefined, year } : {}),
         },
         { title: quiz.title, difficulty, verified: quiz.verified, madeBy: quiz.fromBank ? "모두의 자료실" : (status?.providerLabel ?? "AI"), questions: quiz.questions },
       );
@@ -262,16 +272,16 @@ export default function CreateQuizPage() {
 
         {source === "curriculum" && subject && (
           <div className="grid gap-2">
-            {courses.length > 0 && (
-              <Field label="교육과정 과목">
+            {courses.length > 1 && (
+              <Field label="교육과정 과목 (선택과목)">
                 <Select
                   value={courseId}
                   onChange={(e) => {
                     setCourseId(e.target.value);
-                    setUnit("");
+                    setMaterial(null);
                   }}
                 >
-                  <option value="">{subject.customUnits.length ? "직접 추가한 단원" : "선택하세요"}</option>
+                  <option value="">선택하세요</option>
                   {courses.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -280,23 +290,68 @@ export default function CreateQuizPage() {
                 </Select>
               </Field>
             )}
-            <Field label="단원">
-              <Select
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <Field label="교과서 출판사">
+                <Select
+                  value={publisherChoice}
+                  onChange={(e) => {
+                    setPublisherChoice(e.target.value);
+                    setMaterial(null);
+                  }}
+                >
+                  <option value="">선택하세요</option>
+                  {PUBLISHERS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                  <option value="__custom">직접 입력</option>
+                  <option value={PUBLISHER_UNKNOWN}>{PUBLISHER_UNKNOWN}</option>
+                </Select>
+              </Field>
+              <Field label="연도">
+                <Select
+                  value={year}
+                  onChange={(e) => {
+                    setYear(Number(e.target.value));
+                    setMaterial(null);
+                  }}
+                >
+                  {textbookYears().map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            {publisherChoice === "__custom" && (
+              <Field label="출판사 이름">
+                <TextInput value={publisherCustom} onChange={(e) => setPublisherCustom(e.target.value)} maxLength={40} placeholder="예: 천재교과서" />
+              </Field>
+            )}
+            <Field label="교과서 단원" hint="교과서 목차에 적힌 단원 이름을 그대로 써 주세요. 대표 단원에서 골라도 돼요.">
+              <TextInput
                 value={unit}
+                list="unit-suggestions"
+                maxLength={120}
+                placeholder={unitOptions[0] ? `예: ${unitOptions[0]}` : "예: Ⅰ. 소인수분해 - 1. 소수와 합성수"}
                 onChange={(e) => {
                   setUnit(e.target.value);
                   setMaterial(null);
                 }}
-              >
-                <option value="">선택하세요</option>
+              />
+              <datalist id="unit-suggestions">
                 {unitOptions.map((u) => (
-                  <option key={u} value={u}>
-                    {u}
-                  </option>
+                  <option key={u} value={u} />
                 ))}
-              </Select>
+              </datalist>
             </Field>
-            {unitOptions.length === 0 && <p className="text-xs text-ink-soft">단원이 없어요. 설정 → 과목·단원 관리에서 교육과정 과목을 연결하거나 단원을 추가하세요.</p>}
+            {unit.trim() && (
+              <p className="rounded-2xl bg-surface-2 px-3 py-2 text-xs" aria-label="자료 분류">
+                🏷️ {classificationLabel({ grade: profile ? gradeShortName(profile.grade) : "", subject: courseName, publisher: publisher || "출판사 공통", year, unit: unit.trim() })}
+              </p>
+            )}
           </div>
         )}
 

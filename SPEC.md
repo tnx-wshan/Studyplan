@@ -24,7 +24,7 @@
 - 서버 저장: `node:sqlite` (Node 22.13 이상, 설치할 패키지 없음, WAL 모드로 앱 서버와 관리 서버가 같은 파일을 씀)
 - AI: Vercel AI SDK v7 (`ai`, `@ai-sdk/google|anthropic|openai`), zod로 답 형식 지정
 - 알림: Web Push (`web-push`), 서버 시작 때 스케줄러 실행 (`src/instrumentation.ts`)
-- 테스트: Vitest(단위 211개), Playwright(브라우저 22개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
+- 테스트: Vitest(단위 214개), Playwright(브라우저 23개, 가짜 AI, 앱 서버 3210 + 관리 서버 3211)
 
 ### 폴더
 
@@ -95,6 +95,7 @@ e2e/                        브라우저 테스트
 - 예제 유닛 3개(중1 수학)는 서버 DB를 처음 만들 때 들어간다(`src/lib/server/seed.ts`). 대량 데이터는 관리 도구(JSON 붙여넣기 또는 AI로 만들기)로 채운다.
 
 ### 자료 모음 (AI 학습실 결과 수집)
+- 교과 단원으로 만들 때는 과목(교육과정 과목이 여럿인 선택과목만 한 번 더 고름) → 교과서 출판사(목록·직접 입력·모름, `src/data/publishers.ts`) → 연도 → 교과서의 실제 단원(직접 입력, 대표 단원 추천)을 적는다. 자료 모음은 "학년 · 과목 · 출판사 · 연도 · 단원"으로 나눠 모이고(서버 DB 4번째 버전: `publisher`, `year`, `unit`), 출판사·연도·단원이 같아야 같은 자료로 본다. 관리 도구는 출판사로 거르고 분류를 고친다.
 - 자료 정리·문제 만들기 결과를 서버 DB `bank_items`에 쌓는다. 같은 요청(학년·과목·주제, 띄어쓰기·문장 부호 무시 / 사진·PDF는 내용이 같으면)은 AI를 부르지 않고 쌓인 것을 준다 → 사용 횟수도 쓰지 않는다.
 - 모두의 자료실 `/ai/library`: AI 없이 다른 학생이 만든 정리와 문제를 가져와 푼다.
 - 관리 도구에서 고치거나 숨긴다(숨기면 같은 요청에 AI가 새로 만든다). 비슷한 주제끼리 '겹치는 자료'로 묶어 보여주고, 섹션을 고르면 어울리는 자료를 골라 AI가 겹치는 내용을 합쳐 유닛 초안을 만든다.
@@ -129,7 +130,7 @@ e2e/                        브라우저 테스트
 
 표 (6번째 버전: 경험치 10배 변환): `profile`(한 줄, id `me`), `subjects`, `tasks`, `exams`, `studySessions`, `decks`, `cards`, `wrongNotes`, `images`, `xpEvents`, `quizzes`, `materials`, `methodLogs`, `coachReports`, `routines`, `learnProgress`(유닛 진도), `learnLogs`(학습 기록).
 
-서버 DB(`src/lib/server/db.ts`, `PRAGMA user_version`으로 버전 관리, 지금 3번째 버전): `users`, `user_commands`, `bank_items`, `learn_sections`, `learn_units`, `media`(그림). 구조를 바꿀 때는 `MIGRATIONS`에 새 항목을 덧붙인다(기존 항목은 고치지 않는다).
+서버 DB(`src/lib/server/db.ts`, `PRAGMA user_version`으로 버전 관리, 지금 4번째 버전): `users`, `user_commands`, `bank_items`, `learn_sections`, `learn_units`, `media`(그림). 구조를 바꿀 때는 `MIGRATIONS`에 새 항목을 덧붙인다(기존 항목은 고치지 않는다).
 정확한 필드는 `src/lib/db/types.ts`, 버전 이력은 `src/lib/db/index.ts`.
 
 ## 5. 품질 기준

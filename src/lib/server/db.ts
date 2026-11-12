@@ -108,6 +108,15 @@ const MIGRATIONS: Migration[] = [
       CREATE UNIQUE INDEX media_sha ON media(sha);
     `);
   },
+  // 4: 자료 모음을 "학년 · 과목 · 출판사 · 연도 · 단원"으로 나눠 모은다
+  (db) => {
+    db.exec(`
+      ALTER TABLE bank_items ADD COLUMN publisher TEXT NOT NULL DEFAULT '';
+      ALTER TABLE bank_items ADD COLUMN year INTEGER;
+      ALTER TABLE bank_items ADD COLUMN unit TEXT NOT NULL DEFAULT '';
+      CREATE INDEX bank_class ON bank_items(kind, grade, subject, publisher);
+    `);
+  },
 ];
 
 function migrate(db: DatabaseSync) {
