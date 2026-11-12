@@ -4,7 +4,8 @@ import { noHorizontalScroll, startFresh } from "./helpers";
 test("학습 탭: 코스 고르기 → 핵심 정리와 다섯 가지 문제 → 틀린 문제 다시 → 완료와 하루 목표", async ({ page }) => {
   const errors = await startFresh(page);
 
-  await page.getByRole("navigation").getByRole("link", { name: "학습", exact: true }).click();
+  // 첫 화면이 학습: 메뉴의 '학습'이 선택되어 있다
+  await expect(page.getByRole("navigation").getByRole("link", { name: "학습", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(page.getByText("과정을 고른다.")).toBeVisible();
   // 고1은 아직 유닛이 없어 준비 중, 중1 수학에 예제 유닛 3개
   await expect(page.getByRole("button", { name: "고1 수학 준비 중" })).toBeDisabled();
@@ -81,7 +82,9 @@ test("학습 탭: 코스 고르기 → 핵심 정리와 다섯 가지 문제 →
 
   // 다음 유닛이 열리고, 학습 지도에 완료로 표시된다
   await page.getByRole("link", { name: "학습 지도로" }).click();
-  await expect(page.getByRole("link", { name: "소수와 합성수 (완료)" })).toBeVisible();
+  // 처음에 4/5를 맞혀서 별 2개, 오늘의 미션은 다음 유닛을 가리킨다
+  await expect(page.getByRole("link", { name: "소수와 합성수 (완료) · 별 2개" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "이어서 하기: 거듭제곱과 소인수분해" })).toBeVisible();
   await expect(page.getByRole("link", { name: "거듭제곱과 소인수분해 (지금 할 유닛)" })).toBeVisible();
   await expect(page.getByText("1/3 유닛")).toBeVisible();
 
@@ -89,10 +92,10 @@ test("학습 탭: 코스 고르기 → 핵심 정리와 다섯 가지 문제 →
   await page.getByRole("link", { name: "거듭제곱과 소인수분해 (지금 할 유닛)" }).click();
   await page.getByRole("button", { name: "학습 그만하기" }).click();
   await page.locator("dialog[open]").getByRole("button", { name: "그만하기" }).click();
-  await expect(page).toHaveURL(/\/learn$/);
+  await expect(page).toHaveURL(/localhost:\d+\/$/);
 
-  // 홈에도 하루 학습 목표 카드
-  await page.getByRole("navigation").getByRole("link", { name: /홈/ }).click();
+  // 프로필(예전 홈)에도 하루 학습 목표 카드
+  await page.getByRole("navigation").getByRole("link", { name: "프로필" }).click();
   await expect(page.getByText("오늘의 학습 5분")).toBeVisible();
   await expect(page.getByRole("link", { name: "이어서 하기" })).toBeVisible();
 

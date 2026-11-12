@@ -33,7 +33,7 @@ const OFFLINE_ROUTES = [
   "/ai",
   "/ai/quiz",
   "/ai/library",
-  "/learn",
+  "/profile",
   "/learn/lesson",
 ];
 const WARM_KEY = "hs-sw-warm";

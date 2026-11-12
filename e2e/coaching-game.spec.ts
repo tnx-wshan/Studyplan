@@ -64,7 +64,7 @@ test("게임: 레벨업 → 업적 → 주간 보상 → 상점 → 칭호 → �
   await expect(page.getByText(/업적 기록: 첫 번째 장부/)).toBeVisible();
 
   // 주간 퀘스트(300분) 보상
-  await page.goto("/");
+  await page.goto("/profile");
   await page.getByRole("tab", { name: "주간" }).click();
   await page.getByRole("button", { name: "+100 받기" }).first().click();
   await expect(page.getByText(/의뢰 완수 \+100 XP/)).toBeVisible();
@@ -80,7 +80,7 @@ test("게임: 레벨업 → 업적 → 주간 보상 → 상점 → 칭호 → �
   await page.goto("/growth/badges");
   await page.getByRole("button", { name: /첫 번째 장부/ }).click();
   await expect(page.getByText("칭호: 첫 번째 장부")).toBeVisible();
-  await page.goto("/");
+  await page.goto("/profile");
   await expect(page.getByText("「첫 번째 장부」")).toBeVisible();
 
   // 테마 전환과 알림 설정
@@ -88,7 +88,7 @@ test("게임: 레벨업 → 업적 → 주간 보상 → 상점 → 칭호 → �
   await expect(page.getByText("연속 기록 지키기")).toBeVisible();
   await page.getByRole("radio", { name: /귀여운/ }).click();
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.style)).toBe("cute");
-  await page.goto("/");
+  await page.goto("/profile");
   await expect(page.getByText("🎀 꾸미기")).toBeVisible();
 
   await noHorizontalScroll(page);

@@ -41,12 +41,12 @@ function Lesson() {
         <p role="alert" className="text-danger">
           {error}
         </p>
-        <Link href="/learn" className={buttonStyles("ghost")}>
+        <Link href="/" className={buttonStyles("ghost")}>
           학습 지도로
         </Link>
       </div>
     );
   }
   if (!unit) return <p className="pt-10 text-center text-ink-soft">유닛을 불러오는 중…</p>;
-  return <LessonPlayer key={unit.id + unit.updatedAt} unit={unit} onExit={() => router.push("/learn")} />;
+  return <LessonPlayer key={unit.id + unit.updatedAt} unit={unit} onExit={() => router.push("/")} />;
 }

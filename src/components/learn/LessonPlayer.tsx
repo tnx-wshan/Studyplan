@@ -176,7 +176,7 @@ function Player({ unit, mode, onExit, onRestart, style }: { unit: PlayerUnit; mo
               다음 유닛 →
             </Link>
           )}
-          <Link href="/learn" className={buttonStyles(result.next ? "ghost" : "primary", "lg")}>
+          <Link href="/" className={buttonStyles(result.next ? "ghost" : "primary", "lg")}>
             학습 지도로
           </Link>
         </div>
