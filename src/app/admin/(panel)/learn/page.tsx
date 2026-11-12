@@ -9,6 +9,7 @@ import { Field, Select, TextInput } from "@/components/kit";
 import { toast } from "@/components/Toaster";
 import { Button, Card, buttonStyles, cn } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS, coursesFor, curriculumSourceLabel, type GradeId, type SubjectGroup } from "@/data/curriculum";
+import { baseCourseFor, baseSectionDescription } from "@/data/learn/baseCurriculum";
 import { adminApi } from "@/lib/admin/client";
 import { gradeShort } from "@/lib/learn/names";
 import type { CourseInfo, CourseOutline, LearnSubject } from "@/lib/learn/types";
@@ -26,6 +27,7 @@ export default function AdminLearn() {
   const [error, setError] = useState<string | null>(null);
   const [aiFor, setAiFor] = useState<string | null>(null);
   const [filling, setFilling] = useState(false);
+  const [baseFilling, setBaseFilling] = useState(false);
 
   const load = useCallback(
     () =>
@@ -138,6 +140,9 @@ export default function AdminLearn() {
         <Link href="/admin/learn/import" className={buttonStyles("accent", "sm")}>
           ⤓ 일괄 넣기
         </Link>
+        <Button size="sm" variant="ghost" aria-expanded={baseFilling} onClick={() => setBaseFilling(!baseFilling)}>
+          학기별 기본 단원으로 섹션 채우기…
+        </Button>
         <Button size="sm" variant="ghost" aria-expanded={filling} onClick={() => setFilling(!filling)}>
           교육과정 대표 단원으로 섹션 채우기…
         </Button>
@@ -151,6 +156,20 @@ export default function AdminLearn() {
           onDone={async (key) => {
             setAddingSubject(false);
             setSubject(key);
+          }}
+        />
+      )}
+      {baseFilling && (
+        <BaseFill
+          key={`${grade}:${subject}`}
+          grade={grade as GradeId}
+          subject={subject}
+          subjectName={current?.name ?? ""}
+          existing={new Set(outline?.sections.map((s) => s.title) ?? [])}
+          onDone={async (added) => {
+            setBaseFilling(false);
+            toast(`섹션 ${added}개를 만들었어요 (학기별 기본 단원).`);
+            await load();
           }}
         />
       )}
@@ -395,6 +414,51 @@ function CurriculumFill({ grade, subject, group, existing, onDone }: { grade: st
       {error && <p role="alert" className="text-sm text-danger">{error}</p>}
       <Button size="sm" disabled={!course || fresh.length === 0 || busy} onClick={fill}>
         {course ? `섹션 ${fresh.length}개 만들기` : "교육과정 과목을 골라 주세요"}
+      </Button>
+    </Card>
+  );
+}
+
+/** 학년·과목·학기별 기본 단원(src/data/learn/baseCurriculum.ts)에서 빠진 섹션을 덧붙인다 */
+function BaseFill({ grade, subject, subjectName, existing, onDone }: { grade: GradeId; subject: string; subjectName: string; existing: Set<string>; onDone: (added: number) => void }) {
+  const course = baseCourseFor(grade, subject, subjectName);
+  const fresh = course ? course.sections.filter((s) => !existing.has(s[1])) : [];
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function fill() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await adminApi<{ added: number }>("/api/admin/learn/section", { method: "POST", body: { grade, subject, fromBase: true } });
+      onDone(r.added);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "만들지 못했어요.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3" role="region" aria-label="학기별 기본 단원으로 섹션 채우기">
+      <p className="text-sm">
+        여러 교과서의 목차를 모은 <b>학년·학기별 대단원</b>으로 섹션을 만들어요. 섹션 설명에 학기와 중단원이 들어가고, 일괄 넣기 지시문이 이 중단원을 뼈대로 유닛을 나눠요. 이미 있는 섹션은 그대로 두고 빠진 것만 끝에 덧붙여요.
+      </p>
+      {!course ? (
+        <p className="text-sm text-ink-soft">이 과목에는 기본 단원 자료가 없어요. &lsquo;+ 섹션&rsquo;이나 일괄 넣기로 목차를 넣어 주세요.</p>
+      ) : (
+        <ol className="list-decimal space-y-1 pl-6 text-sm" aria-label="기본 단원 섹션">
+          {course.sections.map((s) => (
+            <li key={s[1]} className={existing.has(s[1]) ? "text-ink-soft" : undefined}>
+              <b className="font-normal">{s[1]}</b>
+              {existing.has(s[1]) && " (이미 있음)"}
+              <span className="block text-xs text-ink-soft">{baseSectionDescription(course, s)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {error && <p role="alert" className="text-sm text-danger">{error}</p>}
+      <Button size="sm" disabled={!course || fresh.length === 0 || busy} onClick={fill}>
+        {course && fresh.length === 0 ? "빠진 섹션이 없어요" : `섹션 ${fresh.length}개 만들기`}
       </Button>
     </Card>
   );

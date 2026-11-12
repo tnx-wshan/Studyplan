@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { coursesFor, curriculumSourceLabel } from "@/data/curriculum";
 import { admin, adminError, ok, readBody } from "@/lib/server/admin-api";
+import { fillCourseFromBase } from "@/lib/server/base-curriculum";
+import { serverDb } from "@/lib/server/db";
 import { courseOutline, createSection, deleteSection, isGrade, isSubjectFor, moveSection, subjectFor, updateSection } from "@/lib/server/learn";
 
 const Create = z.object({
@@ -10,6 +12,8 @@ const Create = z.object({
   description: z.string().max(300).optional(),
   /** 교육과정 대표 단원으로 섹션(목차)을 한꺼번에 만든다 */
   fromCurriculum: z.boolean().optional(),
+  /** 학년·과목·학기별 기본 단원 중 빠진 섹션을 덧붙인다 */
+  fromBase: z.boolean().optional(),
   /** 대표 단원을 가져올 교육과정 과목 (과목에 여럿이면 꼭 고른다) */
   courseId: z.string().max(40).optional(),
 });
@@ -20,6 +24,11 @@ export async function POST(request: Request) {
     if (body instanceof Response) return body;
     const { grade, subject } = body;
     if (!isGrade(grade) || !isSubjectFor(grade, subject)) return adminError(400, "학년과 과목을 골라 주세요.");
+    if (body.fromBase) {
+      const r = fillCourseFromBase(serverDb(), grade, subject, subjectFor(grade, subject)?.name ?? "");
+      if (!r) return adminError(400, "이 과목에는 기본 단원 자료가 없어요.");
+      return ok({ added: r.added, source: "기본 단원" });
+    }
     if (body.fromCurriculum) {
       const group = subjectFor(grade, subject)?.group;
       const list = group ? coursesFor(grade, group) : [];

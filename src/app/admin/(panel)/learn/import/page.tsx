@@ -262,8 +262,9 @@ function PromptMaker() {
     [outline, grade, meta],
   );
   const chosen = section && sections.includes(section) ? section : (sections[0] ?? "");
-  const existing = outline?.sections.find((s) => s.title === chosen)?.units.map((u) => u.title) ?? [];
-  const prompt = chosen ? agentPrompt({ grade, subject, subjectName: meta?.name, group: meta?.group, section: chosen, count: Math.max(1, Math.min(50, Number(count) || 15)), existing }) : "";
+  const chosenSection = outline?.sections.find((s) => s.title === chosen);
+  const existing = chosenSection?.units.map((u) => u.title) ?? [];
+  const prompt = chosen ? agentPrompt({ grade, subject, subjectName: meta?.name, group: meta?.group, section: chosen, sectionNote: chosenSection?.description, count: Math.max(1, Math.min(50, Number(count) || 15)), existing }) : "";
 
   return (
     <section className="space-y-3">

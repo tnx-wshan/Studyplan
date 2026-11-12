@@ -67,7 +67,8 @@ test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용
   await page.locator("dialog[open] input").fill("광합성");
   await answerDialog(page);
   await expect(page.getByRole("heading", { name: "광합성" })).toBeVisible();
-  await page.getByRole("button", { name: "✨ AI로 유닛 만들기" }).click();
+  // 고1 과학에는 기본 단원 섹션도 있으므로 만든 섹션 안의 단추를 누른다
+  await page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "광합성", exact: true }) }).getByRole("button", { name: "✨ AI로 유닛 만들기" }).click();
   await expect(page.getByRole("checkbox", { name: /광합성 \(검토함\)/ })).toBeChecked();
   await page.getByRole("button", { name: /자료 1개로 유닛 초안 만들기/ }).click();
   await expect(page.getByRole("heading", { name: "유닛 고치기" })).toBeVisible({ timeout: 15_000 });

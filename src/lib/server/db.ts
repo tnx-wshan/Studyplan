@@ -2,6 +2,7 @@ import "server-only";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { applyBaseCurriculum } from "./base-curriculum";
 import { seedLearn } from "./seed";
 import { repairDeep } from "@/lib/ai/text";
 
@@ -132,6 +133,10 @@ const MIGRATIONS: Migration[] = [
       );
       CREATE UNIQUE INDEX learn_subjects_name ON learn_subjects(grade, name);
     `);
+  },
+  // 6: 학년·과목·학기별 기본 단원(섹션 목차)을 넣는다. 고2·고3 선택과목은 과목도 만든다 (src/data/learn/baseCurriculum.ts)
+  (db) => {
+    applyBaseCurriculum(db);
   },
 ];
 

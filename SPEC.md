@@ -90,6 +90,7 @@ e2e/                        브라우저 테스트
 
 ### 학습 탭 (듀오링고식)
 - 과목은 학년마다 기본 5과목(국·영·수·사·과)에 관리 도구에서 추가한 과목(수학2, 역사, 체육, 예술 …, 서버 DB `learn_subjects`)이 더해진다. 추가한 과목은 '비슷한 기본 과목'(없어도 됨)을 고르면 수식 답 도구·교육과정 대표 단원·재료 추천에 그 과목 기준을 쓴다. 과목 열쇠는 기본 과목 id(`math`) 또는 `s-xxxxxxxx`.
+- 기본 단원: 학년·과목·학기별 대단원(`src/data/learn/baseCurriculum.ts`, 사용자가 정리한 교과서 목차 총람 시트 기준)을 서버 DB 6번째 버전이 섹션으로 넣는다. 섹션 설명은 "1학기 · 수학 1 · 중단원: …". 중학교·고1은 기본 5과목(1학기·2학기), 중2·3 역사와 고2·3 선택과목은 과목으로 만들고, 고3 국어·영어는 수능 영역(문학·독서, 유형)별. 이미 섹션이 있는 코스는 유닛이 든 섹션 이름이 모두 기본 단원과 같을 때만 맞추고(빈 옛 섹션은 지움), 아니면 건드리지 않는다. 관리 도구 '학기별 기본 단원으로 섹션 채우기'로 빠진 섹션만 덧붙인다(`src/lib/server/base-curriculum.ts`).
 - 코스 = 학년 × 과목, 섹션 = 교육과정 대표 단원(목차), 유닛 = 2~3분. 내용은 서버 DB(`learn_sections`, `learn_units`)에 있고, 받은 것은 기기(localStorage)에 저장해 오프라인에서도 이어서 한다.
 - 단계 종류(`src/lib/learn/types.ts`): `summary`(핵심 정리), `choice`, `short`(정답 여러 개, 수식 표기 차이 무시), `blank`(문장의 `[[정답]]`이 빈칸, 낱말 상자에서 고름), `puzzle`(뜻풀이 + 글자 조각).
 - 아직 끝내지 않은 첫 유닛이 '지금 할 유닛', 그 뒤는 잠김. 처음 끝내면 10 + 처음 맞힌 문제당 2 XP, 다시 하면 5 XP. 공부 시간은 단계당 최대 90초로 센다.
@@ -131,7 +132,7 @@ e2e/                        브라우저 테스트
 
 표 (6번째 버전: 경험치 10배 변환): `profile`(한 줄, id `me`), `subjects`, `tasks`, `exams`, `studySessions`, `decks`, `cards`, `wrongNotes`, `images`, `xpEvents`, `quizzes`, `materials`, `methodLogs`, `coachReports`, `routines`, `learnProgress`(유닛 진도), `learnLogs`(학습 기록).
 
-서버 DB(`src/lib/server/db.ts`, `PRAGMA user_version`으로 버전 관리, 지금 5번째 버전): `users`, `user_commands`, `bank_items`, `learn_sections`, `learn_units`, `learn_subjects`(추가한 과목), `media`(그림). 구조를 바꿀 때는 `MIGRATIONS`에 새 항목을 덧붙인다(기존 항목은 고치지 않는다).
+서버 DB(`src/lib/server/db.ts`, `PRAGMA user_version`으로 버전 관리, 지금 6번째 버전): `users`, `user_commands`, `bank_items`, `learn_sections`, `learn_units`, `learn_subjects`(추가한 과목), `media`(그림). 구조를 바꿀 때는 `MIGRATIONS`에 새 항목을 덧붙인다(기존 항목은 고치지 않는다).
 정확한 필드는 `src/lib/db/types.ts`, 버전 이력은 `src/lib/db/index.ts`.
 
 ## 5. 품질 기준

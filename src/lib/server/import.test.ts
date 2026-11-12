@@ -96,7 +96,7 @@ describe("일괄 넣기: 넣기", () => {
 
   it("바로 공개로 넣을 수 있다", () => {
     importUnits({ grade: "h1", subject: "science", section: "물질", units: [good("원소")] }, { apply: true, status: "published" });
-    expect(courseOutline("h1", "science").sections[0].units.map((u) => u.title)).toEqual(["원소"]);
+    expect(courseOutline("h1", "science").sections.find((x) => x.title === "물질")!.units.map((u) => u.title)).toEqual(["원소"]);
   });
 });
 

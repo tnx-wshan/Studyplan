@@ -14,7 +14,7 @@ test("학습 탭: 코스 고르기 → 핵심 정리와 다섯 가지 문제 →
 
   // 학습 지도: 섹션(목차)과 유닛 길
   await expect(page.getByRole("heading", { name: "소인수분해" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "일차방정식" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^문자와 식/ })).toBeVisible();
   await expect(page.getByLabel("거듭제곱과 소인수분해 (잠김: 앞 유닛을 먼저 끝내세요)")).toBeVisible();
   await noHorizontalScroll(page);
   await page.getByRole("link", { name: "소수와 합성수 (지금 할 유닛)" }).click();

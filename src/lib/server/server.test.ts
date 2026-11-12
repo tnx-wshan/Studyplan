@@ -14,7 +14,8 @@ const uid = "11111111-1111-4111-8111-111111111111";
 
 describe("learn content", () => {
   it("seeds the sample course", () => {
-    expect(listCourses()).toEqual([{ grade: "m1", subject: "math", units: 3 }]);
+    // 유닛이 있는 코스는 예제 중1 수학뿐 (다른 코스는 기본 단원 섹션만 있다)
+    expect(listCourses().filter((c) => c.units > 0)).toEqual([{ grade: "m1", subject: "math", units: 3 }]);
     const outline = courseOutline("m1", "math");
     expect(outline.sections[0].title).toBe("소인수분해");
     expect(outline.sections[0].units.map((u) => u.title)).toEqual(["소수와 합성수", "거듭제곱과 소인수분해"]);
@@ -27,11 +28,12 @@ describe("learn content", () => {
     expect(bad.problems?.[0]).toMatch(/보기에 없어요/);
     const ok = createUnit(s.id, { title: "원소", steps: [{ type: "summary", title: "원소", body: "더 이상 나눌 수 없는 성분" }] });
     const id = ok.unit!.id;
-    expect(courseOutline("m2", "science").sections[0].units).toEqual([]);
+    const mine = () => courseOutline("m2", "science").sections.find((x) => x.id === s.id)!;
+    expect(mine().units).toEqual([]);
     expect(getUnit(id)).toBeNull();
     updateUnit(id, { status: "published" });
     expect(getUnit(id)?.status).toBe("published");
-    expect(courseOutline("m2", "science").sections[0].units).toHaveLength(1);
+    expect(mine().units).toHaveLength(1);
   });
 
   it("reorders units", () => {
@@ -40,7 +42,7 @@ describe("learn content", () => {
     const a = createUnit(s.id, { title: "A", steps: [one], status: "published" }).unit!;
     const b = createUnit(s.id, { title: "B", steps: [one], status: "published" }).unit!;
     moveUnit(b.id, -1);
-    expect(courseOutline("m2", "math").sections[0].units.map((u) => u.title)).toEqual(["B", "A"]);
+    expect(courseOutline("m2", "math").sections.find((x) => x.id === s.id)!.units.map((u) => u.title)).toEqual(["B", "A"]);
     expect(a.order).toBe(0);
   });
 });
@@ -248,5 +250,70 @@ describe("과목 추가 (학년마다)", () => {
     const ok = importUnits({ grade: "h1", subject: "수학2", section: "미분", units: [{ title: "미분계수", steps }] }, { apply: true });
     expect(ok.rows[0]).toMatchObject({ status: "ok", subject: m2.key });
     expect(courseOutline("h1", m2.key, true).sections[0].units.map((u) => u.title)).toEqual(["미분계수"]);
+  });
+});
+
+describe("기본 단원 (학년·과목·학기별 섹션 목차)", () => {
+  it("자료: 코스마다 섹션 이름이 겹치지 않고, 추가할 과목은 이름·아이콘·비슷한 과목이 있다", async () => {
+    const { BASE_COURSES, isBuiltInBase, baseSectionDescription } = await import("@/data/learn/baseCurriculum");
+    const keys = new Set<string>();
+    for (const c of BASE_COURSES) {
+      const key = `${c.grade}:${c.subject}`;
+      expect(keys.has(key), key).toBe(false);
+      keys.add(key);
+      const titles = c.sections.map((s) => s[1]);
+      expect(new Set(titles).size, key).toBe(titles.length);
+      for (const s of c.sections) {
+        expect(s[1].length).toBeLessThanOrEqual(60);
+        expect(baseSectionDescription(c, s).length).toBeLessThanOrEqual(300);
+        if (s[0] === 2) expect(c.books[1], key).toBeTruthy();
+      }
+      if (!isBuiltInBase(c)) {
+        expect(c.subject.length).toBeLessThanOrEqual(20);
+        expect(c.short?.length ?? 0).toBeGreaterThan(0);
+        expect(c.short!.length).toBeLessThanOrEqual(2);
+        expect(c.group, key).toBeTruthy();
+      }
+    }
+  });
+
+  it("새 DB에 학기별 섹션이 들어가고, 예제 유닛은 같은 이름의 섹션에 들어간다", () => {
+    const m1 = courseOutline("m1", "math", true).sections;
+    expect(m1.map((s) => s.title)).toEqual(["소인수분해", "정수와 유리수", "문자와 식", "좌표평면과 그래프", "기본도형", "평면도형", "입체도형", "자료의 정리와 해석"]);
+    expect(m1[0].description).toBe("1학기 · 수학 1 · 중단원: 소인수분해 / 최대공약수와 최소공배수");
+    expect(m1[0].units.map((u) => u.title)).toEqual(["소수와 합성수", "거듭제곱과 소인수분해"]);
+    expect(m1[4].description).toMatch(/^2학기 · 수학 1/);
+    const h1 = courseOutline("h1", "math", true).sections;
+    expect(h1[0]).toMatchObject({ title: "다항식", description: expect.stringMatching(/^1학기 · 공통수학 1/) });
+    expect(h1.at(-1)).toMatchObject({ title: "함수와 그래프", description: expect.stringMatching(/^2학기 · 공통수학 2/) });
+    // 고2 선택과목은 과목으로 만들어진다
+    const algebra = findSubject("h2", "대수")!;
+    expect(algebra).toMatchObject({ short: "대", group: "math", builtIn: false });
+    expect(courseOutline("h2", algebra.key, true).sections.map((s) => s.title)).toEqual(["지수함수와 로그함수", "삼각함수", "수열"]);
+    expect(findSubject("m2", "역사")).toMatchObject({ group: "social" });
+    // 유닛이 없으면 학생에게는 '준비 중'
+    expect(subjectsFor("h2").find((s) => s.name === "대수")?.units).toBe(0);
+  });
+
+  it("다시 넣어도 겹치지 않고, 빈 옛 섹션은 지우고, 관리자가 유닛을 넣은 다른 이름의 섹션이 있으면 그 코스는 건너뛴다", async () => {
+    const { applyBaseCurriculum, fillCourseFromBase } = await import("./base-curriculum");
+    const { serverDb } = await import("./db");
+    expect(applyBaseCurriculum(serverDb()).added).toBe(0);
+    createSection("m1", "math", "일차방정식");
+    const custom = createSection("m2", "math", "내가 만든 섹션");
+    createUnit(custom.id, { title: "A", steps: [{ type: "summary", title: "t", body: "b" }] });
+    const r = applyBaseCurriculum(serverDb());
+    expect(r.skipped).toEqual(["m2:math"]);
+    expect(courseOutline("m1", "math", true).sections.map((s) => s.title)).not.toContain("일차방정식");
+    expect(courseOutline("m2", "math", true).sections.map((s) => s.title)).toContain("내가 만든 섹션");
+
+    // 관리 도구 '기본 단원으로 섹션 채우기': 빠진 섹션만 끝에 덧붙인다
+    const h1 = courseOutline("h1", "math", true).sections;
+    const { deleteSection } = await import("./learn");
+    deleteSection(h1[1].id);
+    expect(fillCourseFromBase(serverDb(), "h1", "math", "수학")?.added).toBe(1);
+    expect(courseOutline("h1", "math", true).sections.at(-1)?.title).toBe("방정식과 부등식");
+    expect(fillCourseFromBase(serverDb(), "h1", "math", "수학")?.added).toBe(0);
+    expect(fillCourseFromBase(serverDb(), "h2", "math", "수학")).toBeNull();
   });
 });

@@ -133,7 +133,7 @@ test("관리 도구 학습 과정: 교육과정 대표 단원으로 섹션 채�
   await panel.getByRole("button", { name: /섹션 \d+개 만들기/ }).click();
   await expect(page.getByText(/섹션 \d+개를 만들었어요 \(2022 개정 교육과정 · 공통수학1 대표 단원\)/)).toBeVisible();
   // 만든 섹션에 기준이 남는다
-  await expect(page.getByRole("heading", { name: /다항식의 연산/ })).toContainText("공통수학1 대표 단원");
+  await expect(page.getByRole("heading", { name: /^다항식의 연산/ })).toContainText("공통수학1 대표 단원");
 
   expect(errors).toEqual([]);
 });
