@@ -9,33 +9,12 @@ import { Button, Card, SectionTitle, cn } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS, coursesFor, type GradeId } from "@/data/curriculum";
 import { agentPrompt } from "@/data/learn/agentPrompt";
 import { adminApi } from "@/lib/admin/client";
-import { readImportText } from "@/lib/learn/import";
+import { mergeResults, packBatches, readBulkFiles, type BulkFile, type ImportResult, type ImportRow } from "@/lib/learn/bulk";
 import { courseName, gradeShort } from "@/lib/learn/names";
 import type { CourseOutline, LearnSubject } from "@/lib/learn/types";
 
-interface Row {
-  where: string;
-  grade: string;
-  subject: string;
-  section: string;
-  title: string;
-  status: "ok" | "duplicate" | "error";
-  problems: string[];
-  steps: number;
-  questions: number;
-  figures: number;
-  newSection: boolean;
-  unitId?: string;
-  renamedFrom?: string;
-}
-
-interface Result {
-  rows: Row[];
-  problems: string[];
-  applied: boolean;
-  added: number;
-  sectionsAdded: number;
-}
+type Row = ImportRow;
+type Result = ImportResult;
 
 const STATUS: Record<Row["status"], [string, string]> = {
   ok: ["넣을 수 있음", "border-success text-success-deep"],
@@ -51,15 +30,27 @@ export default function AdminLearnImport() {
   const [publish, setPublish] = useState(false);
   // 이름이 겹치는 유닛에 숫자를 붙여 넣기 (제안 단추로 켠다)
   const [rename, setRename] = useState(false);
+  // 대량 파일 올리기: 읽은 파일들 (있으면 붙여 넣은 글 대신 이것을 묶음으로 나눠 보낸다)
+  const [bulk, setBulk] = useState<BulkFile[] | null>(null);
+  const [progress, setProgress] = useState<{
+    done: number;
+    total: number;
+    apply: boolean;
+  } | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   const ready = result && !result.applied ? result.rows.filter((r) => r.status === "ok").length : 0;
 
   async function send(apply: boolean, renameDuplicates = rename) {
+    if (bulk) return sendBulk(apply, renameDuplicates);
     setBusy(true);
     setError(null);
     setRename(renameDuplicates);
     try {
-      const r = await adminApi<Result>("/api/admin/learn/import", { method: "POST", body: { text, apply, publish, renameDuplicates } });
+      const r = await adminApi<Result>("/api/admin/learn/import", {
+        method: "POST",
+        body: { text, apply, publish, renameDuplicates },
+      });
       setResult(r);
       if (apply) toast(`유닛 ${r.added}개를 넣었어요${publish ? " (공개)" : " (초안)"}.`);
     } catch (e) {
@@ -70,19 +61,57 @@ export default function AdminLearnImport() {
     }
   }
 
-  /** 여러 파일을 고르면 하나의 배열로 합친다 */
-  async function onFiles(files: File[]) {
-    const parts = await Promise.all(files.map((f) => f.text()));
-    if (parts.length === 1) return setText(parts[0]);
-    const all: unknown[] = [];
-    for (const [i, p] of parts.entries()) {
-      const r = readImportText(p);
-      if (r.error) return setError(`${files[i].name}: ${r.error}`);
-      all.push(...(Array.isArray(r.data) ? r.data : [r.data]));
+  /** 대량: 묶음(요청 하나에 2MB·유닛 150개 이하)으로 나눠 차례로 검사하거나 넣는다 */
+  async function sendBulk(apply: boolean, renameDuplicates: boolean) {
+    const batches = packBatches(bulk!.flatMap((f) => f.courses));
+    if (batches.length === 0) return;
+    setBusy(true);
+    setError(null);
+    setRename(renameDuplicates);
+    const parts: Result[] = [];
+    try {
+      for (const [i, batch] of batches.entries()) {
+        setProgress({ done: i, total: batches.length, apply });
+        parts.push(
+          await adminApi<Result>("/api/admin/learn/import", {
+            method: "POST",
+            body: {
+              text: JSON.stringify(batch),
+              apply,
+              publish,
+              renameDuplicates,
+            },
+          }),
+        );
+      }
+      const merged = mergeResults(parts, renameDuplicates);
+      setResult(merged);
+      if (apply) toast(`유닛 ${merged.added}개를 넣었어요${publish ? " (공개)" : " (초안)"}.`);
+    } catch (e) {
+      const why = e instanceof Error ? e.message : "처리하지 못했어요.";
+      setError(
+        `${batches.length}묶음 중 ${parts.length + 1}번째 묶음에서 멈췄어요: ${why}${apply && parts.length ? `\n앞의 ${parts.length}묶음(유닛 ${parts.reduce((n, p) => n + p.added, 0)}개)은 이미 들어갔어요. 다시 넣으면 이미 넣은 유닛은 '이미 있음'으로 건너뛰어요(숫자 붙이기는 끄고 넣으세요).` : ""}`,
+      );
+      setResult(apply && parts.length ? mergeResults(parts, renameDuplicates) : null);
+    } finally {
+      setBusy(false);
+      setProgress(null);
     }
-    setText(JSON.stringify(all, null, 2));
+  }
+
+  /** 파일 하나(작은 것)는 글 칸에, 여러 개나 큰 파일은 대량 올리기로 읽는다. 폴더에서는 .json만 */
+  async function onFiles(picked: File[]) {
+    const files = picked.filter((f) => /\.(json|txt)$/i.test(f.name) || f.type === "application/json");
     setResult(null);
     setRename(false);
+    setError(null);
+    if (files.length === 0) return setError("JSON 파일이 없어요.");
+    if (files.length === 1 && files[0].size <= 300_000) {
+      setBulk(null);
+      setText(await files[0].text());
+      return;
+    }
+    setBulk(await readBulkFiles(files.sort((x, y) => x.name.localeCompare(y.name, "ko", { numeric: true }))));
   }
 
   return (
@@ -94,7 +123,8 @@ export default function AdminLearnImport() {
         <h1 className="font-display flex-1 text-2xl">유닛 일괄 넣기</h1>
       </div>
       <p className="text-sm text-ink-soft">
-        다른 AI 에이전트로 만든 학습 유닛(JSON)을 한꺼번에 넣어요. 먼저 <b>검사</b>로 결과를 확인하고 넣으세요. 섹션이 없으면 새로 만들고, 문제가 있는 유닛과 이미 있는 유닛은 건너뛰어요. 넣은 유닛은 기본으로 초안이라 학습 과정에서 확인한 뒤 공개해요.
+        다른 AI 에이전트로 만든 학습 유닛(JSON)을 한꺼번에 넣어요. 먼저 <b>검사</b>로 결과를 확인하고 넣으세요. 섹션이 없으면 새로 만들고, 문제가 있는 유닛과
+        이미 있는 유닛은 건너뛰어요. 넣은 유닛은 기본으로 초안이라 학습 과정에서 확인한 뒤 공개해요.
       </p>
 
       <PromptMaker />
@@ -102,20 +132,37 @@ export default function AdminLearnImport() {
       <section className="space-y-3">
         <SectionTitle>2. 만든 JSON 넣기</SectionTitle>
         <Card className="space-y-3">
-          <Field label="JSON 붙여 넣기 (코스 하나, 코스 여러 개의 배열 모두 돼요)">
-            <TextArea
-              rows={12}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-                setResult(null);
-                setRename(false);
-              }}
-              className="font-mono text-xs"
-              placeholder='{ "grade": "m1", "subject": "math", "section": "소인수분해", "units": [ ... ] }'
-            />
-          </Field>
-          <div className="flex flex-wrap items-center gap-2">
+          {bulk ? (
+            <BulkSummary files={bulk} onClear={() => (setBulk(null), setResult(null), setRename(false))} />
+          ) : (
+            <Field label="JSON 붙여 넣기 (코스 하나, 코스 여러 개의 배열 모두 돼요)">
+              <TextArea
+                rows={12}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  setResult(null);
+                  setRename(false);
+                }}
+                className="font-mono text-xs"
+                placeholder='{ "grade": "m1", "subject": "math", "section": "소인수분해", "units": [ ... ] }'
+              />
+            </Field>
+          )}
+          <div
+            className={cn("flex flex-wrap items-center gap-2 rounded-2xl border-2 border-dashed p-3", dragging ? "border-accent bg-surface-2" : "border-line")}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              const files = [...e.dataTransfer.files];
+              if (files.length) void onFiles(files);
+            }}
+          >
             <label className="cursor-pointer rounded-lg border-2 border-line px-3 py-1 text-sm">
               📂 JSON 파일 고르기 (여러 개 가능)
               <input
@@ -130,10 +177,33 @@ export default function AdminLearnImport() {
                 }}
               />
             </label>
-            <Button size="sm" disabled={busy || !text.trim()} onClick={() => send(false, false)}>
+            <label className="cursor-pointer rounded-lg border-2 border-line px-3 py-1 text-sm">
+              🗂️ 폴더째 고르기
+              <input
+                type="file"
+                multiple
+                className="sr-only"
+                {...{ webkitdirectory: "" }}
+                onChange={(e) => {
+                  const files = [...(e.target.files ?? [])];
+                  e.target.value = "";
+                  if (files.length) void onFiles(files);
+                }}
+              />
+            </label>
+            <span className="text-xs text-ink-soft">또는 파일·폴더를 여기에 끌어다 놓기</span>
+            <Button size="sm" className="ml-auto" disabled={busy || (bulk ? bulk.every((f) => !f.units) : !text.trim())} onClick={() => send(false, false)}>
               {busy && !ready ? "검사하는 중…" : "검사하기"}
             </Button>
           </div>
+          {progress && (
+            <div className="space-y-1" role="status">
+              <progress className="w-full" value={progress.done} max={progress.total} aria-label={progress.apply ? "넣는 중" : "검사하는 중"} />
+              <p className="text-xs text-ink-soft">
+                {progress.apply ? "넣는 중" : "검사하는 중"} {progress.done}/{progress.total}묶음
+              </p>
+            </div>
+          )}
           {error && (
             <p role="alert" className="whitespace-pre-line text-sm text-danger">
               {error}
@@ -158,7 +228,8 @@ export default function AdminLearnImport() {
           ) : (
             <>
               <p className="flex-1 text-sm">
-                같은 섹션에 같은 이름의 유닛이 있어서 {result.rows.filter((r) => r.status === "duplicate").length}개를 건너뛰어요. 다른 내용이라면 이름 뒤에 숫자(1, 2 …)를 붙여 함께 넣을 수 있어요.
+                같은 섹션에 같은 이름의 유닛이 있어서 {result.rows.filter((r) => r.status === "duplicate").length}
+                개를 건너뛰어요. 다른 내용이라면 이름 뒤에 숫자(1, 2 …)를 붙여 함께 넣을 수 있어요.
               </p>
               <Button size="sm" disabled={busy} onClick={() => send(false, true)}>
                 이름 뒤에 숫자 붙여 넣기
@@ -182,7 +253,8 @@ export default function AdminLearnImport() {
       {result?.applied && (
         <Card className="space-y-1 text-sm">
           <p className="font-display">
-            유닛 {result.added}개를 넣었어요{result.sectionsAdded ? `, 섹션 ${result.sectionsAdded}개를 새로 만들었어요` : ""}.
+            유닛 {result.added}개를 넣었어요
+            {result.sectionsAdded ? `, 섹션 ${result.sectionsAdded}개를 새로 만들었어요` : ""}.
           </p>
           <p className="text-ink-soft">{publish ? "바로 공개했어요." : "초안으로 넣었어요. 학습 과정에서 열어 확인한 뒤 공개하세요."}</p>
           <Link href="/admin/learn" className="underline">
@@ -190,6 +262,39 @@ export default function AdminLearnImport() {
           </Link>
         </Card>
       )}
+    </div>
+  );
+}
+
+/** 대량 올리기: 읽은 파일 목록 (파일마다 코스·유닛 수, 읽지 못한 까닭) */
+function BulkSummary({ files, onClear }: { files: BulkFile[]; onClear: () => void }) {
+  const bad = files.filter((f) => f.error);
+  const courses = files.reduce((n, f) => n + f.courses.length, 0);
+  const units = files.reduce((n, f) => n + f.units, 0);
+  const mb = files.reduce((n, f) => n + f.size, 0) / 1_000_000;
+  return (
+    <div className="space-y-2" role="region" aria-label="올릴 파일">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex-1 text-sm font-display">
+          파일 {files.length}개 · 코스 {courses}개 · 유닛 {units}개 ({mb < 0.1 ? "0.1MB 미만" : `${mb.toFixed(1)}MB`})
+          {bad.length > 0 && <span className="text-danger"> · 읽지 못한 파일 {bad.length}개</span>}
+        </p>
+        <Button size="sm" variant="ghost" onClick={onClear}>
+          파일 비우기
+        </Button>
+      </div>
+      <ul className="max-h-60 divide-y divide-line overflow-y-auto rounded-2xl border-2 border-line text-sm" aria-label="파일 목록">
+        {files.map((f) => (
+          <li key={f.name} className="px-3 py-1.5">
+            <span className="break-all">{f.name}</span>
+            <span className={cn("ml-2 text-xs", f.error ? "text-danger" : "text-ink-soft")}>
+              {f.error ? "읽지 못함" : `코스 ${f.courses.length} · 유닛 ${f.units}`}
+            </span>
+            {f.error && <p className="whitespace-pre-line text-xs text-danger">{f.error}</p>}
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-ink-soft">읽지 못한 파일은 빼고 보내요. 서버에는 2MB·유닛 150개씩 묶어 차례로 보내고, 넣기는 묶음마다 따로 들어가요.</p>
     </div>
   );
 }
@@ -247,7 +352,13 @@ function ResultView({ result }: { result: Result }) {
                     {r.steps} · {r.questions} · {r.figures}
                   </Td>
                   <Td>
-                    {r.unitId ? <StatusBadge status="draft" /> : <span className={cn("inline-block whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-xs", STATUS[r.status][1])}>{STATUS[r.status][0]}</span>}
+                    {r.unitId ? (
+                      <StatusBadge status="draft" />
+                    ) : (
+                      <span className={cn("inline-block whitespace-nowrap rounded-full border-2 px-2 py-0.5 text-xs", STATUS[r.status][1])}>
+                        {STATUS[r.status][0]}
+                      </span>
+                    )}
                     {r.problems.length > 0 && (
                       <ul className="mt-1 list-disc pl-4 text-xs text-ink-soft">
                         {r.problems.map((p) => (
@@ -295,7 +406,18 @@ function PromptMaker() {
   const chosen = section && sections.includes(section) ? section : (sections[0] ?? "");
   const chosenSection = outline?.sections.find((s) => s.title === chosen);
   const existing = chosenSection?.units.map((u) => u.title) ?? [];
-  const prompt = chosen ? agentPrompt({ grade, subject, subjectName: meta?.name, group: meta?.group, section: chosen, sectionNote: chosenSection?.description, count: Math.max(1, Math.min(50, Number(count) || 15)), existing }) : "";
+  const prompt = chosen
+    ? agentPrompt({
+        grade,
+        subject,
+        subjectName: meta?.name,
+        group: meta?.group,
+        section: chosen,
+        sectionNote: chosenSection?.description,
+        count: Math.max(1, Math.min(50, Number(count) || 15)),
+        existing,
+      })
+    : "";
 
   return (
     <section className="space-y-3">
@@ -340,7 +462,9 @@ function PromptMaker() {
             <TextInput type="number" min={1} max={50} value={count} onChange={(e) => setCount(e.target.value)} />
           </Field>
         </div>
-        {sections.length === 0 && <p className="text-xs text-ink-soft">이 과목은 교육과정 단원이 비어 있어요. 학습 과정에서 섹션을 먼저 만들면 여기에 나와요.</p>}
+        {sections.length === 0 && (
+          <p className="text-xs text-ink-soft">이 과목은 교육과정 단원이 비어 있어요. 학습 과정에서 섹션을 먼저 만들면 여기에 나와요.</p>
+        )}
         {prompt && (
           <>
             <TextArea aria-label="AI 에이전트용 지시문" readOnly rows={10} value={prompt} className="font-mono text-xs" />

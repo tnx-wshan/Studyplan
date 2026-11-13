@@ -167,3 +167,39 @@ test("관리 도구 일괄 넣기: 이름이 겹치는 유닛은 제안 단추�
 
   expect(errors).toEqual([]);
 });
+
+test("관리 도구 일괄 넣기: JSON 파일 여러 개를 한꺼번에 올려 묶음으로 검사하고 넣는다", async ({ page }) => {
+  const errors = await startFresh(page);
+  await adminLogin(page);
+  await page.goto(`${ADMIN_URL}/admin/learn/import`);
+  const steps = [{ type: "summary", title: "정리", body: "본문" }, ...DATA.units[0].steps.slice(1)];
+  // 파일 12개, 파일마다 유닛 15개 (모두 180개) + 깨진 파일 하나 + 앞 파일과 이름이 겹치는 파일
+  const files = Array.from({ length: 12 }, (_, i) => ({
+    name: `unit-${String(i + 1).padStart(2, "0")}.json`,
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify({ grade: "m2", subject: "math", section: `대량 섹션 ${i % 3}`, units: Array.from({ length: 15 }, (_, j) => ({ title: `유닛 ${i}-${j}`, steps })) })),
+  }));
+  files.push({ name: "zz-broken.json", mimeType: "application/json", buffer: Buffer.from("{ 깨진 ") });
+  files.push({ name: "zz-dup.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ grade: "m2", subject: "math", section: "대량 섹션 0", units: [{ title: "유닛 0-0", steps }] })) });
+  await page.locator("input[type=file][multiple][accept]").setInputFiles(files);
+
+  const list = page.getByRole("region", { name: "올릴 파일" });
+  await expect(list).toContainText("파일 14개 · 코스 13개 · 유닛 181개");
+  await expect(list).toContainText("읽지 못한 파일 1개");
+  await expect(list.getByRole("listitem").filter({ hasText: "zz-broken.json" })).toContainText("읽지 못함");
+
+  await page.getByRole("button", { name: "검사하기" }).click();
+  await expect(page.getByText("넣을 수 있음 180개 · 이미 있음 1개 · 문제 있음 0개")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("cell", { name: "zz-dup.json #1" })).toBeVisible();
+
+  await page.getByRole("button", { name: "유닛 180개 넣기" }).click();
+  await expect(page.getByText("유닛 180개를 넣었어요, 섹션 3개를 새로 만들었어요.")).toBeVisible({ timeout: 30_000 });
+
+  // 같은 파일을 다시 올리면 모두 '이미 있음'
+  await page.getByRole("button", { name: "파일 비우기" }).click();
+  await page.locator("input[type=file][multiple][accept]").setInputFiles(files.slice(0, 2));
+  await page.getByRole("button", { name: "검사하기" }).click();
+  await expect(page.getByText("넣을 수 있음 0개 · 이미 있음 30개 · 문제 있음 0개")).toBeVisible({ timeout: 30_000 });
+
+  expect(errors).toEqual([]);
+});

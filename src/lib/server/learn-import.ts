@@ -1,5 +1,7 @@
 import "server-only";
-import { flattenImport } from "@/lib/learn/import";
+import { flattenImport, numberedTitle } from "@/lib/learn/import";
+
+export { numberedTitle };
 import { questionCount, sanitizeSteps } from "@/lib/learn/check";
 import type { UnitStatus } from "@/lib/learn/types";
 import { transaction } from "./db";
@@ -62,20 +64,6 @@ function attachFigures(steps: unknown[], save: boolean): { steps: unknown[]; fig
     return s;
   });
   return { steps: out, figures, problems };
-}
-
-/**
- * 이미 있는 이름과 겹치지 않게 뒤에 숫자를 붙인다: "소수" → "소수 1", "소수 2" … (60자 안에서).
- * 이미 " 숫자"로 끝나는 이름은 숫자를 하나 더 붙이지 않고 다음 숫자로: "새 유닛 1" → "새 유닛 2", "새 유닛 9" → "새 유닛 10".
- */
-export function numberedTitle(title: string, taken: Set<string>): string {
-  const m = title.match(/^(.*\S) (\d+)$/);
-  const base = m ? m[1] : title;
-  for (let n = m ? Number(m[2]) + 1 : 1; ; n++) {
-    const tail = ` ${n}`;
-    const name = `${base.slice(0, 60 - tail.length).trimEnd()}${tail}`;
-    if (!taken.has(name)) return name;
-  }
 }
 
 /**

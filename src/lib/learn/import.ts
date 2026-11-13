@@ -12,7 +12,7 @@ import { gradeShort } from "./names";
  */
 
 export interface ImportUnitInput {
-  /** 몇 번째 코스의 몇 번째 유닛인지 (보고용) */
+  /** 몇 번째 코스의 몇 번째 유닛인지 (보고용). 파일로 올렸으면 "파일 이름 #3" */
   where: string;
   grade: GradeId | null;
   /** 적힌 과목 그대로 (기본 과목 id·이름, 추가한 과목 이름). 서버가 학년의 과목에서 찾는다 */
@@ -39,6 +39,24 @@ export function toSubject(v: unknown): SubjectGroup | null {
 }
 
 const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+/** 대량 파일 올리기에서 코스에 붙이는 파일 이름 칸 (보고용, 저장하지 않는다) */
+export const FILE_KEY = "_file";
+
+/**
+ * 이미 있는 이름과 겹치지 않게 뒤에 숫자를 붙인다: "소수" → "소수 1", "소수 2" … (60자 안에서).
+ * 이미 " 숫자"로 끝나는 이름은 숫자를 하나 더 붙이지 않고 다음 숫자로: "새 유닛 1" → "새 유닛 2", "새 유닛 9" → "새 유닛 10".
+ */
+export function numberedTitle(title: string, taken: Set<string>): string {
+  const m = title.match(/^(.*\S) (\d+)$/);
+  const base = m ? m[1] : title;
+  for (let n = m ? Number(m[2]) + 1 : 1; ; n++) {
+    const tail = ` ${n}`;
+    const name = `${base.slice(0, 60 - tail.length).trimEnd()}${tail}`;
+    if (!taken.has(name)) return name;
+  }
+}
+
 
 /** 글자로 받았으면 JSON으로 읽는다. ```json 감싸기, 앞뒤 설명 글은 떼어 낸다 */
 export function readImportText(input: string): { data: unknown; error?: string } {
@@ -105,7 +123,8 @@ export function flattenImport(data: unknown): { units: ImportUnitInput[]; proble
   const problems: string[] = [];
   courses.forEach((raw, ci) => {
     const c = (raw ?? {}) as Record<string, unknown>;
-    const label = courses.length > 1 ? `${ci + 1}번째 코스` : "코스";
+    const file = typeof c[FILE_KEY] === "string" ? (c[FILE_KEY] as string) : "";
+    const label = file || (courses.length > 1 ? `${ci + 1}번째 코스` : "코스");
     if (!Array.isArray(c.units)) {
       problems.push(`${label}: "units" 배열이 없어요.`);
       return;
@@ -122,7 +141,7 @@ export function flattenImport(data: unknown): { units: ImportUnitInput[]; proble
       const title = text(u.title);
       if (!title) p.push("유닛 이름(title)이 없어요.");
       if (!Array.isArray(u.steps) || u.steps.length === 0) p.push("단계(steps)가 없어요.");
-      units.push({ where: `${courses.length > 1 ? `${ci + 1}-` : ""}${ui + 1}`, grade, subject, section, title: title.slice(0, 60), steps: u.steps, problems: p });
+      units.push({ where: file ? `${file} #${ui + 1}` : `${courses.length > 1 ? `${ci + 1}-` : ""}${ui + 1}`, grade, subject, section, title: title.slice(0, 60), steps: u.steps, problems: p });
     });
   });
   if (units.length === 0 && problems.length === 0) problems.push("넣을 유닛이 없어요.");
