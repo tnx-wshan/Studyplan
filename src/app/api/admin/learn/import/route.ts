@@ -10,6 +10,8 @@ const Body = z.object({
   apply: z.boolean(),
   /** 넣으면서 바로 공개 (기본: 초안) */
   publish: z.boolean().optional(),
+  /** 같은 섹션에 같은 이름이 있으면 건너뛰지 않고 뒤에 숫자(1, 2 …)를 붙여 넣는다 */
+  renameDuplicates: z.boolean().optional(),
 });
 
 /** 학습 유닛 일괄 넣기: 먼저 검사(apply: false)로 결과를 보고, 넣기(apply: true)를 한다 */
@@ -19,6 +21,6 @@ export async function POST(request: Request) {
     if (body instanceof Response) return body;
     const parsed = readImportText(body.text);
     if (parsed.error) return adminError(400, parsed.error);
-    return ok(importUnits(parsed.data, { apply: body.apply, status: body.publish ? "published" : "draft" }));
+    return ok(importUnits(parsed.data, { apply: body.apply, status: body.publish ? "published" : "draft", renameDuplicates: body.renameDuplicates }));
   });
 }

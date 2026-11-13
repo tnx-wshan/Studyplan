@@ -26,6 +26,7 @@ interface Row {
   figures: number;
   newSection: boolean;
   unitId?: string;
+  renamedFrom?: string;
 }
 
 interface Result {
@@ -48,14 +49,17 @@ export default function AdminLearnImport() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [publish, setPublish] = useState(false);
+  // 이름이 겹치는 유닛에 숫자를 붙여 넣기 (제안 단추로 켠다)
+  const [rename, setRename] = useState(false);
 
   const ready = result && !result.applied ? result.rows.filter((r) => r.status === "ok").length : 0;
 
-  async function send(apply: boolean) {
+  async function send(apply: boolean, renameDuplicates = rename) {
     setBusy(true);
     setError(null);
+    setRename(renameDuplicates);
     try {
-      const r = await adminApi<Result>("/api/admin/learn/import", { method: "POST", body: { text, apply, publish } });
+      const r = await adminApi<Result>("/api/admin/learn/import", { method: "POST", body: { text, apply, publish, renameDuplicates } });
       setResult(r);
       if (apply) toast(`유닛 ${r.added}개를 넣었어요${publish ? " (공개)" : " (초안)"}.`);
     } catch (e) {
@@ -78,6 +82,7 @@ export default function AdminLearnImport() {
     }
     setText(JSON.stringify(all, null, 2));
     setResult(null);
+    setRename(false);
   }
 
   return (
@@ -104,6 +109,7 @@ export default function AdminLearnImport() {
               onChange={(e) => {
                 setText(e.target.value);
                 setResult(null);
+                setRename(false);
               }}
               className="font-mono text-xs"
               placeholder='{ "grade": "m1", "subject": "math", "section": "소인수분해", "units": [ ... ] }'
@@ -124,7 +130,7 @@ export default function AdminLearnImport() {
                 }}
               />
             </label>
-            <Button size="sm" disabled={busy || !text.trim()} onClick={() => send(false)}>
+            <Button size="sm" disabled={busy || !text.trim()} onClick={() => send(false, false)}>
               {busy && !ready ? "검사하는 중…" : "검사하기"}
             </Button>
           </div>
@@ -137,6 +143,30 @@ export default function AdminLearnImport() {
       </section>
 
       {result && <ResultView result={result} />}
+
+      {result && !result.applied && (result.rows.some((r) => r.status === "duplicate") || rename) && (
+        <Card className="flex flex-wrap items-center gap-3" role="region" aria-label="이름이 겹치는 유닛">
+          {rename ? (
+            <>
+              <p className="flex-1 text-sm">
+                이름이 겹치는 유닛 {result.rows.filter((r) => r.renamedFrom).length}개는 뒤에 숫자를 붙여 넣어요. 표에서 바뀐 이름을 확인하세요.
+              </p>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => send(false, false)}>
+                숫자 붙이지 않기
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="flex-1 text-sm">
+                같은 섹션에 같은 이름의 유닛이 있어서 {result.rows.filter((r) => r.status === "duplicate").length}개를 건너뛰어요. 다른 내용이라면 이름 뒤에 숫자(1, 2 …)를 붙여 함께 넣을 수 있어요.
+              </p>
+              <Button size="sm" disabled={busy} onClick={() => send(false, true)}>
+                이름 뒤에 숫자 붙여 넣기
+              </Button>
+            </>
+          )}
+        </Card>
+      )}
 
       {result && !result.applied && (
         <Card className="flex flex-wrap items-center gap-3">
@@ -211,6 +241,7 @@ function ResultView({ result }: { result: Result }) {
                     ) : (
                       r.title || "-"
                     )}
+                    {r.renamedFrom && <span className="block text-xs text-ink-soft">원래 이름: {r.renamedFrom}</span>}
                   </Td>
                   <Td className="whitespace-nowrap tabular-nums">
                     {r.steps} · {r.questions} · {r.figures}

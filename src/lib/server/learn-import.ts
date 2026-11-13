@@ -23,6 +23,8 @@ export interface ImportRow {
   /** 섹션이 없어서 새로 만드는지(만들었는지) */
   newSection: boolean;
   unitId?: string;
+  /** 같은 이름이 있어 뒤에 숫자를 붙였으면 원래 이름 */
+  renamedFrom?: string;
 }
 
 export interface ImportResult {
@@ -62,13 +64,22 @@ function attachFigures(steps: unknown[], save: boolean): { steps: unknown[]; fig
   return { steps: out, figures, problems };
 }
 
+/** 이미 있는 이름과 겹치지 않게 뒤에 숫자를 붙인다: "소수" → "소수 1", "소수 2" … (60자 안에서) */
+export function numberedTitle(title: string, taken: Set<string>): string {
+  for (let n = 1; ; n++) {
+    const tail = ` ${n}`;
+    const name = `${title.slice(0, 60 - tail.length).trimEnd()}${tail}`;
+    if (!taken.has(name)) return name;
+  }
+}
+
 /**
  * 학습 유닛을 한꺼번에 넣는다. apply가 false면 검사 결과만 돌려준다.
  * - 섹션은 이름으로 찾고, 없으면 만든다(코스의 끝에 붙는다).
  * - 문제가 있는 유닛과 같은 섹션에 같은 이름이 이미 있는 유닛은 건너뛴다. 나머지만 넣는다.
  * - 넣은 유닛은 기본으로 초안(관리자가 확인한 뒤 공개).
  */
-export function importUnits(data: unknown, opts: { apply: boolean; status?: UnitStatus }): ImportResult {
+export function importUnits(data: unknown, opts: { apply: boolean; status?: UnitStatus; renameDuplicates?: boolean }): ImportResult {
   const { units, problems } = flattenImport(data);
   const run = () => {
     const rows: ImportRow[] = [];
@@ -114,17 +125,25 @@ export function importUnits(data: unknown, opts: { apply: boolean; status?: Unit
       let sectionId = sections.get(u.section);
       row.newSection = !sectionId || sectionId.startsWith("new:");
       const known = sectionId ? titles.get(sectionId) : undefined;
-      if (known?.has(u.title)) {
-        row.status = "duplicate";
-        row.problems.push("같은 섹션에 같은 이름의 유닛이 이미 있어서 건너뛰어요.");
-        continue;
+      let title = u.title;
+      if (known?.has(title)) {
+        if (!opts.renameDuplicates) {
+          row.status = "duplicate";
+          row.problems.push("같은 섹션에 같은 이름의 유닛이 이미 있어서 건너뛰어요.");
+          continue;
+        }
+        // 제안 받아들임: 뒤에 숫자를 붙여 새 이름으로 넣는다
+        title = numberedTitle(title, known);
+        row.renamedFrom = u.title;
+        row.title = title;
+        row.problems.push(`같은 이름이 있어서 '${title}'(으)로 바꿔 넣어요.`);
       }
       if (!opts.apply) {
         // 검사만: 같은 묶음 안의 중복도 알아볼 수 있게 이름을 기억해 둔다
         const fakeId = sectionId ?? `new:${u.grade}:${subjectKey}:${u.section}`;
         if (!sectionId) sections.set(u.section, fakeId);
         if (!titles.has(fakeId)) titles.set(fakeId, new Set());
-        titles.get(fakeId)!.add(u.title);
+        titles.get(fakeId)!.add(title);
         continue;
       }
       if (!sectionId) {
@@ -133,14 +152,14 @@ export function importUnits(data: unknown, opts: { apply: boolean; status?: Unit
         titles.set(sectionId, new Set());
         sectionsAdded++;
       }
-      const r = createUnit(sectionId, { title: u.title, steps: check.steps, status: opts.status ?? "draft" });
+      const r = createUnit(sectionId, { title, steps: check.steps, status: opts.status ?? "draft" });
       if (r.problems) {
         row.status = "error";
         row.problems.push(...r.problems);
         continue;
       }
       row.unitId = r.unit.id;
-      titles.get(sectionId)!.add(u.title);
+      titles.get(sectionId)!.add(title);
       added++;
     }
     return { rows, problems, applied: opts.apply, added, sectionsAdded };

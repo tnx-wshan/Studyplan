@@ -137,3 +137,33 @@ test("관리 도구 학습 과정: 교육과정 대표 단원으로 섹션 채�
 
   expect(errors).toEqual([]);
 });
+
+test("관리 도구 일괄 넣기: 이름이 겹치는 유닛은 제안 단추로 뒤에 숫자를 붙여 넣는다", async ({ page }) => {
+  const errors = await startFresh(page);
+  await adminLogin(page);
+  await page.goto(`${ADMIN_URL}/admin/learn/import`);
+  const unit = (title: string) => ({ title, steps: [{ type: "summary", title: "수직선", body: "0의 오른쪽은 양수예요." }, ...DATA.units[0].steps.slice(1)] });
+  // 예제에 이미 있는 '소수와 합성수' 두 개
+  const data = { grade: "m1", subject: "math", section: "소인수분해", units: [unit("소수와 합성수"), unit("소수와 합성수")] };
+  await page.getByLabel(/JSON 붙여 넣기/).fill(JSON.stringify(data));
+  await page.getByRole("button", { name: "검사하기" }).click();
+  await expect(page.getByText("넣을 수 있음 0개 · 이미 있음 2개 · 문제 있음 0개")).toBeVisible();
+  await expect(page.getByRole("button", { name: "유닛 0개 넣기" })).toBeDisabled();
+
+  const box = page.getByRole("region", { name: "이름이 겹치는 유닛" });
+  await box.getByRole("button", { name: "이름 뒤에 숫자 붙여 넣기" }).click();
+  await expect(page.getByText("넣을 수 있음 2개 · 이미 있음 0개 · 문제 있음 0개")).toBeVisible();
+  const table = page.getByRole("region", { name: /결과 표/ });
+  await expect(table.getByRole("cell", { name: "소수와 합성수 1 원래 이름: 소수와 합성수" })).toBeVisible();
+  await expect(table.getByRole("cell", { name: "소수와 합성수 2 원래 이름: 소수와 합성수" })).toBeVisible();
+
+  // 되돌리기도 된다
+  await box.getByRole("button", { name: "숫자 붙이지 않기" }).click();
+  await expect(page.getByText("넣을 수 있음 0개 · 이미 있음 2개 · 문제 있음 0개")).toBeVisible();
+  await box.getByRole("button", { name: "이름 뒤에 숫자 붙여 넣기" }).click();
+  await page.getByRole("button", { name: "유닛 2개 넣기" }).click();
+  await expect(page.getByText("유닛 2개를 넣었어요.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "소수와 합성수 2" })).toBeVisible();
+
+  expect(errors).toEqual([]);
+});

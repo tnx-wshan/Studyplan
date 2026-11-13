@@ -94,6 +94,27 @@ describe("일괄 넣기: 넣기", () => {
     expect(importUnits(data, { apply: true }).added).toBe(0);
   });
 
+  it("제안을 받아들이면 겹치는 이름 뒤에 1부터 숫자를 붙여 넣는다", () => {
+    const check = importUnits(data, { apply: false, renameDuplicates: true });
+    expect(check.rows.map((x) => x.status)).toEqual(["ok", "ok", "error", "ok", "ok"]);
+    expect(check.rows[1]).toMatchObject({ title: "소수와 합성수 1", renamedFrom: "소수와 합성수" });
+    expect(check.rows[4]).toMatchObject({ title: "새 유닛 1 1", renamedFrom: "새 유닛 1" });
+    const r = importUnits(data, { apply: true, renameDuplicates: true });
+    expect(r.added).toBe(4);
+    const titles = courseOutline("m1", "math", true).sections.find((s) => s.title === "소인수분해")!.units.map((u) => u.title);
+    expect(titles).toEqual(expect.arrayContaining(["소수와 합성수", "소수와 합성수 1", "새 유닛 1", "새 유닛 1 1"]));
+    // 한 번 더 넣으면 다음 숫자
+    const again = importUnits({ ...data, units: [good("소수와 합성수")] }, { apply: true, renameDuplicates: true });
+    expect(again.rows[0].title).toBe("소수와 합성수 2");
+  });
+
+  it("숫자를 붙여도 60자를 넘지 않는다", async () => {
+    const { numberedTitle } = await import("./learn-import");
+    const long = "가".repeat(60);
+    expect(numberedTitle(long, new Set([long]))).toBe("가".repeat(58) + " 1");
+    expect(numberedTitle("소수", new Set(["소수", "소수 1"]))).toBe("소수 2");
+  });
+
   it("바로 공개로 넣을 수 있다", () => {
     importUnits({ grade: "h1", subject: "science", section: "물질", units: [good("원소")] }, { apply: true, status: "published" });
     expect(courseOutline("h1", "science").sections.find((x) => x.title === "물질")!.units.map((u) => u.title)).toEqual(["원소"]);
