@@ -98,11 +98,11 @@ describe("일괄 넣기: 넣기", () => {
     const check = importUnits(data, { apply: false, renameDuplicates: true });
     expect(check.rows.map((x) => x.status)).toEqual(["ok", "ok", "error", "ok", "ok"]);
     expect(check.rows[1]).toMatchObject({ title: "소수와 합성수 1", renamedFrom: "소수와 합성수" });
-    expect(check.rows[4]).toMatchObject({ title: "새 유닛 1 1", renamedFrom: "새 유닛 1" });
+    expect(check.rows[4]).toMatchObject({ title: "새 유닛 2", renamedFrom: "새 유닛 1" });
     const r = importUnits(data, { apply: true, renameDuplicates: true });
     expect(r.added).toBe(4);
     const titles = courseOutline("m1", "math", true).sections.find((s) => s.title === "소인수분해")!.units.map((u) => u.title);
-    expect(titles).toEqual(expect.arrayContaining(["소수와 합성수", "소수와 합성수 1", "새 유닛 1", "새 유닛 1 1"]));
+    expect(titles).toEqual(expect.arrayContaining(["소수와 합성수", "소수와 합성수 1", "새 유닛 1", "새 유닛 2"]));
     // 한 번 더 넣으면 다음 숫자
     const again = importUnits({ ...data, units: [good("소수와 합성수")] }, { apply: true, renameDuplicates: true });
     expect(again.rows[0].title).toBe("소수와 합성수 2");
@@ -113,6 +113,18 @@ describe("일괄 넣기: 넣기", () => {
     const long = "가".repeat(60);
     expect(numberedTitle(long, new Set([long]))).toBe("가".repeat(58) + " 1");
     expect(numberedTitle("소수", new Set(["소수", "소수 1"]))).toBe("소수 2");
+  });
+
+  it("이미 숫자로 끝나는 이름은 숫자를 하나 더 붙이지 않고 다음 숫자로 바꾼다", async () => {
+    const { numberedTitle } = await import("./learn-import");
+    expect(numberedTitle("새 유닛 1", new Set(["새 유닛 1"]))).toBe("새 유닛 2");
+    expect(numberedTitle("새 유닛 1", new Set(["새 유닛 1", "새 유닛 2", "새 유닛 3"]))).toBe("새 유닛 4");
+    expect(numberedTitle("새 유닛 9", new Set(["새 유닛 9"]))).toBe("새 유닛 10");
+    expect(numberedTitle("새 유닛 10", new Set(["새 유닛 10"]))).toBe("새 유닛 11");
+    // 띄어 쓰지 않은 숫자는 이름의 일부로 본다 (수학2 → 수학2 1)
+    expect(numberedTitle("수학2", new Set(["수학2"]))).toBe("수학2 1");
+    const long = `${"가".repeat(57)} 9`;
+    expect(numberedTitle(long, new Set([long]))).toBe(`${"가".repeat(57)} 10`);
   });
 
   it("바로 공개로 넣을 수 있다", () => {
