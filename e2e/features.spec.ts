@@ -1,14 +1,16 @@
 import { expect, test } from "@playwright/test";
-import { answerDialog, daysAgo, noHorizontalScroll, rewindTimer, startFresh } from "./helpers";
+import { answerDialog, daysAgo, noHorizontalScroll, rewindTimer, seedPast, startFresh } from "./helpers";
 
 test("동료의 기록: 레벨이 오르면 새 기록이 열리고 읽을 수 있다", async ({ page }) => {
   const errors = await startFresh(page);
   // 처음에는 모두 잠겨 있다
   await page.goto("/companion/records");
-  await expect(page.getByText("0 / 15")).toBeVisible();
-  await expect(page.getByText("RANK 2에서 열림")).toBeVisible();
+  // 본편 20편 + 외전 4편
+  await expect(page.getByText("0 / 24")).toBeVisible();
+  await expect(page.getByText("RANK 1에서 열림")).toBeVisible();
 
-  // 2시간 집중 → RANK 2
+  // 레벨 1 직전(9,000 XP)에서 2시간 집중(1,200 XP) → RANK 1
+  await seedPast(page, [], { totalXp: 9_000 });
   await page.goto("/timer");
   await page.getByRole("radio", { name: /자유 측정/ }).click();
   await page.getByRole("button", { name: "▶ 집중 시작" }).click();
@@ -29,7 +31,7 @@ test("동료의 기록: 레벨이 오르면 새 기록이 열리고 읽을 수 �
   await expect(page.getByText(/덩굴은 벽을 부수지 않는다/)).toBeVisible();
   await page.getByRole("button", { name: "‹ 목록으로" }).click();
   await expect(page.getByText("NEW")).toHaveCount(0);
-  await expect(page.getByText("1 / 15")).toBeVisible();
+  await expect(page.getByText("1 / 24")).toBeVisible();
 
   await noHorizontalScroll(page);
   expect(errors).toEqual([]);
@@ -138,7 +140,7 @@ test("시험 결과: 끝난 시험의 점수를 기록하면 성적 그래프에
   await page.getByLabel("영어 점수").fill("74");
   await page.getByLabel("다음 시험에서 바꿀 한 가지 🔧").fill("오답을 그때그때 다시 풀기");
   await page.getByRole("button", { name: /결과 저장/ }).click();
-  await expect(page.getByText("시험 결과 기록 완료! +30 XP")).toBeVisible();
+  await expect(page.getByText("시험 결과 기록 완료! +300 XP")).toBeVisible();
   await expect(page.getByText("목표를 모두 이뤘어요! 🎉")).toBeVisible();
   await expect(page.getByText("+6", { exact: true })).toBeVisible();
 

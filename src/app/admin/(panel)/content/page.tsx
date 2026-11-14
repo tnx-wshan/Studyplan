@@ -8,6 +8,7 @@ import { Card, cn } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import { adminApi, ago } from "@/lib/admin/client";
 import { courseName, gradeShort, subjectLabel } from "@/lib/learn/names";
+import { classificationLabel } from "@/data/classification";
 
 interface Item {
   id: string;
@@ -16,6 +17,7 @@ interface Item {
   grade: string;
   subject: string;
   subjectName: string;
+  unit: string;
   topic: string;
   title: string;
   parentId: string | null;
@@ -42,7 +44,12 @@ export default function AdminContent() {
   useEffect(() => {
     const p = new URLSearchParams({ kind, grade, subject, q: q.trim() });
     const t = setTimeout(() => {
-      adminApi<{ items: Item[] }>(`/api/admin/bank?${p}`).then((r) => setItems(r.items), (e) => setError(e.message));
+      adminApi<{ items: Item[] }>(`/api/admin/bank?${p}`).then(
+        (r) => {
+          setItems(r.items);
+        },
+        (e) => setError(e.message),
+      );
     }, 200);
     return () => clearTimeout(t);
   }, [kind, grade, subject, q]);
@@ -89,16 +96,16 @@ export default function AdminContent() {
                 </option>
               ))}
             </Select>
-            <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·주제 찾기" aria-label="자료 찾기" className="w-auto flex-1" />
+            <TextInput value={q} onChange={(e) => setQ(e.target.value)} placeholder="제목·주제·단원 찾기" aria-label="자료 찾기" className="w-auto flex-1" />
           </div>
           {items && items.length === 0 && <Card className="text-sm text-ink-soft">조건에 맞는 자료가 없어요.</Card>}
           {items && items.length > 0 && (
-            <div className="overflow-x-auto rounded-2xl border-2 border-line bg-surface">
+            <div className="overflow-x-auto rounded-2xl border-2 border-line bg-surface" tabIndex={0} role="region" aria-label="자료 표 (옆으로 밀어서 보기)">
               <table className="w-full min-w-[680px]">
                 <thead>
                   <tr>
                     <Th>제목</Th>
-                    <Th>코스</Th>
+                    <Th>분류 (학년 · 과목 · 단원)</Th>
                     <Th>출처</Th>
                     <Th>쓰임</Th>
                     <Th>상태</Th>
@@ -114,7 +121,7 @@ export default function AdminContent() {
                         </Link>
                         <p className="text-xs text-ink-soft">{it.topic}</p>
                       </Td>
-                      <Td className="whitespace-nowrap">{it.grade || it.subject ? `${it.grade ? gradeShort(it.grade) : "?"} ${it.subject ? subjectLabel(it.subject) : it.subjectName || "?"}` : it.subjectName || "-"}</Td>
+                      <Td>{classificationLabel({ grade: it.grade ? gradeShort(it.grade) : "", subject: it.subject ? subjectLabel(it.subject) : it.subjectName, unit: it.unit }) || "-"}</Td>
                       <Td className="whitespace-nowrap">
                         {SOURCE[it.sourceKind] ?? it.sourceKind}
                         {it.kind === "material" && <span className="block text-xs text-ink-soft">문제 {it.children ?? 0}세트</span>}

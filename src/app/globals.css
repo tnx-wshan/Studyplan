@@ -147,6 +147,17 @@ body {
 .md ol { list-style: decimal; padding-left: 1.4em; }
 .md li + li { margin-top: 0.2em; }
 .md strong { color: var(--primary-deep); }
+/* 대표 캐릭터 그림: 살짝 떠 있는 움직임 */
+.character-art { animation: pet-bounce 3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .character-art { animation: none; } }
+/* 프로필 카드 테두리 (레벨 10 은빛, 20 금빛) */
+.card-frame-silver { border-color: var(--ink-soft); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink-soft); }
+.card-frame-gold { border-color: var(--xp); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--xp), 0 0 18px color-mix(in srgb, var(--xp) 45%, transparent); }
+/* 학습 지도 꾸미기 (레벨 5 등불·별빛 길, 15 황동·무지개 길): 단추 사이를 잇는 길 */
+.map-skin::before { content: ""; position: absolute; left: 50%; top: 2rem; bottom: 0; width: 6px; transform: translateX(-50%); border-radius: 999px; opacity: 0.55; pointer-events: none; }
+.map-skin-lantern::before { background: repeating-linear-gradient(180deg, var(--xp) 0 10px, transparent 10px 22px); }
+.map-skin-gilded::before { width: 10px; background: linear-gradient(180deg, var(--xp), var(--accent), var(--primary), var(--success)); opacity: 0.4; }
+.map-skin > ul { position: relative; }
 .md img { display: block; max-width: 100%; max-height: 18rem; width: auto; height: auto; margin: 0.5em auto; padding: 6px; background: var(--figure-bg); border: 1px solid var(--line); border-radius: 10px; }
 .md a { color: var(--accent); text-decoration: underline; }
 .md code { background: var(--surface-2); border-radius: 6px; padding: 0.1em 0.35em; font-size: 0.92em; }

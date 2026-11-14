@@ -32,6 +32,7 @@ interface Item {
   grade: string;
   subject: string;
   subjectName: string;
+  unit: string;
   topic: string;
   title: string;
   data: MaterialData | QuizData;
@@ -81,7 +82,7 @@ function ItemEditor() {
     if (!item) return;
     setSaving(true);
     try {
-      await adminApi("/api/admin/bank/item", { method: "PUT", body: { id: item.id, title: item.title, topic: item.topic, grade: item.grade, subject: item.subject, status: item.status, data: item.data } });
+      await adminApi("/api/admin/bank/item", { method: "PUT", body: { id: item.id, title: item.title, topic: item.topic, grade: item.grade, subject: item.subject, unit: item.unit, status: item.status, data: item.data } });
       toast("저장했어요. 다음 요청부터 고친 내용이 나가요.");
       await load();
     } catch (e) {
@@ -143,6 +144,9 @@ function ItemEditor() {
               </option>
             ))}
           </Select>
+        </Field>
+        <Field label="교과서 단원">
+          <TextInput value={item.unit} maxLength={120} onChange={(e) => set({ unit: e.target.value })} />
         </Field>
         <label className="flex items-center gap-2 text-sm md:col-span-2">
           <input type="checkbox" className="size-5 accent-[var(--accent)]" checked={item.status === "hidden"} onChange={(e) => set({ status: e.target.checked ? "hidden" : "active" })} />

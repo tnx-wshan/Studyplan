@@ -68,9 +68,9 @@ test("플래너 → 시험 계획 → 타이머 → 카드 → 오답노트 → 
   await expect(page.getByText(/의 해를 구하시오/)).toBeVisible();
 
   // 일일 퀘스트 보상
-  await page.goto("/");
-  await page.getByRole("button", { name: "+25 받기" }).click();
-  await expect(page.getByText(/의뢰 완수 \+25 XP/)).toBeVisible();
+  await page.goto("/profile");
+  await page.getByRole("button", { name: "+250 받기" }).click();
+  await expect(page.getByText(/의뢰 완수 \+250 XP/)).toBeVisible();
 
   await page.goto("/growth");
   await expect(page.getByText("최근 7일 과목별")).toBeVisible();

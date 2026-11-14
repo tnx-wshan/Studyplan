@@ -67,7 +67,8 @@ test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용
   await page.locator("dialog[open] input").fill("광합성");
   await answerDialog(page);
   await expect(page.getByRole("heading", { name: "광합성" })).toBeVisible();
-  await page.getByRole("button", { name: "✨ AI로 유닛 만들기" }).click();
+  // 고1 과학에는 기본 단원 섹션도 있으므로 만든 섹션 안의 단추를 누른다
+  await page.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "광합성", exact: true }) }).getByRole("button", { name: "✨ AI로 유닛 만들기" }).click();
   await expect(page.getByRole("checkbox", { name: /광합성 \(검토함\)/ })).toBeChecked();
   await page.getByRole("button", { name: /자료 1개로 유닛 초안 만들기/ }).click();
   await expect(page.getByRole("heading", { name: "유닛 고치기" })).toBeVisible({ timeout: 15_000 });
@@ -93,7 +94,7 @@ test("관리 도구: 다른 포트로만 열림, 자료 모음 수집·재사용
   await adminNav.getByRole("link", { name: "사용자" }).click();
   await page.getByRole("link", { name: "공부왕" }).first().click();
   await expect(page.getByRole("heading", { name: /공부왕/ })).toBeVisible();
-  await page.getByLabel("총 경험치").fill("500");
+  await page.getByLabel("총 경험치").fill("70000"); // 레벨 4가 시작되는 경험치
   await page.getByRole("button", { name: /경험치 적용/ }).click();
   await expect(page.getByText("적용 대기", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "🔒 이용 정지" }).click();

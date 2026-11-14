@@ -25,19 +25,19 @@ describe("coaching storage", () => {
   });
 
   it("gives method xp once per method per day", async () => {
-    expect((await addMethodLog({ methodId: "blank", fields: { text: "a" } }, at("2026-11-09", 9))).xp).toBe(15);
+    expect((await addMethodLog({ methodId: "blank", fields: { text: "a" } }, at("2026-11-09", 9))).xp).toBe(150);
     expect((await addMethodLog({ methodId: "blank", fields: { text: "b" } }, at("2026-11-09", 20))).xp).toBe(0);
-    expect((await addMethodLog({ methodId: "feynman", fields: {} }, at("2026-11-09", 21))).xp).toBe(15);
-    expect((await addMethodLog({ methodId: "blank", fields: {} }, at("2026-11-10", 9))).xp).toBe(15);
-    expect((await getProfile())?.totalXp).toBe(45);
+    expect((await addMethodLog({ methodId: "feynman", fields: {} }, at("2026-11-09", 21))).xp).toBe(150);
+    expect((await addMethodLog({ methodId: "blank", fields: {} }, at("2026-11-10", 9))).xp).toBe(150);
+    expect((await getProfile())?.totalXp).toBe(450);
     expect(await getDB().methodLogs.count()).toBe(4);
   });
 
   it("gives reflection xp once per week and keeps edits", async () => {
-    expect(await saveReflection("2026-W46", { good: "a", bad: "b", nextGoal: "c", mood: 4 })).toBe(20);
+    expect(await saveReflection("2026-W46", { good: "a", bad: "b", nextGoal: "c", mood: 4 })).toBe(200);
     expect(await saveReflection("2026-W46", { good: "a2", bad: "b", nextGoal: "c" })).toBe(0);
     expect((await getDB().reflections.get("2026-W46"))?.good).toBe("a2");
-    expect((await getProfile())?.totalXp).toBe(20);
+    expect((await getProfile())?.totalXp).toBe(200);
   });
 
   it("stores coach reports and loads report input", async () => {
@@ -47,7 +47,7 @@ describe("coaching storage", () => {
     const input = await loadReportInput();
     const r = computeReport(input, weekPeriod("2026-W46"));
     expect(r.methodPractices).toEqual([{ methodId: "blank", count: 1 }]);
-    expect(r.xp).toBe(15);
+    expect(r.xp).toBe(150);
   });
 });
 

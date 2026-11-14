@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type * as T from "./types";
 import { defaultCourseIds, type SubjectGroup } from "@/data/curriculum";
+import { XP_SCALE } from "@/lib/game/level";
 
 export class HomeStudyDB extends Dexie {
   profile!: EntityTable<T.Profile, "id">;
@@ -79,6 +80,22 @@ export class HomeStudyDB extends Dexie {
     this.version(4).stores({ routines: "id", tasks: "id, date, subjectId, examId, routineId, [date+order]" });
     // v5: 학습 탭 (코스 진도, 학습 기록)
     this.version(5).stores({ learnProgress: "id, courseKey", learnLogs: "id, date, unitId" });
+    // v6: 레벨 개편 (0~20레벨, 경험치 10배). 예전 경험치를 같은 비율로 바꾼다. 코인은 그대로.
+    this.version(6).upgrade(async (tx) => {
+      await tx
+        .table("profile")
+        .toCollection()
+        .modify((p: Record<string, unknown>) => {
+          p.totalXp = Math.round(Number(p.totalXp ?? 0) * XP_SCALE);
+          delete p.levelUpFrom;
+        });
+      await tx
+        .table("xpEvents")
+        .toCollection()
+        .modify((e: Record<string, unknown>) => {
+          e.amount = Math.round(Number(e.amount ?? 0) * XP_SCALE);
+        });
+    });
   }
 }
 

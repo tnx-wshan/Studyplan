@@ -1,5 +1,6 @@
 "use client";
 
+import { XP_REWARDS } from "@/lib/game/level";
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -90,7 +91,7 @@ export default function PlannerPage() {
               📊
             </span>
             <p className="flex-1 text-sm">
-              <b className="font-display">{e.title}</b> 수고했어요! 결과와 돌아보기를 기록해요. <span className="text-xp-deep">+30 XP</span>
+              <b className="font-display">{e.title}</b> 수고했어요! 결과와 돌아보기를 기록해요. <span className="text-xp-deep">+{XP_REWARDS.examResult} XP</span>
             </p>
             <span aria-hidden className="text-ink-soft">
               ›

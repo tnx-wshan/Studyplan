@@ -41,6 +41,7 @@ export async function POST(request: Request) {
       subject: parent?.subject ?? subjectId(body.subjectGroup, body.subject),
       subjectName: parent?.subjectName ?? body.subject ?? "",
       topic: parent?.topic ?? quiz.title,
+      unit: parent?.unit ?? "",
       title: quiz.title,
       data: { questions: quiz.questions, verified: quiz.verified, difficulty: body.difficulty },
       parentId: parent?.id ?? null,

@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/kit";
 import { Pet } from "@/components/Pet";
 import { useUiStyle } from "@/components/ThemeSync";
 import { Button, Card, cn } from "@/components/ui";
-import { isUnlocked, renderStory, storyFor, storyKey, type StoryEntry } from "@/data/story";
+import { isSideStory, isUnlocked, renderStory, storyFor, storyKey, type StoryEntry } from "@/data/story";
 import { getDB } from "@/lib/db";
 import { markRecordRead } from "@/lib/db/game";
 import { badgeById } from "@/lib/game/achievements";
@@ -42,8 +42,8 @@ export default function RecordsPage() {
     );
   }
 
-  const main = entries.filter((e) => "level" in e.unlock);
-  const side = entries.filter((e) => "badge" in e.unlock);
+  const main = entries.filter((e) => !isSideStory(e));
+  const side = entries.filter(isSideStory);
 
   return (
     <div className="space-y-5">

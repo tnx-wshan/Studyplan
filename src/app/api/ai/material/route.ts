@@ -13,7 +13,7 @@ function lookupTopic(body: MaterialRequest): string {
     case "web":
       return body.query;
     case "curriculum":
-      return `${body.course} ${body.unit}`;
+      return [body.course, body.unit].join(" ");
     case "photo":
       return body.images.join("|");
     case "pdf":
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       subject,
       subjectName: body.kind === "curriculum" ? body.course : (body.subject ?? ""),
       topic: body.kind === "web" ? body.query : body.kind === "curriculum" ? `${body.course} ${body.unit}` : result.title,
+      ...(body.kind === "curriculum" ? { unit: body.unit } : {}),
       title: result.title,
       data: { summary: result.summary, keyPoints: result.keyPoints, sources: result.sources, ...(result.notice ? { notice: result.notice } : {}) },
       createdBy: await currentUserId(),

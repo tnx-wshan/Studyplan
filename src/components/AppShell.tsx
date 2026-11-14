@@ -19,13 +19,14 @@ import { formatClock, remaining, elapsed } from "@/lib/study/timer";
 import { useMinuteTick, useNow, useTimerState } from "@/lib/timerStore";
 import { toDateKey } from "@/lib/date";
 
+/** 아래 메뉴: 첫 화면은 학습, 맨 오른쪽은 프로필(예전 홈: 동료, 퀘스트, 오늘 할 일, 잔디) */
 const NAV = [
-  { href: "/", label: "홈", icon: "🏠" },
-  { href: "/learn", label: "학습", icon: "📘" },
+  { href: "/", label: "학습", icon: "📘" },
   { href: "/planner", label: "플래너", icon: "🗓️" },
   { href: "/review", label: "복습", icon: "🃏" },
   { href: "/ai", label: "AI 학습실", icon: "🤖" },
   { href: "/growth", label: "성장", icon: "🌱" },
+  { href: "/profile", label: "프로필", icon: "👤" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -136,7 +137,8 @@ function BottomNav() {
     >
       <ul className="grid grid-cols-6">
         {NAV.map((item) => {
-          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          // 학습: 첫 화면과 유닛 화면(/learn/…)
+          const active = item.href === "/" ? pathname === "/" || pathname.startsWith("/learn") : pathname.startsWith(item.href);
           return (
             <li key={item.href}>
               <Link

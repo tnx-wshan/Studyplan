@@ -58,9 +58,9 @@ export function lessonScore(steps: Step[], state: LessonState): LessonScore {
   return { correct: questions.filter((i) => state.firstTry[i]).length, total: questions.length };
 }
 
-/** 유닛 경험치: 처음 끝내면 10 + 처음에 맞힌 문제당 2, 다시 하면 5 */
+/** 유닛 경험치: 처음 끝내면 100 + 처음에 맞힌 문제당 20, 다시 하면 50 */
 export function lessonXp(score: LessonScore, firstCompletion: boolean): number {
-  return firstCompletion ? 10 + score.correct * 2 : 5;
+  return firstCompletion ? 100 + score.correct * 20 : 50;
 }
 
 /** 공부 시간이 부풀지 않도록 단계당 최대 90초로 센다 */

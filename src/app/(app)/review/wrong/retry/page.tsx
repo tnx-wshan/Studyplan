@@ -1,5 +1,6 @@
 "use client";
 
+import { XP_REWARDS } from "@/lib/game/level";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Empty, PageHeader, SubjectChip, useSubjectMap } from "@/components/kit";
@@ -53,7 +54,7 @@ export default function RetryPage() {
             <>
               <p className="font-display text-2xl">오늘 오답 복습 끝!</p>
               <p className="text-ink-soft">
-                {total}문제 중 {correctCount}문제를 맞혔어요. <b className="text-xp-deep">+{total * 5} XP</b>
+                {total}문제 중 {correctCount}문제를 맞혔어요. <b className="text-xp-deep">+{total * XP_REWARDS.wrongAnswerRetried} XP</b>
               </p>
             </>
           ) : (

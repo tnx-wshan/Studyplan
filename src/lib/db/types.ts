@@ -47,9 +47,15 @@ export interface Profile extends Base {
   /** 관리자가 내린 명령을 여기까지 적용했다 */
   lastCommandId?: number;
   /** 학습 탭에서 고른 코스 */
-  learnCourse?: { grade: GradeId; subject: SubjectGroup };
+  learnCourse?: { grade: GradeId; subject: string };
   /** 학습 탭 하루 목표(분) */
   learnGoal?: number;
+  /** 고른 대표 캐릭터 (없으면 테마의 대표) */
+  character?: string;
+  /** 학습 지도 꾸미기 */
+  mapSkin?: "basic" | "lantern" | "gilded";
+  /** 레벨업 보상을 여기까지 받았다 */
+  rewardedLevel?: number;
   /** 학습 습관 진단 결과 */
   diagnosis?: { answers: Record<string, number>; scores: Record<string, number>; at: number };
 }
@@ -190,6 +196,9 @@ export interface Material extends Base {
   sources: { title: string; url: string }[];
   /** 웹 검색어, 단원 이름 등 */
   query?: string;
+  /** 예전 버전에서 저장한 교과서 출판사와 연도 (이제 쓰지 않는다: 출판사 구분 없이 통합 과정) */
+  publisher?: string;
+  year?: number;
 }
 
 export interface Quiz extends Base {

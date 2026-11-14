@@ -56,11 +56,12 @@ ${
 소제목과 목록을 쓴 마크다운으로 답하고, 마지막에 '## 핵심' 아래 꼭 기억할 점 3~7개를 '- '로 적어줘.`;
 }
 
+/** 교과 단원 자료: 출판사를 나누지 않고 여러 교과서의 내용을 모은 통합 교육과정 기준 */
 export function materialFromCurriculumPrompt(grade: string, course: string, unit: string) {
   return `${COMMON}
 ${grade} 학생이 '${course}' 과목의 '${unit}' 단원을 공부하려고 해.
-한국 교육과정 기준으로 이 단원의 핵심 개념, 공식, 자주 나오는 문제 유형, 헷갈리기 쉬운 점을 정리해 줘.
-교과서 출판사마다 내용이 조금 다를 수 있다는 점을 summary 마지막에 한 줄로 알려줘.${MATERIAL_FORMAT}`;
+한국 교육과정 기준으로, 여러 출판사 교과서에 나오는 이 단원의 내용을 하나로 모아 핵심 개념, 공식, 자주 나오는 문제 유형, 헷갈리기 쉬운 점을 정리해 줘.
+특정 교과서의 실제 문장이나 문제를 그대로 옮기지는 마.${MATERIAL_FORMAT}`;
 }
 
 const DIFFICULTY = { easy: "기본 개념 확인 수준", normal: "학교 시험 평균 수준", hard: "응용·심화 수준" };
@@ -70,7 +71,7 @@ const TYPES = { multiple: "객관식(보기 5개, 정답 1개)", short: "단답�
 export const FIGURE_RULES = `[그림]
 - 도형, 좌표평면·그래프, 수직선, 표·도표, 실험 장치, 지도·모식도처럼 그림이 있어야 이해가 쉬운 내용이면 figure에 그림을 SVG 코드로 그려. 그림이 필요 없으면 빈 문자열.
 - 그림을 보고 답을 찾는 문제라면 문제 글에 "그림과 같이", "그림에서"처럼 그림을 가리켜. 정답이 그림에만 있고 글로는 알 수 없게 해도 돼.
-- SVG 규칙: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">처럼 viewBox를 쓰고 가로 400 이하. 흰 바탕에 검은 선(stroke="#222"), 강조는 한두 가지 색만. 글자는 <text>로 쓰고 font-size 14 이상. 수식 기호는 글자 그대로(x², π). 스크립트·외부 이미지·외부 글꼴은 쓰지 마.
+- SVG 규칙: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">처럼 viewBox를 쓰고 가로 400 이하. 흰 바탕에 검은 선(stroke="#222"), 강조는 한두 가지 색만. 글자는 <text>로 쓰고 font-size 14 이상. 수식 기호는 글자 그대로(x², π), SVG 안에 LaTeX는 쓰지 마. 모든 태그를 닫고 </svg>로 끝내. 스크립트·외부 이미지·외부 글꼴은 쓰지 마.
 - 그림의 길이·각도·눈금은 문제의 숫자와 정확히 맞게 그려.`;
 
 export function quizPrompt(input: Omit<QuizRequest, "verify">) {

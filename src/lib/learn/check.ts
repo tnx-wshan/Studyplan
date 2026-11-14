@@ -1,4 +1,4 @@
-import { repairLatexEscapes } from "@/lib/ai/text";
+import { normalizeMathDelimiters, repairLatexEscapes } from "@/lib/ai/text";
 import type { BlankStep, PuzzleStep, QuestionStep, Step } from "./types";
 
 /**
@@ -147,7 +147,8 @@ export function correctAnswerText(step: QuestionStep): string {
 // ───────── 문제 모양 검사 (관리 도구 저장·AI 결과 정리) ─────────
 
 // 백슬래시 하나로 들어와 탭 같은 제어 문자가 된 수식 명령(\times)도 여기서 되돌린다
-const clean = (s: unknown) => (typeof s === "string" ? repairLatexEscapes(s).trim() : "");
+// \( \) 수식 표기는 이 앱의 $...$로 바꾼다
+const clean = (s: unknown) => (typeof s === "string" ? normalizeMathDelimiters(repairLatexEscapes(s)).trim() : "");
 const cleanList = (xs: unknown) => (Array.isArray(xs) ? xs.map(clean).filter(Boolean) : []);
 
 /**

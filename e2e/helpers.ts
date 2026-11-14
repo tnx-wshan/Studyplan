@@ -15,7 +15,8 @@ export async function startFresh(page: Page, grade = "고1") {
   await page.getByRole("button", { name: "다음" }).click();
   await page.fill("input", "에코");
   await page.getByRole("button", { name: "시작하기" }).click();
-  await expect(page.getByRole("tab", { name: "주간" })).toBeVisible();
+  // 첫 화면은 학습: 처음에는 코스를 고르는 화면 (예전 홈 화면은 /profile)
+  await expect(page.getByText("과정을 고른다.")).toBeVisible();
   return errors;
 }
 

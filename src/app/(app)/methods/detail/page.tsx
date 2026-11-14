@@ -1,5 +1,6 @@
 "use client";
 
+import { XP_REWARDS } from "@/lib/game/level";
 import { useLiveQuery } from "dexie-react-hooks";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -76,7 +77,7 @@ function Detail() {
 
       <div className="space-y-2">
         <Link href={`/methods/practice?id=${method.id}`} className={buttonStyles("primary", "lg", "w-full")}>
-          ▶ 지금 해보기 (+15 XP)
+          ▶ 지금 해보기 (+{XP_REWARDS.methodPractice} XP)
         </Link>
         {method.links?.map((l) => (
           <Link key={l.href} href={l.href} className={buttonStyles("ghost", "md", "w-full")}>

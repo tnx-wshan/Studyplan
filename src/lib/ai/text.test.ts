@@ -62,3 +62,12 @@ describe("stripImages", () => {
     expect(stripImages("![](/x)")).toBe("[그림]");
   });
 });
+
+describe("normalizeMathDelimiters", () => {
+  it("\\( \\)는 $로, \\[ \\]는 $$로 바꾼다", async () => {
+    const { normalizeMathDelimiters, cleanAiText } = await import("./text");
+    expect(normalizeMathDelimiters(String.raw`값은 \( 3^4 \)이고 \[x = 2\] 이다`)).toBe("값은 $3^4$이고 $$x = 2$$ 이다");
+    expect(normalizeMathDelimiters("빈칸 [[소수]]는 그대로")).toBe("빈칸 [[소수]]는 그대로");
+    expect(cleanAiText(String.raw`\(2^3\)의 값`)).toBe("$2^3$의 값");
+  });
+});

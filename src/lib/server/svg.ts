@@ -27,5 +27,36 @@ export function sanitizeSvg(raw: string): string | null {
     .replace(/@import[^;]*;?/gi, "")
     .replace(/url\(\s*(['"]?)(?!#)[^)]*\1\s*\)/gi, "none");
   if (!/^<svg[^>]*\sxmlns=/i.test(s)) s = s.replace(/^<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
-  return s;
+  // 글자 속 & 는 XML에서 &amp; 로 써야 한다 (안 그러면 그림 전체가 깨진다)
+  s = s.replace(/&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
+  return svgProblem(s) ? null : s;
+}
+
+/**
+ * 브라우저가 그릴 수 없는 SVG인지 본다: 태그가 닫히지 않았거나 짝이 엇갈린 경우.
+ * 문제가 있으면 이유, 없으면 null.
+ */
+export function svgProblem(raw: string): string | null {
+  const svg = raw.trim();
+  if (!/^<svg[\s>]/i.test(svg)) return "<svg 로 시작하지 않아요.";
+  if (!/<\/svg>$/i.test(svg)) return "</svg> 로 끝나지 않아요.";
+  const stack: string[] = [];
+  const re = /<(\/?)([a-zA-Z][\w:.-]*)((?:\s+[^\s=>/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"']+))?)*)\s*(\/?)>/g;
+  let last = 0;
+  for (let m = re.exec(svg); m; m = re.exec(svg)) {
+    // 태그 사이 글자에 < 가 남아 있으면 태그 모양이 깨진 것
+    if (svg.slice(last, m.index).includes("<")) return "태그 모양이 올바르지 않아요.";
+    last = m.index + m[0].length;
+    const [, close, name, , self] = m;
+    if (self) continue;
+    if (!close) stack.push(name);
+    else {
+      // 닫는 태그가 나왔는데 열린 태그와 다르면, 열린 쪽이 닫히지 않은 것
+      const open = stack.pop();
+      if (open !== name) return open ? `<${open}> 태그가 닫히지 않았어요.` : `</${name}> 앞에 여는 태그가 없어요.`;
+    }
+  }
+  if (svg.slice(last).includes("<")) return "태그 모양이 올바르지 않아요.";
+  if (stack.length) return `<${stack[stack.length - 1]}> 태그가 닫히지 않았어요.`;
+  return null;
 }

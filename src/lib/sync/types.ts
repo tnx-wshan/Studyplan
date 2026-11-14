@@ -6,7 +6,7 @@ import { z } from "zod";
  */
 
 export const SnapshotSchema = z.object({
-  level: z.number().int().min(1).max(10_000),
+  level: z.number().int().min(0).max(10_000),
   totalXp: z.number().int().min(0),
   coins: z.number().int().min(0),
   freezes: z.number().int().min(0).max(10),

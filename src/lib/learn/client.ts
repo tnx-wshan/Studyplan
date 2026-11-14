@@ -1,6 +1,7 @@
 "use client";
 
-import type { CourseInfo, CourseOutline, LearnSection, LearnUnit } from "./types";
+import type { GradeId } from "@/data/curriculum";
+import type { CourseInfo, CourseOutline, LearnSection, LearnSubject, LearnUnit } from "./types";
 
 /**
  * 학습 탭 내용은 서버에 있다. 한 번 받은 것은 기기에 저장해 두어 인터넷이 없을 때도 이어서 할 수 있게 한다.
@@ -52,9 +53,9 @@ async function getJson<T>(url: string, key: string): Promise<{ data: T; offline:
   }
 }
 
-export const fetchCourses = () => getJson<{ courses: CourseInfo[] }>("/api/learn/courses", "courses");
+export const fetchCourses = () => getJson<{ courses: CourseInfo[]; subjects?: Partial<Record<GradeId, LearnSubject[]>> }>("/api/learn/courses", "courses");
 
 export const fetchOutline = (grade: string, subject: string) =>
   getJson<CourseOutline>(`/api/learn/outline?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`, `outline:${grade}:${subject}`);
 
-export const fetchUnit = (id: string) => getJson<LearnUnit & { section: LearnSection }>(`/api/learn/unit?id=${encodeURIComponent(id)}`, `unit:${id}`);
+export const fetchUnit = (id: string) => getJson<LearnUnit & { section: LearnSection & { group?: string | null } }>(`/api/learn/unit?id=${encodeURIComponent(id)}`, `unit:${id}`);

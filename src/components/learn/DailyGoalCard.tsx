@@ -27,7 +27,7 @@ export function DailyGoalCard({ withLink = false }: { withLink?: boolean }) {
           </p>
         </div>
         {withLink && (
-          <Link href="/learn" className={buttonStyles(met ? "ghost" : "primary", "sm")}>
+          <Link href="/" className={buttonStyles(met ? "ghost" : "primary", "sm")}>
             {met ? "더 하기" : "이어서 하기"}
           </Link>
         )}

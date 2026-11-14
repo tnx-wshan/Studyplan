@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/kit";
+import { CharacterPicker, MapSkinPicker } from "@/components/game/GrowthSettings";
 import { Pet } from "@/components/Pet";
 import { toast } from "@/components/Toaster";
 import { useUiStyle } from "@/components/ThemeSync";
@@ -36,7 +37,9 @@ export default function CompanionPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={noir ? "동료 장비" : "🎀 펫 꾸미기"} back="/" />
+      <PageHeader title={noir ? "동료 장비" : "🎀 펫 꾸미기"} back="/profile" />
+      <CharacterPicker />
+      <MapSkinPicker />
       <Card className="overflow-hidden p-0 text-center">
         <div className="px-4 pb-2 pt-4" style={backgroundStyle(shown.background, noir)}>
           <p className="kicker text-left">Preview</p>
@@ -50,7 +53,7 @@ export default function CompanionPage() {
           <span className="font-display shrink-0">🪙 {profile.coins}</span>
         </div>
       </Card>
-      <p className="text-xs text-ink-soft">코인은 얻은 경험치 10마다 1개씩 쌓여요. 공부로만 모을 수 있어요.</p>
+      <p className="text-xs text-ink-soft">코인은 얻은 경험치 100마다 1개씩 쌓이고, 레벨이 오를 때도 받아요. 공부로만 모을 수 있어요.</p>
 
       {(["accessory", "background"] as const).map((kind) => (
         <section key={kind}>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Pet } from "../Pet";
+import { CharacterArt, useActiveCharacter } from "./CharacterArt";
+import { cardFrame } from "@/lib/game/rewards";
 import { useUiStyle } from "../ThemeSync";
 import { Card, ProgressBar, cn } from "../ui";
 import { backgroundStyle } from "@/data/shop";
@@ -17,17 +18,20 @@ import { withRo } from "@/lib/korean";
 export function CompanionCard() {
   const state = usePetState();
   const style = useUiStyle();
+  const active = useActiveCharacter();
   const badges = useLiveQuery(async () => new Set((await getDB().userBadges.toArray()).map((b) => b.badgeId)), []);
-  if (!state) return null;
+  if (!state || !active) return null;
   const unread = badges ? unreadCount(style, state.level.level, badges, state.profile.readRecords ?? []) : 0;
-  const { profile, level, stage, next, mood } = state;
+  const { profile, level, next, mood } = state;
   const t = terms(style);
   const noir = style === "noir";
   const title = badgeById(profile.titleBadge);
   const bg = backgroundStyle(profile.equipped?.background, noir);
+  // 레벨 10 은빛, 레벨 20 금빛 테두리
+  const frame = cardFrame(level.level);
 
   return (
-    <Card className={cn("overflow-hidden p-0 text-center", !bg && "bg-gradient-to-b from-bg-soft to-surface")}>
+    <Card className={cn("overflow-hidden p-0 text-center", !bg && "bg-gradient-to-b from-bg-soft to-surface", frame && `card-frame-${frame}`)}>
       <div className="relative px-4 pt-4" style={bg}>
         <div className="absolute right-3 top-3 flex gap-1.5">
           <Link href="/companion/records" className="relative rounded-full bg-surface/80 px-2.5 py-1 text-xs backdrop-blur" aria-label={noir ? "동료의 기록" : "펫의 일기"}>
@@ -44,8 +48,7 @@ export function CompanionCard() {
         </div>
         <p className="kicker text-left">Companion · {t.speciesLabel(profile.pet.species)}</p>
         <p className="font-display text-sm text-ink-soft">
-          {t.stageLabel(stage.stage)}
-          {t.stageSuffix}
+          {active.character.name} · {active.title}
         </p>
         <h1 className="font-display text-2xl">{profile.pet.name}</h1>
         {title && (
@@ -54,7 +57,7 @@ export function CompanionCard() {
           </p>
         )}
         <div className="flex justify-center py-2">
-          <Pet species={profile.pet.species} stage={stage.stage} mood={mood} size={180} accessory={profile.equipped?.accessory} />
+          <CharacterArt mood={mood} size={180} />
         </div>
       </div>
       <div className="space-y-3 px-4 pb-4 pt-2">
@@ -64,9 +67,7 @@ export function CompanionCard() {
         <div className="space-y-1 text-left">
           <div className="flex justify-between text-sm">
             <span className="font-display">{noir ? `RANK ${level.level}` : `Lv.${level.level}`}</span>
-            <span className="tabular-nums text-ink-soft">
-              {level.current} / {level.needed} XP
-            </span>
+            <span className="tabular-nums text-ink-soft">{level.max ? "최고 레벨" : `${level.current.toLocaleString()} / ${level.needed.toLocaleString()} XP`}</span>
           </div>
           <ProgressBar value={level.progress} label="다음 레벨까지 경험치" className={noir ? "h-2 border-0" : undefined} />
           {next && (

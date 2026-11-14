@@ -8,7 +8,8 @@ import { Button, Card, cn } from "@/components/ui";
 import { SUBJECT_GROUPS, type SubjectGroup } from "@/data/curriculum";
 import { saveMaterialAndQuiz } from "@/lib/db/ai";
 import { useProfile } from "@/lib/hooks";
-import { courseName, gradeShort } from "@/lib/learn/names";
+import { gradeShort, subjectLabel } from "@/lib/learn/names";
+import { classificationLabel } from "@/data/classification";
 import type { StoredQuestion } from "@/lib/ai/schemas";
 
 interface ListItem {
@@ -18,6 +19,7 @@ interface ListItem {
   grade: string;
   subject: string;
   subjectName: string;
+  unit: string;
   quizzes: number;
   uses: number;
 }
@@ -183,7 +185,7 @@ export default function LibraryPage() {
                 <Card className="space-y-0.5">
                   <p className="font-display">{it.title}</p>
                   <p className="text-xs text-ink-soft">
-                    {it.grade && it.subject ? courseName(it.grade, it.subject) : it.subjectName || "과목 없음"} · 문제 {it.quizzes}세트 · {it.uses}번 쓰임
+                    {classificationLabel({ grade: it.grade ? gradeShort(it.grade) : "", subject: it.subject ? subjectLabel(it.subject) : it.subjectName || "과목 없음", unit: it.unit })} · 문제 {it.quizzes}세트 · {it.uses}번 쓰임
                   </p>
                 </Card>
               </button>

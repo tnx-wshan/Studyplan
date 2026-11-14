@@ -18,10 +18,10 @@ const cmd = (id: number, type: string, payload: Record<string, unknown>) => ({ i
 describe("learn progress", () => {
   it("records a unit, grants xp once in full, and tracks the daily goal", async () => {
     const r1 = await finishUnit({ unitId: "u1", courseKey: "m1:math", title: "소수", score: { correct: 4, total: 5 }, seconds: 150 });
-    expect(r1).toEqual({ xp: 18, first: true });
+    expect(r1).toEqual({ xp: 180, first: true });
     const r2 = await finishUnit({ unitId: "u1", courseKey: "m1:math", title: "소수", score: { correct: 5, total: 5 }, seconds: 160 });
-    expect(r2).toEqual({ xp: 5, first: false });
-    expect((await getProfile())?.totalXp).toBe(23);
+    expect(r2).toEqual({ xp: 50, first: false });
+    expect((await getProfile())?.totalXp).toBe(230);
     const p = await getDB().learnProgress.get("u1");
     expect(p).toMatchObject({ attempts: 2, bestCorrect: 5 });
     const d = await dailyLearn();
@@ -35,7 +35,7 @@ describe("learn progress", () => {
     const id = await ensureServerId();
     expect(await ensureServerId()).toBe(id);
     const s = await buildSnapshot();
-    expect(s).toMatchObject({ level: 1, totalXp: 12, learnDone: ["u1"], learnTodaySec: 60, streak: 1 });
+    expect(s).toMatchObject({ level: 0, totalXp: 120, learnDone: ["u1"], learnTodaySec: 60, streak: 1 });
   });
 
   it("applies admin commands once, in order", async () => {

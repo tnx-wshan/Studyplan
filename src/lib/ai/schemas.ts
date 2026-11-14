@@ -68,7 +68,14 @@ export const MaterialRequestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("photo"), grade: z.string().max(20), subject: z.string().max(20).optional(), subjectGroup: SubjectGroupSchema, images: z.array(z.string().max(8_000_000).regex(DATA_URL)).min(1).max(5) }),
   z.object({ kind: z.literal("pdf"), grade: z.string().max(20), subject: z.string().max(20).optional(), subjectGroup: SubjectGroupSchema, pdf: z.string().max(20_000_000).regex(DATA_URL) }),
   z.object({ kind: z.literal("web"), grade: z.string().max(20), subject: z.string().max(20).optional(), subjectGroup: SubjectGroupSchema, query: z.string().min(1).max(200) }),
-  z.object({ kind: z.literal("curriculum"), grade: z.string().max(20), subjectGroup: SubjectGroupSchema, course: z.string().min(1).max(40), unit: z.string().min(1).max(80) }),
+  z.object({
+    kind: z.literal("curriculum"),
+    grade: z.string().max(20),
+    subjectGroup: SubjectGroupSchema,
+    course: z.string().min(1).max(40),
+    /** 교과서의 실제 단원 이름 (학생이 직접 쓰거나 대표 단원에서 고른다) */
+    unit: z.string().trim().min(1).max(120),
+  }),
 ]);
 export type MaterialRequest = z.infer<typeof MaterialRequestSchema>;
 

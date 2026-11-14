@@ -11,7 +11,6 @@ import { getDB } from "@/lib/db";
 import { claimExamMilestone, claimWeeklyQuest, examQuestStatus, weeklyStatus } from "@/lib/db/game";
 import { claimQuest, dailyStats } from "@/lib/db/study";
 import { FREEZE_QUESTS_NEEDED, maybeAwardFreeze } from "@/lib/db/retention";
-import { MAX_FREEZES } from "@/lib/game/streak";
 import { daysBetween, toDateKey } from "@/lib/date";
 import { DAILY_QUESTS, questProgress } from "@/lib/game/quests";
 
@@ -99,7 +98,7 @@ export function QuestBoard() {
       <Card className="space-y-2" role="tabpanel">
         {tab === "weekly" && (
           <p className="text-xs text-ink-soft">
-            🛡️ 주간 {noir ? "의뢰" : "퀘스트"} {FREEZE_QUESTS_NEEDED}개를 완수하면 연속 기록 보호권을 받아요 (최대 {MAX_FREEZES}개). 하루 쉬어도 연속 기록이 유지돼요.
+            🛡️ 주간 {noir ? "의뢰" : "퀘스트"} {FREEZE_QUESTS_NEEDED}개를 완수하면 연속 기록 보호권을 받아요 (최대 2개, 레벨 10부터 3개). 하루 쉬어도 연속 기록이 유지돼요.
           </p>
         )}
         {tab !== "exam" && rows?.map((r) => <QuestRow key={r.key} row={r} noir={noir} />)}

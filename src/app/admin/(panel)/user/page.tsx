@@ -10,9 +10,9 @@ import { toast } from "@/components/Toaster";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import { GRADES, SUBJECT_GROUPS } from "@/data/curriculum";
 import { adminApi, ago, formatTime } from "@/lib/admin/client";
-import { levelFromXp, xpToNext } from "@/lib/game/level";
-import { courseName, gradeShort } from "@/lib/learn/names";
-import { courseKey, type CourseInfo, type CourseOutline } from "@/lib/learn/types";
+import { MAX_LEVEL, levelFromXp, xpForLevel } from "@/lib/game/level";
+import { gradeShort, subjectLabel } from "@/lib/learn/names";
+import { courseKey, type CourseOutline, type LearnSubject } from "@/lib/learn/types";
 import { COMMAND_LABELS, type StoredCommand, type UserCommand, type UserSnapshot } from "@/lib/sync/types";
 
 interface UserDetail {
@@ -27,8 +27,6 @@ interface UserDetail {
   commands: StoredCommand[];
 }
 
-/** 레벨 n이 시작되는 총 경험치 */
-const xpForLevel = (level: number) => Array.from({ length: Math.max(0, level - 1) }, (_, i) => xpToNext(i + 1)).reduce((a, b) => a + b, 0);
 
 export default function AdminUserPage() {
   return (
@@ -98,7 +96,7 @@ function UserView() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Mini label="레벨" value={`Lv.${s.level ?? 1}`} />
+        <Mini label="레벨" value={`Lv.${s.level ?? 0}`} />
         <Mini label="경험치" value={String(s.totalXp ?? 0)} />
         <Mini label="코인" value={String(s.coins ?? 0)} />
         <Mini label="연속 학습" value={`${s.streak ?? 0}일 (최장 ${s.longestStreak ?? 0})`} />
@@ -221,7 +219,7 @@ function Mini({ label, value }: { label: string; value: string }) {
 
 function EditValues({ user, onSend }: { user: UserDetail; onSend: (c: UserCommand) => Promise<void> }) {
   const s = user.snapshot;
-  const [level, setLevel] = useState(String(s.level ?? 1));
+  const [level, setLevel] = useState(String(s.level ?? 0));
   const [xp, setXp] = useState(String(s.totalXp ?? 0));
   const [coins, setCoins] = useState(String(s.coins ?? 0));
   const [freezes, setFreezes] = useState(String(Math.min(2, s.freezes ?? 0)));
@@ -232,9 +230,9 @@ function EditValues({ user, onSend }: { user: UserDetail; onSend: (c: UserComman
     <Card className="grid gap-4 md:grid-cols-2">
       <div className="space-y-2">
         <Field label="레벨 (그 레벨의 시작 경험치로 맞춰요)">
-          <TextInput type="number" min={1} max={200} value={level} onChange={(e) => setLevel(e.target.value)} />
+          <TextInput type="number" min={0} max={MAX_LEVEL} value={level} onChange={(e) => setLevel(e.target.value)} />
         </Field>
-        <Button size="sm" variant="ghost" onClick={() => onSend({ type: "setXp", payload: { totalXp: xpForLevel(Math.max(1, num(level))) } })}>
+        <Button size="sm" variant="ghost" onClick={() => onSend({ type: "setXp", payload: { totalXp: xpForLevel(num(level)) } })}>
           레벨 적용
         </Button>
       </div>
@@ -285,12 +283,12 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
   const [grade, setGrade] = useState(current?.[0] || user.grade || "m1");
   const [subject, setSubject] = useState(current?.[1] || "math");
   const [outline, setOutline] = useState<CourseOutline | null>(null);
-  const [courses, setCourses] = useState<CourseInfo[]>([]);
+  const [subjects, setSubjects] = useState<LearnSubject[]>([]);
   useEffect(() => {
-    adminApi<{ courses: CourseInfo[]; outline: CourseOutline }>(`/api/admin/learn?grade=${grade}&subject=${subject}`).then(
+    adminApi<{ outline: CourseOutline; subjects: LearnSubject[] }>(`/api/admin/learn?grade=${grade}&subject=${subject}`).then(
       (r) => {
         setOutline(r.outline);
-        setCourses(r.courses);
+        setSubjects(r.subjects);
       },
       () => setOutline(null),
     );
@@ -303,10 +301,18 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
   return (
     <Card className="space-y-3">
       <p className="text-sm text-ink-soft">
-        지금 고른 코스: {user.snapshot.learnCourse ? courseName(...(user.snapshot.learnCourse.split(":") as [string, string])) : "없음"} · 끝낸 유닛 {done.size}개
+        지금 고른 코스: {user.snapshot.learnCourse ? `${gradeShort(current?.[0] ?? "")} ${subjects.find((s) => s.key === current?.[1])?.name ?? subjectLabel(current?.[1] ?? "")}` : "없음"} · 끝낸 유닛 {done.size}개
       </p>
       <div className="flex flex-wrap gap-2">
-        <Select aria-label="학년" value={grade} onChange={(e) => setGrade(e.target.value)} className="w-auto">
+        <Select
+          aria-label="학년"
+          value={grade}
+          onChange={(e) => {
+            setGrade(e.target.value);
+            if (!SUBJECT_GROUPS.some((g) => g.id === subject)) setSubject("math");
+          }}
+          className="w-auto"
+        >
           {GRADES.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
@@ -314,9 +320,9 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
           ))}
         </Select>
         <Select aria-label="과목" value={subject} onChange={(e) => setSubject(e.target.value)} className="w-auto">
-          {SUBJECT_GROUPS.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.label} ({courses.find((c) => c.grade === grade && c.subject === g.id)?.units ?? 0})
+          {subjects.map((s) => (
+            <option key={s.key} value={s.key}>
+              {s.name} ({s.units})
             </option>
           ))}
         </Select>
@@ -362,7 +368,7 @@ function LearnProgressEditor({ user, onSend }: { user: UserDetail; onSend: (c: U
         size="sm"
         variant="ghost"
         onClick={async () => {
-          if (await askConfirm(`${courseName(grade, subject)} 코스의 진도를 모두 지울까요?`, { confirmLabel: "모두 지우기", danger: true })) await onSend({ type: "learnResetCourse", payload: { courseKey: key } });
+          if (await askConfirm(`${gradeShort(grade)} ${subjects.find((s) => s.key === subject)?.name ?? subjectLabel(subject)} 코스의 진도를 모두 지울까요?`, { confirmLabel: "모두 지우기", danger: true })) await onSend({ type: "learnResetCourse", payload: { courseKey: key } });
         }}
       >
         이 코스 진도 모두 지우기

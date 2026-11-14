@@ -38,7 +38,7 @@ export default function AdminUsers() {
       {error && <p role="alert" className="text-danger">{error}</p>}
       {users && users.length === 0 && <Card className="text-sm text-ink-soft">아직 접속한 사용자가 없어요.</Card>}
       {shown.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border-2 border-line bg-surface">
+        <div className="overflow-x-auto rounded-2xl border-2 border-line bg-surface" tabIndex={0} role="region" aria-label="사용자 표 (옆으로 밀어서 보기)">
           <table className="w-full min-w-[640px]">
             <thead>
               <tr>
@@ -66,7 +66,7 @@ export default function AdminUsers() {
                     <StatusBadge status={u.status} />
                   </Td>
                   <Td className="tabular-nums">
-                    Lv.{u.snapshot.level ?? 1} · {u.snapshot.totalXp ?? 0}
+                    Lv.{u.snapshot.level ?? 0} · {u.snapshot.totalXp ?? 0}
                   </Td>
                   <Td className="tabular-nums">{u.snapshot.streak ?? 0}일</Td>
                   <Td>
