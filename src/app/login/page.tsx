@@ -107,8 +107,8 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className={inputClass}
             />
-            {signup && <span className="block text-xs text-ink-soft">8자 이상, 영문자와 숫자를 모두 넣어 주세요.</span>}
           </label>
+          {signup && <p className="-mt-1 text-xs text-ink-soft">8자 이상, 영문자와 숫자를 모두 넣어 주세요.</p>}
           {signup && (
             <label className="block space-y-1.5">
               <span className="text-sm text-ink-soft">비밀번호 확인</span>

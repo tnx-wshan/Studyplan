@@ -71,8 +71,8 @@ export function AccountSettings() {
             <label className="block space-y-1">
               <span className="text-sm text-ink-soft">새 비밀번호</span>
               <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} className={inputClass} />
-              <span className="block text-xs text-ink-soft">8자 이상, 영문자와 숫자를 모두 넣어 주세요.</span>
             </label>
+            <p className="-mt-1 text-xs text-ink-soft">8자 이상, 영문자와 숫자를 모두 넣어 주세요.</p>
             <label className="block space-y-1">
               <span className="text-sm text-ink-soft">새 비밀번호 확인</span>
               <input type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />

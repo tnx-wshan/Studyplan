@@ -1,6 +1,24 @@
 import { expect, test } from "@playwright/test";
 import { ADMIN_URL, E2E_PASSWORD, adminLogin, answerDialog, noHorizontalScroll, signUp, startFresh } from "./helpers";
 
+/** 이 기기의 첫 계정이 쓰는 DB("homestudy")에 저장된 닉네임 */
+async function storedNickname(page: import("@playwright/test").Page) {
+  return page.evaluate(
+    () =>
+      new Promise<string | null>((resolve) => {
+        const open = indexedDB.open("homestudy");
+        open.onsuccess = () => {
+          const db = open.result;
+          if (!db.objectStoreNames.contains("profile")) return resolve(null);
+          const get = db.transaction("profile").objectStore("profile").get("me");
+          get.onsuccess = () => resolve(get.result?.nickname ?? null);
+          get.onerror = () => resolve(null);
+        };
+        open.onerror = () => resolve(null);
+      }),
+  );
+}
+
 async function logout(page: import("@playwright/test").Page) {
   await page.goto("/settings");
   await page.getByRole("button", { name: "로그아웃" }).click();
@@ -22,25 +40,25 @@ test("회원가입 검사: 형식·약한 비밀번호·확인 불일치·중복
   await page.getByLabel("비밀번호", { exact: true }).fill("abcd1234");
   await page.getByLabel("비밀번호 확인").fill("abcd1234");
   await page.click("button[type=submit]");
-  await expect(page.getByRole("alert")).toHaveText(/메일주소 형식/);
+  await expect(page.locator("p[role=alert]")).toHaveText(/메일주소 형식/);
 
   await page.getByLabel("메일주소 (아이디)").fill("dup@example.com");
   await page.getByLabel("비밀번호", { exact: true }).fill("onlyletters");
   await page.getByLabel("비밀번호 확인").fill("onlyletters");
   await page.click("button[type=submit]");
-  await expect(page.getByRole("alert")).toHaveText(/영문자와 숫자/);
+  await expect(page.locator("p[role=alert]")).toHaveText(/영문자와 숫자/);
 
   await page.getByLabel("비밀번호", { exact: true }).fill("abcd1234");
   await page.getByLabel("비밀번호 확인").fill("abcd9999");
   await page.click("button[type=submit]");
-  await expect(page.getByRole("alert")).toHaveText(/확인이 달라요/);
+  await expect(page.locator("p[role=alert]")).toHaveText(/확인이 달라요/);
 
   const email = `dup-${Date.now()}@example.com`;
   await signUp(page, email);
   await expect(page.getByRole("heading", { name: /반가워요/ })).toBeVisible();
   await page.context().clearCookies();
   await signUp(page, email);
-  await expect(page.getByRole("alert")).toHaveText(/이미 가입된 메일/);
+  await expect(page.locator("p[role=alert]")).toHaveText(/이미 가입된 메일/);
 });
 
 test("로그인 유지: 새로 고침·다시 열어도 같은 계정, 로그아웃해도 기록은 남고 다시 로그인하면 돌아온다", async ({ page }) => {
@@ -48,7 +66,8 @@ test("로그인 유지: 새로 고침·다시 열어도 같은 계정, 로그아
   await page.reload();
   await expect(page).not.toHaveURL(/\/login/);
   await page.goto("/profile");
-  await expect(page.getByText("공부왕").first()).toBeVisible();
+  await expect(page).toHaveURL(/\/profile/);
+  expect(await storedNickname(page)).toBe("공부왕");
 
   await page.goto("/settings");
   await expect(page.getByText(/@example\.com/)).toBeVisible();
@@ -78,7 +97,8 @@ test("같은 기기에서 다른 계정은 기록이 섞이지 않고, 원래 �
   await login(page, emailText.trim());
   await expect(page).not.toHaveURL(/\/login/);
   await page.goto("/profile");
-  await expect(page.getByText("공부왕").first()).toBeVisible();
+  await expect(page).toHaveURL(/\/profile/); // 첫 실행 설정으로 돌아가지 않는다
+  expect(await storedNickname(page)).toBe("공부왕");
   expect(errors).toEqual([]);
 });
 
@@ -91,7 +111,7 @@ test("비밀번호 변경: 현재 비밀번호 확인, 새 비밀번호로 다�
   await page.getByLabel("새 비밀번호", { exact: true }).fill("brandnew99");
   await page.getByLabel("새 비밀번호 확인").fill("brandnew99");
   await page.getByRole("button", { name: "비밀번호 바꾸기" }).last().click();
-  await expect(page.getByRole("alert")).toHaveText(/현재 비밀번호가 맞지 않아요/);
+  await expect(page.locator("p[role=alert]")).toHaveText(/현재 비밀번호가 맞지 않아요/);
 
   await page.getByLabel("현재 비밀번호").fill(E2E_PASSWORD);
   await page.getByRole("button", { name: "비밀번호 바꾸기" }).last().click();
@@ -103,7 +123,7 @@ test("비밀번호 변경: 현재 비밀번호 확인, 새 비밀번호로 다�
   await page.getByRole("button", { name: "로그아웃" }).click();
   await answerDialog(page);
   await login(page, email, E2E_PASSWORD);
-  await expect(page.getByRole("alert")).toHaveText(/맞지 않아요/);
+  await expect(page.locator("p[role=alert]")).toHaveText(/맞지 않아요/);
   await login(page, email, "brandnew99");
   await expect(page).not.toHaveURL(/\/login/);
 });
@@ -126,10 +146,7 @@ test("관리 도구: 메일주소가 보이고 임시 비밀번호로 로그인�
 
   // 다른 기기(이 브라우저)의 로그인은 풀린다
   await page.goto("/planner");
-  await page.waitForTimeout(500);
-  await page.reload();
-  await expect(page).toHaveURL(/\/login|\/planner/);
-  await page.context().clearCookies();
+  await expect(page).toHaveURL(/\/login/, { timeout: 20_000 }); // 앱이 동기화하다가 로그인이 풀린 것을 알고 로그인 화면으로 보낸다
   await page.goto("/login");
   await login(page, email, temp);
   await expect(page).not.toHaveURL(/\/login/);
