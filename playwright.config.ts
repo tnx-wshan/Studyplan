@@ -8,6 +8,7 @@ const ADMIN_PORT = 3211;
 const env = {
   AI_PROVIDER: "mock",
   AI_LIMIT_TUTOR: "3",
+  SIGNUP_LIMIT_PER_HOUR: "1000",
   SESSION_SECRET: "e2e-secret",
   ADMIN_PASSWORD: "e2e-admin",
   HOMESTUDY_DB_NAME: "e2e.db",

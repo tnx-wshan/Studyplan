@@ -3,8 +3,8 @@ import { isAuthConfigured } from "@/lib/auth";
 import { createAccount } from "@/lib/server/accounts";
 import { clientKey, createLimiter, readJson, sessionResponse, str } from "@/lib/server/session";
 
-/** 같은 주소에서 가입은 1시간에 10번까지 */
-const signups = createLimiter(60 * 60_000, 10);
+/** 같은 주소에서 가입은 1시간에 10번까지 (SIGNUP_LIMIT_PER_HOUR로 바꿀 수 있다. 브라우저 테스트는 크게 둔다) */
+const signups = createLimiter(60 * 60_000, Number(process.env.SIGNUP_LIMIT_PER_HOUR) || 10);
 
 /** 메일주소와 비밀번호로 가입한다 (메일 인증은 하지 않는다). 가입하면 바로 로그인된다. */
 export async function POST(request: Request) {
