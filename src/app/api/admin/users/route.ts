@@ -1,3 +1,4 @@
+import { emailsById } from "@/lib/server/accounts";
 import { admin, ok } from "@/lib/server/admin-api";
 import { unitCourseMap } from "@/lib/server/learn";
 import { listUsers } from "@/lib/server/users";
@@ -6,6 +7,7 @@ import { listUsers } from "@/lib/server/users";
 export async function GET() {
   return admin(() => {
     const units = unitCourseMap();
+    const emails = emailsById();
     return ok({
       users: listUsers().map((u) => {
         const perCourse: Record<string, number> = {};
@@ -13,7 +15,7 @@ export async function GET() {
           const info = units.get(id);
           if (info) perCourse[`${info.grade}:${info.subject}`] = (perCourse[`${info.grade}:${info.subject}`] ?? 0) + 1;
         }
-        return { ...u, learnByCourse: perCourse };
+        return { ...u, email: emails.get(u.id) ?? "", learnByCourse: perCourse };
       }),
     });
   });

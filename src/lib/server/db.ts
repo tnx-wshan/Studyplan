@@ -9,6 +9,7 @@ import { repairDeep } from "@/lib/ai/text";
 /**
  * 서버 DB (Node 내장 SQLite). 학생 개인 데이터는 여전히 기기(IndexedDB)에 있고,
  * 여기에는 여러 사용자가 함께 쓰는 것만 둔다:
+ *   - accounts: 학생 계정(메일주소·비밀번호 해시)
  *   - users / user_commands: 관리 도구가 보는 사용자 요약과, 관리자가 고친 값(기기가 다음 접속 때 적용)
  *   - bank_items: AI 학습실에서 만든 정리·문제 모음 (중복 생성 방지, AI 없이도 쓰기)
  *   - learn_sections / learn_units: 학습 탭의 코스 내용
@@ -137,6 +138,21 @@ const MIGRATIONS: Migration[] = [
   // 6: 학년·과목·학기별 기본 단원(섹션 목차)을 넣는다. 고2·고3 선택과목은 과목도 만든다 (src/data/learn/baseCurriculum.ts)
   (db) => {
     applyBaseCurriculum(db);
+  },
+  // 7: 학생 계정 (메일주소 + 비밀번호). id는 users.id와 같다 (기기가 서버에 알리는 사용자 id)
+  (db) => {
+    db.exec(`
+      CREATE TABLE accounts (
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        session_version INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        last_login_at INTEGER
+      );
+      CREATE UNIQUE INDEX accounts_email ON accounts(email);
+    `);
   },
 ];
 

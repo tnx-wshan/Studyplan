@@ -1,13 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { TINY_PNG, noHorizontalScroll, rewindTimer, startFresh } from "./helpers";
 
-test("잠금: 비밀번호 없이는 화면과 API에 접근할 수 없다", async ({ page, request }) => {
+test("잠금: 로그인 없이는 화면과 API에 접근할 수 없다", async ({ page, request }) => {
   await page.goto("/planner");
   await expect(page).toHaveURL(/\/login/);
   expect((await request.get("/api/ai/status")).status()).toBe(401);
-  await page.fill("input[type=password]", "wrong");
+  await page.getByLabel("메일주소 (아이디)").fill("nobody@example.com");
+  await page.getByLabel("비밀번호", { exact: true }).fill("wrong1234");
   await page.click("button[type=submit]");
-  await expect(page.getByText("비밀번호가 맞지 않아요")).toBeVisible();
+  await expect(page.getByText("메일주소나 비밀번호가 맞지 않아요")).toBeVisible();
 });
 
 test("플래너 → 시험 계획 → 타이머 → 카드 → 오답노트 → 퀘스트 보상", async ({ page }) => {

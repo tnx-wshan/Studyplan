@@ -17,6 +17,7 @@ import { COMMAND_LABELS, type StoredCommand, type UserCommand, type UserSnapshot
 
 interface UserDetail {
   id: string;
+  email: string;
   nickname: string;
   grade: string;
   status: "active" | "suspended";
@@ -42,6 +43,7 @@ function UserView() {
   const [user, setUser] = useState<UserDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [memo, setMemo] = useState("");
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   const load = useCallback(
     () =>
@@ -78,6 +80,16 @@ function UserView() {
     }
   }
 
+  async function resetPassword() {
+    if (!(await askConfirm(`${user?.email}의 비밀번호를 임시 비밀번호로 바꿀까요? 그 학생의 다른 기기 로그인이 모두 풀려요.`, { confirmLabel: "임시 비밀번호 만들기", danger: true }))) return;
+    try {
+      const r = await adminApi<{ password: string }>("/api/admin/user/password", { method: "POST", body: { id } });
+      setTempPassword(r.password);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "만들지 못했어요.");
+    }
+  }
+
   if (error) return <p role="alert" className="text-danger">{error}</p>;
   if (!user) return <p className="text-ink-soft">불러오는 중…</p>;
   const s = user.snapshot;
@@ -102,6 +114,9 @@ function UserView() {
         <Mini label="연속 학습" value={`${s.streak ?? 0}일 (최장 ${s.longestStreak ?? 0})`} />
         <Mini label="학습 탭 (오늘/주)" value={`${Math.round((s.learnTodaySec ?? 0) / 60)}분 / ${Math.round((s.learnWeekSec ?? 0) / 60)}분`} />
       </div>
+      <p className="text-sm">
+        로그인 아이디: <span className="font-semibold">{user.email || "(계정 없음 — 계정 도입 전 기록)"}</span>
+      </p>
       <p className="text-xs text-ink-soft">
         마지막 접속 {ago(user.lastSeenAt)} · 처음 접속 {formatTime(user.createdAt)} · 마지막 공부한 날 {s.lastStudyDate ?? "-"}
       </p>
@@ -126,6 +141,19 @@ function UserView() {
             )}
             <span className="text-xs text-ink-soft">정지하면 학생 화면이 잠기고, 기기 데이터는 그대로 남아요.</span>
           </div>
+          {user.email && (
+            <div className="space-y-2">
+              <Button variant="ghost" onClick={resetPassword}>
+                🔑 임시 비밀번호 만들기
+              </Button>
+              <span className="block text-xs text-ink-soft">메일을 보내지 않으므로, 비밀번호를 잊은 학생에게 직접 알려 주세요. 학생은 로그인한 뒤 설정에서 바꿀 수 있어요.</span>
+              {tempPassword && (
+                <p role="status" className="rounded-xl border-2 border-line px-3 py-2 text-sm">
+                  임시 비밀번호: <code className="font-semibold">{tempPassword}</code> (지금만 보여요)
+                </p>
+              )}
+            </div>
+          )}
           <Field label="관리자 메모 (학생에게 보이지 않아요)">
             <TextArea value={memo} onChange={(e) => setMemo(e.target.value)} maxLength={1000} />
           </Field>

@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from "dexie";
 import type * as T from "./types";
 import { defaultCourseIds, type SubjectGroup } from "@/data/curriculum";
 import { XP_SCALE } from "@/lib/game/level";
+import { currentDbName } from "./account";
 
 export class HomeStudyDB extends Dexie {
   profile!: EntityTable<T.Profile, "id">;
@@ -102,7 +103,7 @@ export class HomeStudyDB extends Dexie {
 let instance: HomeStudyDB | null = null;
 
 export function getDB(): HomeStudyDB {
-  if (!instance) instance = new HomeStudyDB();
+  if (!instance) instance = new HomeStudyDB(currentDbName());
   return instance;
 }
 

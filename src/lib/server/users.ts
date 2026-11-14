@@ -70,7 +70,7 @@ export function syncUser(req: SyncRequest, now = Date.now()) {
     db.prepare("UPDATE user_commands SET applied_at = ? WHERE user_id = ? AND id <= ? AND applied_at IS NULL").run(now, req.userId, req.lastCommandId);
     const status = (db.prepare("SELECT status FROM users WHERE id = ?").get(req.userId) as { status: string }).status;
     const commands = (db.prepare("SELECT * FROM user_commands WHERE user_id = ? AND id > ? AND applied_at IS NULL ORDER BY id").all(req.userId, req.lastCommandId) as unknown as CommandRow[]).map(toCommand);
-    return { status: (status === "suspended" ? "suspended" : "active") as UserStatus, commands };
+    return { userId: req.userId, status: (status === "suspended" ? "suspended" : "active") as UserStatus, commands };
   });
 }
 

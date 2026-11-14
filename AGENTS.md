@@ -19,7 +19,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ### 명령
 ```
-npm run dev          # 개발 서버 (비밀번호는 .env.local의 APP_PASSWORD)
+npm run dev          # 개발 서버 (학생 계정은 화면에서 회원가입, .env.local에는 SESSION_SECRET 필요)
 npm run dev:admin    # 관리 도구 개발 서버 (포트 3300, ADMIN_PASSWORD)
 npm test             # 단위 테스트 (Vitest)
 npm run lint && npm run typecheck

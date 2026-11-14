@@ -1,4 +1,5 @@
 import { getDB, newId } from "./index";
+import { signOutDevice } from "./account";
 import { computeStreak } from "@/lib/game/streak";
 import { levelFromXp } from "@/lib/game/level";
 import { toDateKey } from "@/lib/date";
@@ -94,6 +95,12 @@ export async function applyCommands(commands: StoredCommand[], at = Date.now()):
 async function post(body: SyncRequest): Promise<SyncResponse | null> {
   try {
     const res = await fetch("/api/user/sync", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), cache: "no-store" });
+    if (res.status === 401) {
+      // 로그인이 풀렸다 (다른 기기에서 비밀번호를 바꿨거나 계정이 없어졌다): 다시 로그인하게 한다
+      signOutDevice();
+      if (typeof window !== "undefined") window.location.replace("/login");
+      return null;
+    }
     if (!res.ok) return null;
     return (await res.json()) as SyncResponse;
   } catch {
@@ -117,6 +124,8 @@ export async function syncNow(): Promise<SyncResponse | null> {
   if (!body) return null;
   const res = await post(body);
   if (!res) return null;
+  // 서버는 로그인한 계정의 id로 이 기기를 알아본다
+  if (res.userId && res.userId !== body.userId) await getDB().profile.update("me", { serverId: res.userId });
   if (res.commands.length > 0) {
     await applyCommands(res.commands);
     const again = await request();

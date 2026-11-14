@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getAccount } from "@/lib/server/accounts";
 import { admin, adminError, ok, readBody } from "@/lib/server/admin-api";
 import { unitCourseMap } from "@/lib/server/learn";
 import { deleteUser, getUser, updateUser } from "@/lib/server/users";
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     if (!user) return adminError(404, "사용자를 찾을 수 없어요.");
     const units = unitCourseMap();
     const done = (user.snapshot.learnDone ?? []).map((unitId) => ({ unitId, ...(units.get(unitId) ?? { title: "(지워진 유닛)", section: "", grade: "", subject: "" }) }));
-    return ok({ user, done });
+    return ok({ user: { ...user, email: getAccount(id)?.email ?? "" }, done });
   });
 }
 

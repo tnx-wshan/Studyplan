@@ -57,6 +57,8 @@ export interface StoredCommand {
 export type UserStatus = "active" | "suspended";
 
 export interface SyncResponse {
+  /** 서버가 이 기기를 알아보는 id (로그인한 계정의 id). 다르면 기기가 맞춘다 */
+  userId: string;
   status: UserStatus;
   commands: StoredCommand[];
 }

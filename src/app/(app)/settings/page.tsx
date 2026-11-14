@@ -3,6 +3,8 @@
 import { useRef, useState } from "react";
 import { applyTheme, DEFAULT_STYLE } from "@/components/ThemeSync";
 import { Pet } from "@/components/Pet";
+import { AccountSettings } from "@/components/AccountSettings";
+import { signOutDevice } from "@/lib/db/account";
 import { NotificationSettings } from "@/components/NotificationSettings";
 import { setStyle } from "@/lib/db/game";
 import Link from "next/link";
@@ -49,7 +51,9 @@ export default function SettingsPage() {
   }
 
   async function onLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    if (!(await askConfirm("로그아웃할까요? 이 기기의 공부 기록은 지워지지 않고, 같은 계정으로 다시 로그인하면 그대로 돌아와요."))) return;
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    signOutDevice();
     window.location.replace("/login");
   }
 
@@ -218,8 +222,10 @@ export default function SettingsPage() {
         </Card>
       </section>
 
+      <AccountSettings />
+
       <Button variant="ghost" className="w-full" onClick={onLogout}>
-        잠그기 (로그아웃)
+        로그아웃
       </Button>
     </div>
   );

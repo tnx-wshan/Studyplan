@@ -8,7 +8,6 @@ const ADMIN_PORT = 3211;
 const env = {
   AI_PROVIDER: "mock",
   AI_LIMIT_TUTOR: "3",
-  APP_PASSWORD: "e2e-pass",
   SESSION_SECRET: "e2e-secret",
   ADMIN_PASSWORD: "e2e-admin",
   HOMESTUDY_DB_NAME: "e2e.db",

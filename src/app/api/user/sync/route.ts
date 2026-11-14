@@ -1,22 +1,20 @@
 import { NextResponse } from "next/server";
-import { USER_COOKIE, signValue } from "@/lib/auth";
 import { parseBody } from "@/lib/ai/route-helpers";
+import { adoptDeviceUser } from "@/lib/server/accounts";
+import { currentAccount } from "@/lib/server/identity";
 import { syncUser } from "@/lib/server/users";
 import { SyncRequestSchema, type SyncResponse } from "@/lib/sync/types";
 
-/** 기기 요약을 받아 저장하고, 관리자가 내린 명령과 이용 상태를 돌려준다 */
+/**
+ * 기기 요약을 받아 저장하고, 관리자가 내린 명령과 이용 상태를 돌려준다.
+ * 사용자 id는 로그인한 계정의 id를 쓴다 (기기가 보낸 id는 계정 도입 전 기록을 이어 붙일 때만 본다).
+ */
 export async function POST(request: Request) {
+  const account = await currentAccount();
+  if (!account) return NextResponse.json({ error: "unauthorized", loggedOut: true }, { status: 401 });
   const body = await parseBody(request, SyncRequestSchema);
   if (body instanceof Response) return body;
-  const result: SyncResponse = syncUser(body);
-  const response = NextResponse.json(result);
-  // AI 학습실이 누가 만든 자료인지 기록하고, 이용 정지된 사용자를 막을 때 쓴다
-  response.cookies.set(USER_COOKIE, signValue(body.userId, "uid"), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 365,
-  });
-  return response;
+  adoptDeviceUser(account.id, body.userId);
+  const result: SyncResponse = syncUser({ ...body, userId: account.id });
+  return NextResponse.json(result, { headers: { "cache-control": "no-store" } });
 }

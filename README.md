@@ -6,7 +6,7 @@
 
 ```bash
 npm install
-cp .env.example .env.local   # APP_PASSWORD, SESSION_SECRET 값을 채웁니다
+cp .env.example .env.local   # SESSION_SECRET 값을 채웁니다 (학생 계정은 앱 화면에서 회원가입)
 npm run dev                  # http://localhost:3000
 ```
 

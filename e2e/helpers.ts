@@ -1,13 +1,25 @@
 import { expect, type Page } from "@playwright/test";
 
+let signupCount = 0;
+export const E2E_PASSWORD = "e2e-pass1234";
+
+/** 새 계정으로 가입한다 (메일주소는 테스트마다 다르게). 가입한 메일주소를 돌려준다 */
+export async function signUp(page: Page, email = `e2e-${Date.now()}-${++signupCount}@example.com`) {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "회원가입" }).click();
+  await page.getByLabel("메일주소 (아이디)").fill(email);
+  await page.getByLabel("비밀번호", { exact: true }).fill(E2E_PASSWORD);
+  await page.getByLabel("비밀번호 확인").fill(E2E_PASSWORD);
+  await page.click("button[type=submit]");
+  return email;
+}
+
 /** 로그인하고 첫 실행 설정을 마친다 (누아르 테마 기준 문구) */
 export async function startFresh(page: Page, grade = "고1") {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(`[${page.url().replace(/^https?:\/\/[^/]+/, "")}] ${e.message}`));
   page.on("dialog", (d) => d.accept());
-  await page.goto("/login");
-  await page.fill("input[type=password]", "e2e-pass");
-  await page.click("button[type=submit]");
+  await signUp(page);
   await expect(page.getByRole("heading", { name: /반가워요/ })).toBeVisible();
   await page.fill("input", "공부왕");
   await page.getByRole("button", { name: grade }).click();

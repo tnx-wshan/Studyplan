@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const SESSION_COOKIE = "hs_session";
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30일
+/** 한 번 로그인하면 그 기기에서 계속 쓴다 (1년) */
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 365;
 
 function secret(): string | null {
   return process.env.SESSION_SECRET || null;
@@ -18,56 +19,45 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ab, bb);
 }
 
-/** 서버 설정이 빠져 있으면 잠금을 풀지 않는다(fail closed). */
+/** 서버 설정이 빠져 있으면 로그인을 열지 않는다(fail closed). */
 export function isAuthConfigured(): boolean {
-  return Boolean(process.env.APP_PASSWORD && secret());
+  return Boolean(secret());
 }
 
-export function checkPassword(input: string): boolean {
-  const expected = process.env.APP_PASSWORD;
-  if (!expected || !secret()) return false;
-  return safeEqual(input, expected);
+// ───────── 학생 계정 세션 ─────────
+
+export interface SessionInfo {
+  accountId: string;
+  /** 계정의 세션 버전. 비밀번호를 바꾸면 올라가서 다른 기기의 세션이 끊긴다 */
+  version: number;
 }
 
-/** 세션 토큰: 발급 시각 + 서명. 비밀번호나 SESSION_SECRET을 바꾸면 기존 세션은 무효가 된다. */
-export function createSessionToken(now = Date.now()): string {
+/** 세션 토큰: `계정id.버전.발급시각.서명`. 서명만 보면 되므로 프록시에서 DB 없이 확인한다. */
+export function createSessionToken(accountId: string, version = 0, now = Date.now()): string {
   const key = secret();
   if (!key) throw new Error("SESSION_SECRET is not set");
-  const issued = String(now);
-  return `${issued}.${sign(`${issued}:${process.env.APP_PASSWORD}`, key)}`;
+  const body = `${accountId}.${version}.${now}`;
+  return `${body}.${sign(`session:${body}`, key)}`;
+}
+
+export function parseSessionToken(token: string | undefined, now = Date.now()): SessionInfo | null {
+  const key = secret();
+  if (!token || !key) return null;
+  const parts = token.split(".");
+  if (parts.length !== 4) return null;
+  const [accountId, ver, issued, signature] = parts;
+  if (!accountId || !signature) return null;
+  const issuedAt = Number(issued);
+  const version = Number(ver);
+  if (!Number.isFinite(issuedAt) || !Number.isInteger(version)) return null;
+  if (now - issuedAt > SESSION_MAX_AGE * 1000 || issuedAt > now + 60_000) return null;
+  if (!safeEqual(signature, sign(`session:${accountId}.${ver}.${issued}`, key))) return null;
+  return { accountId, version };
 }
 
 export function verifySessionToken(token: string | undefined, now = Date.now()): boolean {
-  const key = secret();
-  if (!token || !key || !process.env.APP_PASSWORD) return false;
-  const [issued, signature] = token.split(".");
-  if (!issued || !signature) return false;
-  const issuedAt = Number(issued);
-  if (!Number.isFinite(issuedAt)) return false;
-  if (now - issuedAt > SESSION_MAX_AGE * 1000 || issuedAt > now + 60_000) return false;
-  return safeEqual(signature, sign(`${issued}:${process.env.APP_PASSWORD}`, key));
+  return parseSessionToken(token, now) !== null;
 }
-
-// ───────── 서명한 값 (사용자 id 쿠키) ─────────
-
-/** 값에 서명을 붙인다. purpose가 다르면 서로의 서명으로 쓸 수 없다 */
-export function signValue(value: string, purpose: string): string {
-  const key = secret();
-  if (!key) throw new Error("SESSION_SECRET is not set");
-  return `${value}.${sign(`${purpose}:${value}`, key)}`;
-}
-
-export function verifySignedValue(token: string | undefined, purpose: string): string | null {
-  const key = secret();
-  if (!token || !key) return null;
-  const i = token.lastIndexOf(".");
-  if (i <= 0) return null;
-  const value = token.slice(0, i);
-  return safeEqual(token.slice(i + 1), sign(`${purpose}:${value}`, key)) ? value : null;
-}
-
-/** 이 기기의 사용자 id (동기화할 때 서버가 발급) */
-export const USER_COOKIE = "hs_uid";
 
 // ───────── 관리 도구 ─────────
 

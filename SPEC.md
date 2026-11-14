@@ -10,7 +10,7 @@
 | 이름 | 홈스터디 (HomeStudy) |
 | 형태 | 설치할 수 있는 웹앱(PWA), 휴대폰 화면 기준, 오프라인에서도 열림 |
 | 사용자 | 여러 학생이 같은 비밀번호로 사용. 학생 화면 + 관리자용 관리 도구(다른 포트) |
-| 로그인 | 비밀번호 하나 (`APP_PASSWORD`). 계정·회원가입 없음 |
+| 로그인 | 학생 계정: 메일주소(아이디) + 비밀번호로 회원가입·로그인(메일 인증 없음), 비밀번호 변경, 한 번 로그인하면 그 기기에서 1년 유지. 비밀번호를 잊으면 관리 도구에서 임시 비밀번호를 줌 |
 | 과목 | 국어·영어·수학·사회·과학, 한국 교육과정 (중1~고3) |
 | 데이터 | 학생 데이터는 기기 안(IndexedDB). 서버 DB(Node 내장 SQLite, `.data/homestudy.db`)에는 함께 쓰는 것만: 사용자 요약·관리자 명령, 자료 모음, 학습 과정. Supabase는 나중에 |
 | AI | Gemini·Claude·OpenAI 중 하나를 환경 변수로 선택. 지금은 Gemini 사용 |
@@ -54,7 +54,7 @@ e2e/                        브라우저 테스트
 
 | 이름 | 뜻 |
 | --- | --- |
-| `APP_PASSWORD`, `SESSION_SECRET` | 로그인 비밀번호, 쿠키 서명 값 |
+| `SESSION_SECRET` | 로그인 세션(쿠키) 서명 값 |
 | `AI_PROVIDER` | `gemini` · `claude` · `openai` · `mock`(가짜 AI) |
 | `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | 고른 회사의 키 하나 |
 | `AI_MODEL`, `AI_MODEL_FALLBACKS` | 모델 바꾸기, 예비 모델들(쉼표). Gemini 기본 `gemini-3.5-flash` → `gemini-flash-lite-latest`, `gemini-flash-latest` |

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ADMIN_COOKIE, SESSION_COOKIE, isAdminServer, verifyAdminToken, verifySessionToken } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/intro", "/api/auth/login", "/manifest.webmanifest", "/sw.js", "/offline.html"];
+const PUBLIC_PATHS = ["/login", "/intro", "/api/auth/login", "/api/auth/signup", "/api/auth/logout", "/manifest.webmanifest", "/sw.js", "/offline.html"];
 const ADMIN_PUBLIC = ["/admin/login", "/api/admin/login"];
 
 const isAdminPath = (p: string) => p === "/admin" || p.startsWith("/admin/") || p.startsWith("/api/admin/");
@@ -10,7 +10,7 @@ const isSharedPath = (p: string) => p === "/api/media";
 
 /**
  * 관리 서버(ADMIN_SERVER=1, 다른 포트): 관리 화면만 열고, 관리자 로그인이 필요하다.
- * 학생 서버: 관리 화면은 없는 주소(404)로 보이고, 나머지는 앱 비밀번호로 잠근다.
+ * 학생 서버: 관리 화면은 없는 주소(404)로 보이고, 나머지는 학생 계정으로 로그인해야 열린다.
  */
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
